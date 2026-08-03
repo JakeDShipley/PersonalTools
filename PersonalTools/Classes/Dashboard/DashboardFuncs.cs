@@ -45,6 +45,14 @@ namespace PersonalTools.Classes.Dashboard
                     PageUrl = "/MediaExtractor",
                     ButtonText = "Open"
                 },
+                new DashboardToolObj
+                {
+                    Title = "Grand Exchange Price Checker",
+                    Description = "Search realtime OSRS Grand Exchange prices.",
+                    IconClass = "fa-solid fa-coins",
+                    PageUrl = "/GrandExchange",
+                    ButtonText = "Open"
+                },
             };
         }
     }
