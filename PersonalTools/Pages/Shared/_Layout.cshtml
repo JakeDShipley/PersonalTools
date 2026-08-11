@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿﻿
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -44,13 +45,17 @@
                         <a class="nav-link" asp-page="/Notes/Index">Notes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-page="/GranExchange/Index">Grand Exchange</a>
+                        <a class="nav-link" asp-page="/GrandExchange/Index">Grand Exchange</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/MediaExtractor/Index">Media Extractor</a>
                     </li>
                 </ul>
             </div>
+
+            <a class="nav-link ms-lg-2 text-white" asp-page="/Settings/Index" title="Settings">
+                <i class="fa-solid fa-gear fa-lg"></i>
+            </a>
         </div>
     </nav>
 
@@ -77,4 +82,13 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
+
+<Style>
+    .hold-delete-btn:hover,
+    .hold-delete-btn:active,
+    .hold-delete-btn:focus {
+    background-color: transparent !important;
+    color: #dc3545 !important;
+    }
+</Style>
 </html>

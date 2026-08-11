@@ -1,0 +1,138 @@
+@page
+@model PersonalTools.Pages.Settings.IndexModel
+@{
+    ViewData["Title"] = "Settings";
+
+    string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="h5 fw-semibold mb-2">Data</h2>
+            <p class="small-muted mb-0">
+                Permanently delete all locally stored data, including your CS2 skins list.
+            </p>
+        </div>
+
+        <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllDataModal">
+            <i class="fa-solid fa-trash me-1"></i>Delete all data
+        </button>
+    </div>
+</div>
+
+
+@* Delete All Data Modal *@
+<div class="modal fade" id="deleteAllDataModal" tabindex="-1" aria-labelledby="deleteAllDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="deleteAllDataModalLabel">Delete all data</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-3">
+                    This will permanently delete all locally stored data. This action cannot be undone.
+                </p>
+
+                <form method="post" asp-page-handler="DeleteAllData" id="deleteAllDataForm">
+                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" id="holdDeleteBtn">
+                        <span class="hold-delete-fill" id="holdDeleteFill"></span>
+                        <span class="hold-delete-label position-relative">Hold to delete all data</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Head {
+    <style>
+        .hold-delete-btn {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .hold-delete-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 0%;
+            background-color: #dc3545;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hold-delete-label {
+            z-index: 1;
+        }
+
+        .hold-delete-btn.is-holding .hold-delete-label {
+            color: #fff;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(function () {
+            const holdDurationMs = 5000;
+            let holdStart = null;
+            let holdFrame = null;
+
+            const $btn = $('#holdDeleteBtn');
+            const $fill = $('#holdDeleteFill');
+            const $form = $('#deleteAllDataForm');
+
+            function startHold(e) {
+                e.preventDefault();
+
+                if (holdStart) {
+                    return;
+                }
+
+                holdStart = Date.now();
+                $btn.addClass('is-holding');
+                holdFrame = requestAnimationFrame(tick);
+            }
+
+            function tick() {
+                const elapsed = Date.now() - holdStart;
+                const percent = Math.min((elapsed / holdDurationMs) * 100, 100);
+
+                $fill.css('width', percent + '%');
+
+                if (percent >= 100) {
+                    holdStart = null;
+                    $form.trigger('submit');
+                    return;
+                }
+
+                holdFrame = requestAnimationFrame(tick);
+            }
+
+            function cancelHold() {
+                if (holdFrame) {
+                    cancelAnimationFrame(holdFrame);
+                    holdFrame = null;
+                }
+
+                holdStart = null;
+                $btn.removeClass('is-holding');
+                $fill.css('width', '0%');
+            }
+
+            $btn.on('mousedown touchstart', startHold);
+            $btn.on('mouseup mouseleave touchend touchcancel', cancelHold);
+            $('#deleteAllDataModal').on('hidden.bs.modal', cancelHold);
+        });
+    </script>
+}

@@ -2,6 +2,7 @@ using PersonalTools.Classes.Dashboard;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
 using PersonalTools.Classes.Skins;
+using PersonalTools.Classes.Settings;
 using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
 
@@ -28,6 +29,9 @@ builder.Services.AddScoped<INoteFuncs, NoteFuncs>();
 
 // Grand Exchange
 string? osrsWikiUserAgent = builder.Configuration["OsrsWikiPrices:UserAgent"];
+
+//Settings
+builder.Services.AddScoped<ISettingsFuncs, SettingsFuncs>();
 
 if (string.IsNullOrWhiteSpace(osrsWikiUserAgent))
     throw new InvalidOperationException("The OsrsWikiPrices:UserAgent app setting is required.");
