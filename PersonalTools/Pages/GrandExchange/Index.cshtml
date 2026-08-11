@@ -1,0 +1,135 @@
+@page
+@model PersonalTools.Pages.GrandExchange.IndexModel
+@{
+    ViewData["Title"] = "Grand Exchange";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-grand-exchange.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 grand-exchange-page">
+    <div class="ge-hero section-spacing">
+        <p class="ge-kicker mb-2"><i class="fa-solid fa-coins me-2"></i>Old School RuneScape</p>
+        <h1 class="page-title mb-2">Grand Exchange</h1>
+        <p class="page-subtitle mb-0">Look up the latest recorded high and low prices for tradeable items.</p>
+    </div>
+
+    <div class="card ge-search-card shadow-sm section-spacing">
+        <div class="card-body p-3 p-lg-4">
+            <form method="get" id="grandExchangeSearchForm" class="row g-2 align-items-end">
+                <div class="col-12 col-md">
+                    <label asp-for="SearchTerm" class="form-label ge-label">Search an item</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input asp-for="SearchTerm" class="form-control" placeholder="Example: Abyssal whip" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button class="btn btn-warning btn-lg w-100 ge-search-button" type="submit">
+                        <i class="fa-solid fa-scroll me-1"></i>Search exchange
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger shadow-sm border-0" role="alert">
+            @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.HasSearched && !Model.Items.Any())
+    {
+        <div class="card ge-empty-card shadow-sm">
+            <div class="card-body p-4 text-center">
+                <i class="fa-solid fa-magnifying-glass ge-empty-icon mb-3"></i>
+                <h2 class="h5">No exchange items found</h2>
+                <p class="small-muted mb-0">Try another item name, such as Rune scimitar or Saradomin brew.</p>
+            </div>
+        </div>
+    }
+    else if (Model.Items.Any())
+    {
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+            <h2 class="h4 mb-0">Found items</h2>
+            <span class="small-muted">Showing @Model.Items.Count result@(Model.Items.Count == 1 ? string.Empty : "s")</span>
+        </div>
+
+        <div class="row g-3 g-lg-4">
+            @foreach (var item in Model.Items)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card ge-item-card h-100 shadow-sm">
+                        <div class="card-body p-3 p-lg-4 d-flex flex-column">
+                            <div class="d-flex gap-3 align-items-start mb-3">
+                                <div class="ge-item-frame flex-shrink-0">
+                                    @if (!string.IsNullOrWhiteSpace(item.IconUrl))
+                                    {
+                                        <img src="@item.IconUrl" alt="@item.Name" class="ge-item-icon" />
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-gem"></i>
+                                    }
+                                </div>
+                                <div class="min-width-0">
+                                    <h3 class="h5 ge-item-name mb-1">@item.Name</h3>
+                                    @if (item.MembersOnly)
+                                    {
+                                        <span class="badge ge-members-badge"><i class="fa-solid fa-crown me-1"></i>Members</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Free-to-play</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <p class="ge-description small-muted flex-grow-1">@item.Description</p>
+
+                            @if (item.HasPriceData)
+                            {
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6">
+                                        <div class="ge-price-panel ge-price-low">
+                                            <span class="ge-price-label">Latest low</span>
+                                            <strong>@item.LowPrice.ToString("N0") gp</strong>
+                                            @if (item.LowPriceUpdated.HasValue)
+                                            {
+                                                <small>@item.LowPriceUpdated.Value.ToString("dd MMM HH:mm")</small>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="ge-price-panel ge-price-high">
+                                            <span class="ge-price-label">Latest high</span>
+                                            <strong>@item.HighPrice.ToString("N0") gp</strong>
+                                            @if (item.HighPriceUpdated.HasValue)
+                                            {
+                                                <small>@item.HighPriceUpdated.Value.ToString("dd MMM HH:mm")</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary py-2 px-3 mb-0 small">No recent price data is available for this item.</div>
+                            }
+
+                            <div class="ge-item-footer mt-3 pt-3">
+                                <span><i class="fa-solid fa-boxes-stacked me-1"></i>Buy limit: @(item.BuyLimit > 0 ? item.BuyLimit.ToString("N0") : "Not listed")</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/pages/page-grand-exchange.js" asp-append-version="true"></script>
+}

@@ -102,13 +102,10 @@ namespace PersonalTools.Classes.MediaExtractor
                 // 3. srcset (take BEST quality image)
                 string srcset = node.GetAttributeValue("srcset", "");
 
-                string bestFromSrcset = GetBestFromSrcSet(srcset);
+                string? bestFromSrcset = GetBestFromSrcSet(srcset);
 
                 // 4. decide best candidate
-                string finalUrl =
-                    bestFromSrcset ??
-                    dataSrc ??
-                    src;
+                string finalUrl = bestFromSrcset ?? dataSrc ?? src;
 
                 AddMedia(finalUrl, "Image", items);
             }

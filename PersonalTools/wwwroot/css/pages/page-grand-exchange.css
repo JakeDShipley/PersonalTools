@@ -1,0 +1,158 @@
+.grand-exchange-page {
+    --ge-gold: #e7b85c;
+    --ge-gold-dark: #8b642b;
+    --ge-ink: #292018;
+    --ge-parchment: #f2e7c5;
+    --ge-wood: #49311f;
+}
+
+.ge-hero {
+    background: linear-gradient(135deg, #342317, #6d4b2c);
+    border: 3px solid var(--ge-gold-dark);
+    box-shadow: inset 0 0 0 2px rgba(244, 211, 133, .38), 0 .5rem 1rem rgba(42, 28, 16, .18);
+    color: #fff8e7;
+    padding: 1.5rem;
+}
+
+.ge-kicker, .ge-label, .ge-price-label {
+    color: var(--ge-gold);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.ge-hero .page-title, .ge-hero .page-subtitle {
+    color: inherit;
+}
+
+.ge-search-card, .ge-item-card, .ge-empty-card {
+    background: linear-gradient(135deg, #fff7df, var(--ge-parchment));
+    border: 2px solid #8a663d;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5);
+}
+
+.ge-search-card .input-group-text, .ge-search-card .form-control {
+    border-color: #9d7747;
+}
+
+.ge-search-card .input-group-text {
+    background: #e7d4a4;
+    color: var(--ge-wood);
+}
+
+.ge-search-card .form-control:focus {
+    border-color: var(--ge-gold-dark);
+    box-shadow: 0 0 0 .25rem rgba(139, 100, 43, .2);
+}
+
+.ge-search-button {
+    background: linear-gradient(#f2c56a, #bb8433);
+    border-color: #754a1e;
+    color: #2d1b0e;
+    font-weight: 700;
+}
+
+.ge-search-button:hover, .ge-search-button:focus {
+    background: linear-gradient(#ffd77d, #c9903a);
+    border-color: #5f3915;
+    color: #211207;
+}
+
+.ge-item-card {
+    color: var(--ge-ink);
+}
+
+.ge-item-frame {
+    align-items: center;
+    background: radial-gradient(circle, #4d341f, #21150d);
+    border: 3px solid #ab803d;
+    box-shadow: inset 0 0 0 2px #160e08;
+    color: var(--ge-gold);
+    display: flex;
+    font-size: 1.8rem;
+    height: 68px;
+    justify-content: center;
+    padding: .5rem;
+    width: 68px;
+}
+
+.ge-item-icon {
+    image-rendering: pixelated;
+    max-height: 48px;
+    max-width: 48px;
+}
+
+.ge-item-name {
+    color: #3c2818;
+    font-family: Georgia, serif;
+}
+
+.min-width-0 {
+    min-width: 0;
+}
+
+.ge-members-badge {
+    background: #754d92;
+    color: #fff;
+}
+
+.ge-description {
+    min-height: 2.5rem;
+}
+
+.ge-price-panel {
+    border: 1px solid #96703d;
+    display: flex;
+    flex-direction: column;
+    min-height: 95px;
+    padding: .7rem;
+}
+
+.ge-price-panel strong {
+    color: #302014;
+    font-size: 1.05rem;
+    line-height: 1.35;
+}
+
+.ge-price-panel small {
+    color: #715f4a;
+    margin-top: auto;
+}
+
+.ge-price-low {
+    background: rgba(177, 214, 182, .38);
+}
+
+.ge-price-high {
+    background: rgba(244, 211, 133, .42);
+}
+
+.ge-price-low .ge-price-label {
+    color: #3f7048;
+}
+
+.ge-price-high .ge-price-label {
+    color: #8b642b;
+}
+
+.ge-item-footer {
+    border-top: 1px solid rgba(90, 61, 35, .25);
+    color: #65513c;
+    font-size: .875rem;
+}
+
+.ge-empty-card {
+    border-style: dashed;
+}
+
+.ge-empty-icon {
+    color: var(--ge-gold-dark);
+    font-size: 2rem;
+}
+
+@media (max-width: 575.98px) {
+    .ge-hero {
+        padding: 1.25rem;
+    }
+}
