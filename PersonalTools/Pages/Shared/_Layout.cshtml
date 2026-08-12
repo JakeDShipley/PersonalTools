@@ -26,9 +26,14 @@
                 <i class="fa-solid fa-toolbox me-2"></i>Personal Tools
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="d-flex align-items-center gap-2 order-lg-2">
+                <a class="nav-link text-white" asp-page="/Settings/Index" title="Settings">
+                    <i class="fa-solid fa-gear fa-lg"></i>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
 
             <div id="mainNavbar" class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto gap-lg-2">
@@ -50,12 +55,11 @@
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/MediaExtractor/Index">Media Extractor</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-page="/CSMatches/Index">CS Matches</a>
+                    </li>
                 </ul>
             </div>
-
-            <a class="nav-link ms-lg-2 text-white" asp-page="/Settings/Index" title="Settings">
-                <i class="fa-solid fa-gear fa-lg"></i>
-            </a>
         </div>
     </nav>
 
@@ -82,7 +86,7 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-
+</html>
 <Style>
     .hold-delete-btn:hover,
     .hold-delete-btn:active,
@@ -91,4 +95,3 @@
     color: #dc3545 !important;
     }
 </Style>
-</html>

@@ -1,13 +1,13 @@
+using PersonalTools.Classes.CSMatches;
 using PersonalTools.Classes.Dashboard;
+using PersonalTools.Classes.GrandExchange;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
-using PersonalTools.Classes.Skins;
 using PersonalTools.Classes.Settings;
+using PersonalTools.Classes.Skins;
+using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
-
-using PersonalTools.Classes.GrandExchange;
-using PersonalTools.Data.GrandExchange;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +48,10 @@ builder.Services.AddScoped<IGrandExchangeFuncs, GrandExchangeFuncs>();
 
 // Media Extractor
 builder.Services.AddScoped<IMediaExtractorFuncs, MediaExtractorFuncs>();
+
+// CSMatches
+builder.Services.AddScoped<ICSMatchFuncs, CSMatchFuncs>();
+builder.Services.AddScoped<ICSMatchReferenceData, CSMatchReferenceData>();
 
 var app = builder.Build();
 

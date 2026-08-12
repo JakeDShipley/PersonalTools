@@ -10,4 +10,10 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\CSMatches\" />
+    <Folder Include="wwwroot\images\cs\maps\" />
+    <Folder Include="wwwroot\images\cs\teams\" />
+  </ItemGroup>
+
 </Project>

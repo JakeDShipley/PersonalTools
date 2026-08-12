@@ -1,0 +1,30 @@
+[
+  {
+    "Name": "Inferno",
+    "ImagePath": "/images/cs/maps/inferno.png"
+  },
+  {
+    "Name": "Mirage",
+    "ImagePath": "/images/cs/maps/mirage.png"
+  },
+  {
+    "Name": "Dust2",
+    "ImagePath": "/images/cs/maps/dust2.png"
+  },
+  {
+    "Name": "Nuke",
+    "ImagePath": "/images/cs/maps/nuke.png"
+  },
+  {
+    "Name": "Ancient",
+    "ImagePath": "/images/cs/maps/ancient.png"
+  },
+  {
+    "Name": "Cache",
+    "ImagePath": "/images/cs/maps/cache.png"
+  },
+  {
+    "Name": "Anubis",
+    "ImagePath": "/images/cs/maps/anubis.png"
+  }
+]
