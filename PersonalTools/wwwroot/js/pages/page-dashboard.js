@@ -8,7 +8,28 @@ $(function () {
 
     const linksGrid=$('#quickLinksGrid'),quickLinkModal=document.getElementById('quickLinkModal');
     function host(url){try{return new URL(url).hostname.replace('www.','');}catch{return url;}}
-    function loadQuickLinks(){ $.getJSON('/api/quick-links').done(links=>{linksGrid.empty();if(!links.length){linksGrid.append($('<div class="col-12 small-muted">').text('Add the sites you use most.'));return;}links.forEach(link=>{const card=$('<a class="quick-link-card" target="_blank" rel="noopener">').attr('href',link.url).append($('<span class="quick-link-icon">').append($('<i>').addClass(link.iconClass||'fa-solid fa-arrow-up-right-from-square')),$('<span>').append($('<strong>').text(link.title),$('<small>').text(host(link.url)));const menu=$('<button class="quick-link-menu" type="button" aria-label="Edit quick link">').data('link',link).append($('<i class="fa-solid fa-ellipsis">'));menu.on('click',e=>{e.preventDefault();openQuickLink(menu.data('link'));});linksGrid.append($('<div class="col-12 col-sm-6 col-lg-4 col-xl-3">').append(card.append(menu)));});}).fail(()=>linksGrid.html('<div class="col-12 small-muted">Quick links are unavailable until MariaDB is configured.</div>')); }
+    function loadQuickLinks(){
+        $.getJSON('/api/quick-links').done(links=>{
+            linksGrid.empty();
+            if(!links.length){
+                linksGrid.append($('<div class="col-12 small-muted">').text('Add the sites you use most.'));
+                return;
+            }
+            links.forEach(link=>{
+                const card=$('<a class="quick-link-card" target="_blank" rel="noopener">')
+                    .attr('href',link.url)
+                    .append(
+                        $('<span class="quick-link-icon">').append($('<i>').addClass(link.iconClass||'fa-solid fa-arrow-up-right-from-square')),
+                        $('<span>').append($('<strong>').text(link.title),$('<small>').text(host(link.url)))
+                    );
+                const menu=$('<button class="quick-link-menu" type="button" aria-label="Edit quick link">')
+                    .data('link',link)
+                    .append($('<i class="fa-solid fa-ellipsis">'));
+                menu.on('click',e=>{e.preventDefault();openQuickLink(menu.data('link'));});
+                linksGrid.append($('<div class="col-12 col-sm-6 col-lg-4 col-xl-3">').append(card.append(menu)));
+            });
+        }).fail(()=>linksGrid.html('<div class="col-12 small-muted">Quick links are unavailable until MariaDB is configured.</div>'));
+    }
     function openQuickLink(link){$('#quickLinkError').addClass('d-none');$('#quickLinkId').val(link?.quickLinkId||'');$('#quickLinkTitle').val(link?.title||'');$('#quickLinkUrl').val(link?.url||'');$('#quickLinkIcon').val(link?.iconClass||'');$('#deleteQuickLink').toggleClass('d-none',!link);$('#quickLinkModalTitle').text(link?'Edit quick link':'Add quick link');bootstrap.Modal.getOrCreateInstance(quickLinkModal).show();}
     $('[data-bs-target="#quickLinkModal"]').on('click',()=>openQuickLink(null));
     $('#quickLinkForm').on('submit',function(e){e.preventDefault();const form=$(this),id=$('#quickLinkId').val(),button=form.find('button[type="submit"]'),payload={title:$('#quickLinkTitle').val(),url:$('#quickLinkUrl').val(),iconClass:$('#quickLinkIcon').val()||null};button.prop('disabled',true);$.ajax({url:id?`/api/quick-links/${id}`:'/api/quick-links',method:id?'PUT':'POST',contentType:'application/json',headers:{RequestVerificationToken:$('input[name="__RequestVerificationToken"]').first().val()},data:JSON.stringify(payload)}).done(()=>{bootstrap.Modal.getInstance(quickLinkModal).hide();loadQuickLinks();}).fail(xhr=>$('#quickLinkError').text(xhr.responseJSON?.message||'The quick link could not be saved.').removeClass('d-none')).always(()=>button.prop('disabled',false));});
