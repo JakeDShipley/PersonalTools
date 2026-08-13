@@ -1,0 +1,843 @@
+﻿@page
+@model PersonalTools.Pages.CSMatches.IndexModel
+@{
+    ViewData["Title"] = "CS2 Matches";
+}
+
+<div class="container px-3 px-lg-4">
+    <div class="row align-items-start gy-3 section-spacing">
+        <div class="col-12 col-lg">
+            <h1 class="page-title">CS Matches</h1>
+            <p class="page-subtitle">
+                Track your CS2 match results and stats.
+            </p>
+        </div>
+
+        <div class="col-12 col-lg-auto d-flex gap-2">
+            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
+                <i class="fa-solid fa-sliders me-1"></i>Edit Stats
+            </button>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                <i class="fa-solid fa-plus me-1"></i>Add match
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="alert alert-success shadow-sm border-0 section-spacing">
+            @Model.SuccessMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger shadow-sm border-0 section-spacing">
+            @Model.ErrorMessage
+        </div>
+    }
+
+    @* Stats *@
+    <div class="row g-3 section-spacing" id="statsRow">
+        <div class="col-6 col-md-3 js-stat" data-stat-key="totalMatches">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
+                    <p class="small-muted mb-1">Total Matches</p>
+                    <p class="h5 mb-0">@Model.Stats.TotalMatches</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="winsLosses">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
+                    <p class="small-muted mb-1">Wins / Losses</p>
+                    <p class="h4 mb-0"><span class="text-success">@Model.Stats.Wins</span> / <span class="text-danger">@Model.Stats.Losses</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="totalWinRate">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
+                    <p class="small-muted mb-1">Total Win Rate</p>
+                    <p class="h4 mb-0">@Model.Stats.WinRate%</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="winRateCT">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
+                    <p class="small-muted mb-1">Win Rate (CT Start)</p>
+                    <p class="h4 mb-0">@Model.Stats.WinRateCTStart%</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="winRateT">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
+                    <p class="small-muted mb-1">Win Rate (T Start)</p>
+                    <p class="h4 mb-0">@Model.Stats.WinRateTStart%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 js-stat" data-stat-key="overtimeGames">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
+                    <p class="small-muted mb-1">Overtime Games</p>
+                    <p class="h5 mb-0">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="otWinLoss">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
+                    <p class="small-muted mb-1">OT Wins / Losses</p>
+                    <p class="h5 mb-0"><span class="text-success">@Model.Stats.OvertimeWins</span> / <span class="text-danger">@Model.Stats.OvertimeLosses</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="avgScoreMargin">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
+                    <p class="small-muted mb-1">Avg Score Margin</p>
+                    <p class="h5 mb-0">@Model.Stats.AverageScoreMargin</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="currentStreak">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
+                    <p class="small-muted mb-1">Current Streak</p>
+                    <p class="h5 mb-0 @(Model.Stats.CurrentStreakType == "Win" ? "text-success" : "text-danger")">
+                        @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMap">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
+                    <p class="small-muted mb-1">Best Map</p>
+                    <p class="h5 mb-0">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="worstMap">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
+                    <p class="small-muted mb-1">Worst Map</p>
+                    <p class="h5 mb-0">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMapCT">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
+                    <p class="small-muted mb-1">Best Map (CT Start)</p>
+                    <p class="h5 mb-0">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMapT">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-3 position-relative">
+                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
+                       data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
+                    <p class="small-muted mb-1">Best Map (T Start)</p>
+                    <p class="h5 mb-0">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Filters *@
+    <div class="card shadow-sm border-0 section-spacing">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-6 col-md-3">
+                    <label class="form-label small-muted mb-1">Map</label>
+                    <select class="form-select form-select-sm" id="filterMap">
+                        <option value="">All maps</option>
+                        @foreach (var map in Model.Maps)
+                        {
+                            <option value="@map.Name">@map.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small-muted mb-1">Result</label>
+                    <select class="form-select form-select-sm" id="filterResult">
+                        <option value="">All</option>
+                        <option value="win">Wins</option>
+                        <option value="loss">Losses</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small-muted mb-1">Start Side</label>
+                    <select class="form-select form-select-sm" id="filterSide">
+                        <option value="">All</option>
+                        <option value="CT">CT</option>
+                        <option value="T">T</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small-muted mb-1">Overtime</label>
+                    <select class="form-select form-select-sm" id="filterOvertime">
+                        <option value="">All</option>
+                        <option value="yes">Overtime only</option>
+                        <option value="no">Regulation only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Match cards *@
+    @if (Model.Matches.Any())
+    {
+        <div class="row g-3 g-lg-4" id="matchList">
+            @foreach (var match in Model.Matches)
+            {
+                var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
+                var isWin = match.TeamScore > match.OpponentScore;
+                var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+
+                <div class="col-12 col-md-6 col-xl-4 match-card-wrapper"
+                     data-map="@match.MapName"
+                     data-result="@(isWin ? "win" : "loss")"
+                     data-side="@match.StartSide"
+                     data-overtime="@(isOvertime ? "yes" : "no")">
+                    <div class="card tool-card h-100 shadow-sm">
+                        @if (map != null && !string.IsNullOrWhiteSpace(map.ImagePath))
+                        {
+                            <img src="@map.ImagePath" class="card-img-top" alt="@match.MapName" style="height: 140px; object-fit: cover;" />
+                        }
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h2 class="h5 fw-semibold mb-0">@match.MapName</h2>
+                                    <img src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" style="height: 20px; width: 20px; object-fit: contain;" />
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary js-edit-match"
+                                            type="button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editMatchModal"
+                                            data-match-id="@match.MatchId"
+                                            data-match-side="@match.StartSide"
+                                            data-match-map="@match.MapName"
+                                            data-match-gametype="@match.GameType"
+                                            data-match-teamscore="@match.TeamScore"
+                                            data-match-opponentscore="@match.OpponentScore"
+                                            data-match-ot="@match.OvertimeCount">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-danger js-delete-match"
+                                            type="button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteMatchModal"
+                                            data-match-id="@match.MatchId"
+                                            data-match-title="@match.MapName">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="badge text-bg-light border">@match.GameType</span>
+                            </div>
+
+                            <hr class="my-2" />
+
+                            <div class="text-center py-2">
+                                <p class="mb-0 fw-bold" style="font-size: 2rem;">
+                                    <span class="@(isWin ? "text-success" : "text-danger")">@match.TeamScore</span>
+                                    <span class="small-muted">-</span>
+                                    <span class="@(!isWin ? "text-success" : "text-danger")">@match.OpponentScore</span>
+                                </p>
+
+                                @if (isOvertime)
+                                {
+                                    <span class="badge text-bg-warning mt-1">
+                                        Overtime (@match.OvertimeCount)
+                                    </span>
+                                }
+                            </div>
+
+                            <p class="small-muted mb-0 mt-auto" style="font-size: 0.75rem;">
+                                @match.Created.ToString("dd MMM yyyy HH:mm")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-12 d-none" id="noMatchesMessage">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <p class="mb-0 small-muted">No matches found for the selected filters.</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <p class="mb-0 small-muted">
+                    No matches yet. Click <strong>Add match</strong> to record your first one.
+                </p>
+            </div>
+        </div>
+    }
+</div>
+
+@* Add Match Modal *@
+<div class="modal fade" id="addMatchModal" tabindex="-1" aria-labelledby="addMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="Create" class="js-match-form">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="addMatchModalLabel">Add match</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Start Side</label>
+                            <select asp-for="StartSide" id="addStartSide" class="form-select">
+                                <option value="CT">CT</option>
+                                <option value="T">T</option>
+                            </select>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Game Type</label>
+                            <select asp-for="GameType" id="addGameType" class="form-select">
+                                @foreach (var gt in Model.GameTypes)
+                                {
+                                    <option value="@gt">@gt</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Map</label>
+                            <div class="d-flex gap-2 align-items-start">
+                                <select asp-for="MapName" id="addMapName" class="form-select js-map-select" data-preview-target="addMapPreview">
+                                    @foreach (var map in Model.Maps)
+                                    {
+                                        <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
+                                    }
+                                </select>
+                                <button class="btn btn-outline-secondary text-nowrap js-open-add-map" type="button" data-bs-toggle="modal" data-bs-target="#addMapModal">
+                                    <i class="fa-solid fa-plus me-1"></i>Add New Map
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <img src="" id="addMapPreview" class="js-map-preview rounded" style="max-height: 100px; display: none;" alt="Map preview" />
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Your Team Score</label>
+                            <input asp-for="TeamScore" type="number" min="0" id="addTeamScore" class="form-control js-team-score" />
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Opponent Score</label>
+                            <input asp-for="OpponentScore" type="number" min="0" id="addOpponentScore" class="form-control js-opponent-score" />
+                        </div>
+
+                        <div class="col-12 js-ot-wrapper" id="addOtWrapper" style="display: none;">
+                            <label class="form-label">Overtime detected — how many overtimes were played?</label>
+                            <input asp-for="OvertimeCount" type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save match</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Edit Match Modal *@
+<div class="modal fade" id="editMatchModal" tabindex="-1" aria-labelledby="editMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="Edit" class="js-match-form">
+                <input type="hidden" asp-for="MatchId" id="editMatchId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="editMatchModalLabel">Edit match</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Start Side</label>
+                            <select asp-for="StartSide" id="editStartSide" class="form-select">
+                                <option value="CT">CT</option>
+                                <option value="T">T</option>
+                            </select>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Game Type</label>
+                            <select asp-for="GameType" id="editGameType" class="form-select">
+                                @foreach (var gt in Model.GameTypes)
+                                {
+                                    <option value="@gt">@gt</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Map</label>
+                            <div class="d-flex gap-2 align-items-start">
+                                <select asp-for="MapName" id="editMapName" class="form-select js-map-select" data-preview-target="editMapPreview">
+                                    @foreach (var map in Model.Maps)
+                                    {
+                                        <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
+                                    }
+                                </select>
+                                <button class="btn btn-outline-secondary text-nowrap js-open-add-map" type="button" data-bs-toggle="modal" data-bs-target="#addMapModal">
+                                    <i class="fa-solid fa-plus me-1"></i>Add New Map
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <img src="" id="editMapPreview" class="js-map-preview rounded" style="max-height: 100px; display: none;" alt="Map preview" />
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Your Team Score</label>
+                            <input asp-for="TeamScore" type="number" min="0" id="editTeamScore" class="form-control js-team-score" />
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label">Opponent Score</label>
+                            <input asp-for="OpponentScore" type="number" min="0" id="editOpponentScore" class="form-control js-opponent-score" />
+                        </div>
+
+                        <div class="col-12 js-ot-wrapper" id="editOtWrapper" style="display: none;">
+                            <label class="form-label">Overtime detected — how many overtimes were played?</label>
+                            <input asp-for="OvertimeCount" type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Delete Match Modal *@
+<div class="modal fade" id="deleteMatchModal" tabindex="-1" aria-labelledby="deleteMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" name="matchId" id="deleteMatchId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="deleteMatchModalLabel">Delete match</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-1">Are you sure you want to delete this match?</p>
+                    <p class="fw-semibold mb-0" id="deleteMatchTitle"></p>
+                    <p class="small-muted mt-3 mb-0">This action cannot be undone.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="submit">Delete match</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Add New Map Modal *@
+<div class="modal fade" id="addMapModal" tabindex="-1" aria-labelledby="addMapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="AddMap" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="addMapModalLabel">Add new map</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="NewMapName" class="form-label">Map name</label>
+                        <input asp-for="NewMapName" class="form-control" placeholder="Example: Overpass" />
+                    </div>
+
+                    <div class="mb-0">
+                        <label asp-for="NewMapImage" class="form-label">Map image</label>
+                        <input asp-for="NewMapImage" type="file" accept=".jpg,.jpeg,.png,.webp" class="form-control" />
+                        <div class="form-text">JPG, PNG or WEBP, up to 2MB.</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Add map</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Edit Stats Modal *@
+<div class="modal fade" id="editStatsModal" tabindex="-1" aria-labelledby="editStatsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="editStatsModalLabel">Edit Stats</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="small-muted mb-3">Choose which stats to show at the top of the page.</p>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalMatches" id="statToggle-totalMatches">
+                        <label class="form-check-label" for="statToggle-totalMatches">Total Matches</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winsLosses" id="statToggle-winsLosses">
+                        <label class="form-check-label" for="statToggle-winsLosses">Wins / Losses</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalWinRate" id="statToggle-totalWinRate">
+                        <label class="form-check-label" for="statToggle-totalWinRate">Total Win Rate</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateCT" id="statToggle-winRateCT">
+                        <label class="form-check-label" for="statToggle-winRateCT">Win Rate (CT Start)</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateT" id="statToggle-winRateT">
+                        <label class="form-check-label" for="statToggle-winRateT">Win Rate (T Start)</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateGameType" id="statToggle-winRateGameType">
+                        <label class="form-check-label" for="statToggle-winRateGameType">Win Rate by Game Type</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate broken down by game type (e.g. Competitive, Premier, FaceIT)."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="overtimeGames" id="statToggle-overtimeGames">
+                        <label class="form-check-label" for="statToggle-overtimeGames">Overtime Games</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="otWinLoss" id="statToggle-otWinLoss">
+                        <label class="form-check-label" for="statToggle-otWinLoss">OT Wins / Losses</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="avgScoreMargin" id="statToggle-avgScoreMargin">
+                        <label class="form-check-label" for="statToggle-avgScoreMargin">Avg Score Margin</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="currentStreak" id="statToggle-currentStreak">
+                        <label class="form-check-label" for="statToggle-currentStreak">Current Streak</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMap" id="statToggle-bestMap">
+                        <label class="form-check-label" for="statToggle-bestMap">Best Map</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="worstMap" id="statToggle-worstMap">
+                        <label class="form-check-label" for="statToggle-worstMap">Worst Map</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapCT" id="statToggle-bestMapCT">
+                        <label class="form-check-label" for="statToggle-bestMapCT">Best Map (CT Start)</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-0">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapT" id="statToggle-bestMapT">
+                        <label class="form-check-label" for="statToggle-bestMapT">Best Map (T Start)</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const STAT_STORAGE_KEY = 'csMatchesStatVisibility';
+
+        function loadStatVisibility() {
+            try {
+                const raw = localStorage.getItem(STAT_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveStatVisibility(map) {
+            localStorage.setItem(STAT_STORAGE_KEY, JSON.stringify(map));
+        }
+
+        function applyStatVisibility() {
+            const visibility = loadStatVisibility();
+
+            $('.js-stat').each(function () {
+                const key = $(this).data('stat-key');
+                const isVisible = visibility[key] !== false;
+                $(this).toggle(isVisible);
+            });
+
+            $('.js-stat-toggle').each(function () {
+                const key = $(this).data('stat-key');
+                $(this).prop('checked', visibility[key] !== false);
+            });
+        }
+
+        $(document).on('change', '.js-stat-toggle', function () {
+            const visibility = loadStatVisibility();
+            const key = $(this).data('stat-key');
+            visibility[key] = $(this).is(':checked');
+            saveStatVisibility(visibility);
+            applyStatVisibility();
+        });
+
+        applyStatVisibility();
+
+        $(function () {
+            $('[data-bs-toggle="tooltip"]').each(function () {
+                new bootstrap.Tooltip(this);
+            });
+        });
+
+         function updateOvertimeVisibility($form) {
+            const team = parseInt($form.find('.js-team-score').val()) || 0;
+            const opponent = parseInt($form.find('.js-opponent-score').val()) || 0;
+            const total = team + opponent;
+            const $wrapper = $form.find('.js-ot-wrapper');
+            const $otInput = $form.find('.js-ot-count');
+
+            if (total > 24) {
+                $wrapper.show();
+                $otInput.prop('disabled', false);
+                if (!$otInput.val() || $otInput.val() == 0) {
+                    $otInput.val(Math.ceil((total - 24) / 6));
+                }
+            } else {
+                $wrapper.hide();
+                $otInput.prop('disabled', true);
+                $otInput.val(0);
+            }
+        }
+
+        function updateMapPreview($select) {
+            const $option = $select.find('option:selected');
+            const image = $option.data('image');
+            const targetId = $select.data('preview-target');
+            const $preview = $('#' + targetId);
+
+            if (image) {
+                $preview.attr('src', image).show();
+            } else {
+                $preview.hide();
+            }
+        }
+
+        $(document).on('input change', '.js-team-score, .js-opponent-score', function () {
+            updateOvertimeVisibility($(this).closest('form'));
+        });
+
+        $(document).on('change', '.js-map-select', function () {
+            updateMapPreview($(this));
+        });
+
+        $('.js-match-form').each(function () {
+            updateOvertimeVisibility($(this));
+        });
+
+        $('#addMatchModal').on('shown.bs.modal', function () {
+            updateMapPreview($('#addMapName'));
+        });
+
+        $(document).on('click', '.js-edit-match', function () {
+            const side = $(this).data('match-side');
+            const map = $(this).data('match-map');
+            const gameType = $(this).data('match-gametype');
+            const teamScore = $(this).data('match-teamscore');
+            const opponentScore = $(this).data('match-opponentscore');
+            const ot = $(this).data('match-ot');
+
+            $('#editMatchId').val($(this).data('match-id'));
+            $('#editStartSide').val(side);
+            $('#editGameType').val(gameType);
+            $('#editMapName').val(map);
+            $('#editTeamScore').val(teamScore);
+            $('#editOpponentScore').val(opponentScore);
+            $('#editOvertimeCount').val(ot);
+
+            updateMapPreview($('#editMapName'));
+            updateOvertimeVisibility($('#editMatchModal').find('form'));
+        });
+
+        $(document).on('click', '.js-delete-match', function () {
+            $('#deleteMatchId').val($(this).data('match-id'));
+            $('#deleteMatchTitle').text($(this).data('match-title'));
+        });
+
+        function applyFilters() {
+            const map = $('#filterMap').val();
+            const result = $('#filterResult').val();
+            const side = $('#filterSide').val();
+            const overtime = $('#filterOvertime').val();
+            let visibleCount = 0;
+
+            $('.match-card-wrapper').each(function () {
+                const $card = $(this);
+                const matches =
+                    (!map || $card.data('map') === map) &&
+                    (!result || $card.data('result') === result) &&
+                    (!side || $card.data('side') === side) &&
+                    (!overtime || $card.data('overtime') === overtime);
+
+                $card.toggle(matches);
+
+                if (matches) {
+                    visibleCount++;
+                }
+            });
+
+            $('#noMatchesMessage').toggleClass('d-none', visibleCount !== 0);
+        }
+
+        $('#filterMap, #filterResult, #filterSide, #filterOvertime').on('change', applyFilters);
+
+        // #6 — Add New Map opened from within Add/Edit Match should return to that modal on close
+        let csMatchOriginModalId = null;
+
+        $(document).on('click', '.js-open-add-map', function () {
+            const $originModal = $(this).closest('.modal');
+            csMatchOriginModalId = '#' + $originModal.attr('id');
+        });
+
+        $('#addMapModal').on('show.bs.modal', function () {
+            if (csMatchOriginModalId) {
+                bootstrap.Modal.getOrCreateInstance($(csMatchOriginModalId)[0]).hide();
+            }
+        });
+
+        $('#addMapModal').on('hidden.bs.modal', function () {
+            if (csMatchOriginModalId) {
+                bootstrap.Modal.getOrCreateInstance($(csMatchOriginModalId)[0]).show();
+                csMatchOriginModalId = null;
+            }
+        });
+    </script>
+}

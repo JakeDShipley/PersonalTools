@@ -19,7 +19,7 @@ namespace PersonalTools.Classes.Dashboard
                     Description = "Look up Steam inventory information and inspect item data.",
                     IconClass = "fa-brands fa-steam",
                     PageUrl = "/Inventory",
-                    ButtonText = "Open inventory lookup"
+                    ButtonText = "Open",
                 },
                 new DashboardToolObj
                 {
@@ -27,7 +27,7 @@ namespace PersonalTools.Classes.Dashboard
                     Description = "Track skins, prices, purchase dates, notes and other useful details.",
                     IconClass = "fa-solid fa-gun",
                     PageUrl = "/Skins",
-                    ButtonText = "Open skin tracker"
+                    ButtonText = "Open",
                 },
                 new DashboardToolObj
                 {
@@ -35,7 +35,7 @@ namespace PersonalTools.Classes.Dashboard
                     Description = "Write simple blog-style notes and display them as Bootstrap cards.",
                     IconClass = "fa-solid fa-note-sticky",
                     PageUrl = "/Notes",
-                    ButtonText = "Open notes"
+                    ButtonText = "Open",
                 },
                 new DashboardToolObj
                 {
@@ -51,6 +51,14 @@ namespace PersonalTools.Classes.Dashboard
                     Description = "Search realtime OSRS Grand Exchange prices.",
                     IconClass = "fa-solid fa-coins",
                     PageUrl = "/GrandExchange",
+                    ButtonText = "Open"
+                },
+                new DashboardToolObj
+                {
+                    Title = "CS2 Match Tracker",
+                    Description = "Track your CS2 match results and stats.",
+                    IconClass = "fa-solid fa-bomb",
+                    PageUrl = "/CSMatches",
                     ButtonText = "Open"
                 },
             };

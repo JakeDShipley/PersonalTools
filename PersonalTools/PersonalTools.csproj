@@ -11,4 +11,10 @@
     <PackageReference Include="MySqlConnector" Version="2.4.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\CSMatches\" />
+    <Folder Include="wwwroot\images\cs\maps\" />
+    <Folder Include="wwwroot\images\cs\teams\" />
+  </ItemGroup>
+
 </Project>

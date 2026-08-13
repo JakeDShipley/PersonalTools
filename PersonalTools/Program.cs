@@ -1,21 +1,21 @@
+using PersonalTools.Classes.CSMatches;
+using PersonalTools.Classes;
 using PersonalTools.Classes.Dashboard;
+using PersonalTools.Classes.GrandExchange;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
-using PersonalTools.Classes.Skins;
 using PersonalTools.Classes.Settings;
-using PersonalTools.Classes;
+using PersonalTools.Classes.Skins;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
 using PersonalTools.Data;
-
-using PersonalTools.Classes.GrandExchange;
-using PersonalTools.Data.GrandExchange;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +90,10 @@ builder.Services.AddHttpClient<IMediaExtractorFuncs, MediaExtractorFuncs>(client
     client.Timeout = TimeSpan.FromSeconds(20);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalToolsMediaExtractor/1.0");
 });
+
+// CSMatches
+builder.Services.AddScoped<ICSMatchFuncs, CSMatchFuncs>();
+builder.Services.AddScoped<ICSMatchReferenceData, CSMatchReferenceData>();
 
 var app = builder.Build();
 
