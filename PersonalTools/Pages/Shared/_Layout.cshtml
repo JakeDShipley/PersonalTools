@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] | Personal Tools</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
@@ -20,18 +21,21 @@
     @await RenderSectionAsync("Head", required: false)
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark app-navbar shadow-sm">
+    <nav class="navbar navbar-expand-xl app-navbar">
         <div class="container px-3 px-lg-4">
-            <a class="navbar-brand fw-semibold" asp-page="/Index">
-                <i class="fa-solid fa-toolbox me-2"></i>Personal Tools
+            <a class="navbar-brand" asp-page="/Index" aria-label="Personal Tools dashboard">
+                <span class="brand-mark" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </span>
+                <span class="brand-wordmark">Personal<span>Tools</span></span>
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div id="mainNavbar" class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto gap-lg-2">
+                <ul class="navbar-nav ms-xl-4 me-auto app-nav-links">
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/Index">Dashboard</a>
                     </li>
@@ -47,15 +51,57 @@
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/GrandExchange/Index">Grand Exchange</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/MediaExtractor/Index">Media Extractor</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Media
+                        </a>
+                        <ul class="dropdown-menu media-menu">
+                            <li><span class="dropdown-header">Media tools</span></li>
+                            <li><a class="dropdown-item" asp-page="/MediaExtractor/Index"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Media Extractor</a></li>
+                            <li><a class="dropdown-item" asp-page="/AudioStudio/Index"><i class="fa-solid fa-wave-square me-2"></i>Audio Studio</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link blits-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Blits
+                        </a>
+                        <ul class="dropdown-menu blits-menu">
+                            <li><span class="dropdown-header">Blits' workshop</span></li>
+                            <li><span class="dropdown-item-text">New tools will appear here.</span></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            System
+                        </a>
+                        <ul class="dropdown-menu system-menu">
+                            <li><span class="dropdown-header">Infrastructure</span></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-server me-2"></i>Server monitor <span class="badge text-bg-light float-end">Soon</span></a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-database me-2"></i>Database monitor <span class="badge text-bg-light float-end">Soon</span></a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-scroll me-2"></i>Logs viewer <span class="badge text-bg-light float-end">Soon</span></a></li>
+                        </ul>
                     </li>
                 </ul>
-            </div>
 
-            <a class="nav-link ms-lg-2 text-white" asp-page="/Settings/Index" title="Settings">
-                <i class="fa-solid fa-gear fa-lg"></i>
-            </a>
+                <div class="nav-utilities">
+                    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme">
+                        <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                    </button>
+                    <a class="settings-link" asp-page="/Settings/Index" title="Settings" aria-label="Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </a>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form method="post" asp-page="/Login" asp-page-handler="SignOut" class="d-inline js-signout-form">
+                            <button class="settings-link" type="submit" title="Sign out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a class="settings-link" asp-page="/Login" asp-route-returnUrl="@Context.Request.Path" title="Sign in" aria-label="Sign in"><i class="fa-solid fa-right-to-bracket"></i></a>
+                    }
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -64,8 +110,9 @@
     </main>
 
     <footer class="app-footer">
-        <div class="container px-3 px-lg-4">
+        <div class="container px-3 px-lg-4 d-flex flex-wrap justify-content-between gap-2">
             <span>&copy; @DateTime.Now.Year Personal Tools</span>
+            <span class="d-flex gap-3"><a asp-page="/Privacy" class="link-secondary text-decoration-none">Privacy</a><a asp-page="/Cookies" class="link-secondary text-decoration-none">Cookies</a></span>
         </div>
     </footer>
 
@@ -74,6 +121,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
 
@@ -83,12 +131,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 
-<Style>
-    .hold-delete-btn:hover,
-    .hold-delete-btn:active,
-    .hold-delete-btn:focus {
-    background-color: transparent !important;
-    color: #dc3545 !important;
-    }
-</Style>
 </html>

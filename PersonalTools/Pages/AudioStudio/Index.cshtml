@@ -1,0 +1,92 @@
+@page
+@model PersonalTools.Pages.AudioStudio.IndexModel
+@{
+    ViewData["Title"] = "Audio Studio";
+}
+
+<div class="container px-3 px-lg-4 audio-studio-page">
+    @Html.AntiForgeryToken()
+    <div class="row align-items-end gy-3 section-spacing">
+        <div class="col-lg-8">
+            <p class="eyebrow">Media tools</p>
+            <h1 class="page-title">Audio Studio</h1>
+            <p class="page-subtitle mb-0">Turn a video into a clean audio clip, choose the exact range, and download it in a format that suits the job.</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <span class="audio-studio-limit"><i class="fa-solid fa-shield-halved me-2"></i>Processed privately on this device</span>
+        </div>
+    </div>
+
+    <section class="card border-0 shadow-sm audio-workbench" aria-labelledby="audioStudioHeading">
+        <div class="card-body p-3 p-md-4 p-xl-5">
+            <h2 id="audioStudioHeading" class="visually-hidden">Create an audio export</h2>
+            <input id="audioFileInput" class="visually-hidden" type="file" accept="video/*,audio/*,.mkv,.avi,.m4a,.aac,.ogg" />
+            <button id="audioDropZone" type="button" class="audio-drop-zone w-100 text-center" aria-describedby="audioDropHelp">
+                <span class="audio-drop-icon"><i class="fa-solid fa-file-arrow-up"></i></span>
+                <span class="d-block fw-semibold fs-5">Drop a video or audio file here</span>
+                <span id="audioDropHelp" class="d-block small text-body-secondary mt-1">or choose a file from this device · MP4, MOV, WebM, MP3, WAV and more · never uploaded</span>
+            </button>
+
+            <div id="audioEditor" class="d-none">
+                <div class="audio-file-summary d-flex align-items-center gap-3 mt-4">
+                    <span class="audio-file-icon"><i class="fa-solid fa-wave-square"></i></span>
+                    <div class="min-w-0 flex-grow-1">
+                        <div id="audioFileName" class="fw-semibold text-truncate"></div>
+                        <div id="audioFileMeta" class="small text-body-secondary"></div>
+                    </div>
+                    <button id="audioChangeFile" type="button" class="btn btn-sm btn-outline-secondary">Change</button>
+                </div>
+
+                <div class="audio-preview-shell mt-4">
+                    <video id="audioVideoPreview" class="w-100 rounded d-none" controls playsinline></video>
+                    <audio id="audioPreview" class="w-100 d-none" controls></audio>
+                </div>
+
+                <div class="audio-trim-panel mt-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h3 class="h6 mb-1">Trim selection</h3>
+                            <p class="small text-body-secondary mb-0">Drag either handle to set the beginning and end of the exported clip.</p>
+                        </div>
+                        <span id="audioSelectionLength" class="audio-duration-pill">00:00</span>
+                    </div>
+                    <div class="audio-range-wrap" aria-label="Audio trim range">
+                        <div id="audioRangeSelection" class="audio-range-selection"></div>
+                        <input id="audioStartRange" class="audio-range" type="range" value="0" step="0.1" aria-label="Trim start" />
+                        <input id="audioEndRange" class="audio-range" type="range" value="0" step="0.1" aria-label="Trim end" />
+                    </div>
+                    <div class="d-flex justify-content-between small text-body-secondary mt-2">
+                        <span>Start <strong id="audioStartValue" class="text-body">00:00</strong></span>
+                        <span>End <strong id="audioEndValue" class="text-body">00:00</strong></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-end mt-1">
+                    <div class="col-sm-5 col-lg-4">
+                        <label for="audioOutputFormat" class="form-label fw-semibold">Export format</label>
+                        <select id="audioOutputFormat" class="form-select">
+                            <option value="mp3">MP3 · flexible and widely supported</option>
+                            <option value="m4a">M4A · efficient, high quality</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-7 col-lg-8 d-flex justify-content-sm-end">
+                        <button id="audioExportButton" class="btn btn-primary px-4" type="button">
+                            <i class="fa-solid fa-scissors me-2"></i>Export trimmed audio
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="audioStudioMessage" class="alert d-none mt-4 mb-0" role="status"></div>
+        </div>
+    </section>
+</div>
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-audio-studio.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/lib/ffmpeg-wasm/ffmpeg.js" asp-append-version="true"></script>
+    <script src="~/js/pages/page-audio-studio.js" asp-append-version="true"></script>
+}

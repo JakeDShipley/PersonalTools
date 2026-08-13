@@ -12,7 +12,14 @@
     box-shadow: inset 0 0 0 2px rgba(244, 211, 133, .38), 0 .5rem 1rem rgba(42, 28, 16, .18);
     color: #fff8e7;
     padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
 }
+
+.ge-hero::after { content: ""; position: absolute; inset: auto 8% -32px; height: 70px; background: radial-gradient(ellipse at center, rgba(255,191,73,.5), rgba(218,90,25,.18) 35%, transparent 70%); filter: blur(8px); animation: ge-hearth 2.6s ease-in-out infinite alternate; pointer-events: none; }
+.ge-hero > * { position: relative; z-index: 1; }
+@keyframes ge-hearth { from { opacity: .45; transform: scaleX(.84) translateY(5px); } to { opacity: .9; transform: scaleX(1.14) translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .ge-hero::after { animation: none; } }
 
 .ge-kicker, .ge-label, .ge-price-label {
     color: var(--ge-gold);
