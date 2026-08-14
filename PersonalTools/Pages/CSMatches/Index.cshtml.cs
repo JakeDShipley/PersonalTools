@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PersonalTools.Classes;
 using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
 namespace PersonalTools.Pages.CSMatches
@@ -9,18 +11,26 @@ namespace PersonalTools.Pages.CSMatches
         private readonly ICSMatchFuncs _matchFuncs;
         private readonly ICSMatchReferenceData _referenceData;
         private readonly IWebHostEnvironment _env;
+        private readonly IAuthFuncs _auth;
+        private readonly IMapPoolSuggestionFuncs _mapPoolSuggestion;
 
-        public IndexModel(ICSMatchFuncs matchFuncs, ICSMatchReferenceData referenceData, IWebHostEnvironment env)
+        public IndexModel(ICSMatchFuncs matchFuncs, ICSMatchReferenceData referenceData, IWebHostEnvironment env, IAuthFuncs auth, IMapPoolSuggestionFuncs mapPoolSuggestion)
         {
             _matchFuncs = matchFuncs;
             _referenceData = referenceData;
             _env = env;
+            _auth = auth;
+            _mapPoolSuggestion = mapPoolSuggestion;
         }
+
+        private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         public List<CSMatchObj> Matches { get; set; } = new();
         public List<CSMapObj> Maps { get; set; } = new();
         public List<string> GameTypes { get; set; } = new();
         public CSMatchStatsObj Stats { get; set; } = new();
+        public bool HasLinkedSteamId { get; set; }
+        public bool MapPoolSuggestionPending { get; set; }
 
         [BindProperty]
         public string MatchId { get; set; } = string.Empty;
@@ -64,6 +74,8 @@ namespace PersonalTools.Pages.CSMatches
             Maps = await _referenceData.GetMaps();
             GameTypes = await _referenceData.GetGameTypes();
             Stats = await _matchFuncs.GetStats();
+            HasLinkedSteamId = !string.IsNullOrWhiteSpace((await _auth.GetUser(UserId))?.SteamId);
+            MapPoolSuggestionPending = (await _mapPoolSuggestion.GetPendingSuggestion())?.Count > 0;
         }
 
         public async Task<IActionResult> OnPostCreate()
@@ -131,6 +143,14 @@ namespace PersonalTools.Pages.CSMatches
                 TempData["SuccessMessage"] = "Match deleted successfully.";
             }
 
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteAllMatches()
+        {
+            await _matchFuncs.DeleteAllMatches();
+
+            TempData["SuccessMessage"] = "All matches deleted successfully.";
             return RedirectToPage();
         }
 

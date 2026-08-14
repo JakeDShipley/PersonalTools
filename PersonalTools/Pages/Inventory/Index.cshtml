@@ -6,7 +6,7 @@
     <div class="section-spacing"><p class="eyebrow">Counter-Strike 2</p><h1 class="page-title">Steam inventory</h1><p class="page-subtitle">A focused view of a public CS2 inventory, directly from Steam.</p></div>
     <div class="alert alert-light border inventory-signed-in mb-3">
         @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId)) { <span><i class="fa-brands fa-steam me-2"></i>Steam account linked. <a href="?Profile=@Model.LinkedSteamId">View my CS2 inventory</a></span> }
-        else { <span><i class="fa-brands fa-steam me-2"></i><a href="/auth/steam/link">Link your Steam account</a> to view your own inventory without pasting a profile URL.</span> }
+        else { <span><i class="fa-brands fa-steam me-2"></i><a href="/Settings?steamRequired=true">Link your Steam account in Settings</a> to view your own inventory without pasting a profile URL.</span> }
     </div>
     <div class="card inventory-search-card border-0 shadow-sm section-spacing"><div class="card-body p-3 p-lg-4"><form method="get" class="row g-2 align-items-end"><div class="col-12 col-lg"><label asp-for="Profile" class="form-label fw-semibold">Steam profile</label><input asp-for="Profile" class="form-control form-control-lg" placeholder="Profile URL, custom Steam URL, or SteamID64" autocomplete="off" /><div class="form-text">The profile and inventory must be public. Results are cached briefly to treat Steam gently.</div></div><div class="col-12 col-lg-auto"><button class="btn btn-primary btn-lg w-100" type="submit"><i class="fa-brands fa-steam me-2"></i>View inventory</button></div></form></div></div>
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage)) { <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div> }

@@ -26,5 +26,25 @@
   {
     "Name": "Anubis",
     "ImagePath": "/images/cs/maps/anubis.png"
+  },
+  {
+    "Name": "Overpass",
+    "ImagePath": "/images/cs/maps/overpass.png"
+  },
+  {
+    "Name": "Train",
+    "ImagePath": "/images/cs/maps/train.png"
+  },
+  {
+    "Name": "Vertigo",
+    "ImagePath": "/images/cs/maps/vertigo.png"
+  },
+  {
+    "Name": "Office",
+    "ImagePath": "/images/cs/maps/office.png"
+  },
+  {
+    "Name": "Italy",
+    "ImagePath": "/images/cs/maps/italy.png"
   }
 ]

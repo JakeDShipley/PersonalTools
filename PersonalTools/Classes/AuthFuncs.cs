@@ -13,6 +13,7 @@ public interface IAuthFuncs
     Task<bool> IsSessionValid(string sessionId, long userId);
     Task DeleteSession(string sessionId);
     Task LinkSteam(long userId, string steamId);
+    Task UnlinkSteam(long userId);
     Task<AppUser?> GetUser(long userId);
 }
 
@@ -27,6 +28,7 @@ public sealed class AuthFuncs : IAuthFuncs
     public Task<bool> IsSessionValid(string sessionId, long userId) => _data.IsSessionValid(sessionId, userId);
     public Task DeleteSession(string sessionId) => _data.DeleteSession(sessionId);
     public Task LinkSteam(long userId, string steamId) => _data.SetSteamId(userId, steamId);
+    public Task UnlinkSteam(long userId) => _data.ClearSteamId(userId);
     public Task<AppUser?> GetUser(long userId) => _data.GetUserById(userId);
     private static string Hash(string password) { byte[] salt = RandomNumberGenerator.GetBytes(16); byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA512, 32); return $"PBKDF2-SHA512$600000${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}"; }
     private static bool Verify(string password, string stored) { string[] p = stored.Split('$'); if (p.Length != 4 || p[0] != "PBKDF2-SHA512" || !int.TryParse(p[1], out int i)) return false; byte[] expected = Convert.FromBase64String(p[3]); byte[] actual = Rfc2898DeriveBytes.Pbkdf2(password, Convert.FromBase64String(p[2]), i, HashAlgorithmName.SHA512, expected.Length); return CryptographicOperations.FixedTimeEquals(actual, expected); }

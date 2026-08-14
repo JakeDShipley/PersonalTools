@@ -15,6 +15,7 @@
         public int TeamScore { get; set; }
         public int OpponentScore { get; set; }
         public int OvertimeCount { get; set; }
+        public string? LeetifyMatchId { get; set; }
         public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
     }

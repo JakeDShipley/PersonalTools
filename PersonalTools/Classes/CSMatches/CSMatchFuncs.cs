@@ -9,7 +9,9 @@ namespace PersonalTools.Classes.CSMatches
         Task CreateMatch(CSMatchObj match);
         Task UpdateMatch(string matchId, CSMatchObj match);
         Task DeleteMatch(string matchId);
-        Task<CSMatchStatsObj> GetStats();
+        Task DeleteAllMatches();
+        Task ImportMatches(List<CSMatchObj> matches);
+        Task<CSMatchStatsObj> GetStats(IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null);
     }
 
     public class CSMatchFuncs : ICSMatchFuncs
@@ -83,9 +85,44 @@ namespace PersonalTools.Classes.CSMatches
             await _localJsonData.SaveList(FileName, matches);
         }
 
-        public async Task<CSMatchStatsObj> GetStats()
+        public async Task DeleteAllMatches()
+        {
+            await _localJsonData.SaveList(FileName, new List<CSMatchObj>());
+        }
+
+        public async Task ImportMatches(List<CSMatchObj> matches)
+        {
+            if (matches.Count == 0)
+            {
+                return;
+            }
+
+            List<CSMatchObj> existing = await _localJsonData.LoadList<CSMatchObj>(FileName);
+            HashSet<string> existingLeetifyIds = existing
+                .Where(x => !string.IsNullOrWhiteSpace(x.LeetifyMatchId))
+                .Select(x => x.LeetifyMatchId!)
+                .ToHashSet();
+
+            existing.AddRange(matches.Where(m => string.IsNullOrWhiteSpace(m.LeetifyMatchId) || !existingLeetifyIds.Contains(m.LeetifyMatchId!)));
+
+            await _localJsonData.SaveList(FileName, existing);
+        }
+
+        public async Task<CSMatchStatsObj> GetStats(IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null)
         {
             List<CSMatchObj> matches = await GetMatches();
+
+            HashSet<string>? gameTypeFilter = includedGameTypes?.ToHashSet();
+            if (gameTypeFilter is { Count: > 0 })
+            {
+                matches = matches.Where(x => gameTypeFilter.Contains(x.GameType)).ToList();
+            }
+
+            HashSet<string>? mapFilter = includedMaps?.ToHashSet();
+            if (mapFilter is { Count: > 0 })
+            {
+                matches = matches.Where(x => mapFilter.Contains(x.MapName)).ToList();
+            }
 
             CSMatchStatsObj stats = new CSMatchStatsObj();
 

@@ -14,6 +14,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using PersonalTools.Data.CSMatches;
 using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
@@ -102,9 +103,22 @@ builder.Services.AddHttpClient<IMediaExtractorFuncs, MediaExtractorFuncs>(client
 // CSMatches
 builder.Services.AddScoped<ICSMatchFuncs, CSMatchFuncs>();
 builder.Services.AddScoped<ICSMatchReferenceData, CSMatchReferenceData>();
+builder.Services.AddHttpClient<ILeetifyData, LeetifyData>(client =>
+{
+    client.BaseAddress = new Uri("https://api-public.cs-prod.leetify.com/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+});
+builder.Services.AddScoped<ILeetifyFuncs, LeetifyFuncs>();
+builder.Services.AddHttpClient<IMapPoolSuggestionData, MapPoolSuggestionData>(client =>
+{
+    client.BaseAddress = new Uri("https://en.wikipedia.org/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me; contact via GitHub)");
+});
+builder.Services.AddScoped<IMapPoolSuggestionFuncs, MapPoolSuggestionFuncs>();
 
 var app = builder.Build();
-
 
 if (!app.Environment.IsDevelopment())
 {
@@ -151,7 +165,7 @@ app.MapGet("/auth/steam/callback", async (HttpContext context, IHttpClientFactor
     var steamIdMatch = System.Text.RegularExpressions.Regex.Match(identity, @"^https://steamcommunity\.com/openid/id/(\d{17})$");
     if (!response.IsSuccessStatusCode || !verification.Contains("is_valid:true", StringComparison.Ordinal) || !steamIdMatch.Success) return Results.BadRequest("Steam linking could not be verified. Please try again.");
     await auth.LinkSteam(userId, steamIdMatch.Groups[1].Value);
-    return Results.LocalRedirect("/Inventory?Profile=" + Uri.EscapeDataString(steamIdMatch.Groups[1].Value));
+    return Results.LocalRedirect("/Settings");
 });
 
 

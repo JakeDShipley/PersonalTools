@@ -49,6 +49,8 @@ DROP PROCEDURE IF EXISTS sp_auth_session_delete$$
 CREATE PROCEDURE sp_auth_session_delete(IN p_session_id CHAR(32)) DELETE FROM UserSessions WHERE SessionId=p_session_id$$
 DROP PROCEDURE IF EXISTS sp_auth_user_set_steam_id$$
 CREATE PROCEDURE sp_auth_user_set_steam_id(IN p_user_id BIGINT,IN p_steam_id CHAR(17)) UPDATE Users SET SteamId=p_steam_id WHERE UserId=p_user_id$$
+DROP PROCEDURE IF EXISTS sp_auth_user_clear_steam_id$$
+CREATE PROCEDURE sp_auth_user_clear_steam_id(IN p_user_id BIGINT) UPDATE Users SET SteamId=NULL WHERE UserId=p_user_id$$
 DROP PROCEDURE IF EXISTS sp_quick_links_get$$
 CREATE PROCEDURE sp_quick_links_get(IN p_user_id BIGINT) SELECT QuickLinkId,Title,Url,IconClass,UpdatedUtc FROM QuickLinks WHERE UserId=p_user_id ORDER BY Title$$
 DROP PROCEDURE IF EXISTS sp_quick_links_create$$

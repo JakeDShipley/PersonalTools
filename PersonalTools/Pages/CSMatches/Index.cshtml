@@ -5,6 +5,7 @@
 }
 
 <div class="container px-3 px-lg-4">
+    @Html.AntiForgeryToken()
     <div class="row align-items-start gy-3 section-spacing">
         <div class="col-12 col-lg">
             <h1 class="page-title">CS Matches</h1>
@@ -13,9 +14,15 @@
             </p>
         </div>
 
-        <div class="col-12 col-lg-auto d-flex gap-2">
+        <div class="col-12 col-lg-auto d-flex flex-wrap gap-2">
             <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
                 <i class="fa-solid fa-sliders me-1"></i>Edit Stats
+            </button>
+            <button class="btn btn-outline-secondary" type="button" id="fetchLeetifyBtn" data-steam-linked="@Model.HasLinkedSteamId.ToString().ToLowerInvariant()">
+                <i class="fa-solid fa-cloud-arrow-down me-1"></i>Fetch matches from Leetify
+            </button>
+            <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllMatchesModal">
+                <i class="fa-solid fa-trash me-1"></i>Delete all matches
             </button>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
                 <i class="fa-solid fa-plus me-1"></i>Add match
@@ -37,6 +44,14 @@
         </div>
     }
 
+    @if (Model.MapPoolSuggestionPending)
+    {
+        <div class="alert alert-info shadow-sm border-0 section-spacing d-none" id="mapPoolSuggestionBanner">
+            <i class="fa-solid fa-circle-info me-1"></i>
+            The Active Duty map pool may have changed. <a href="/Settings">Review it in Settings</a>.
+        </div>
+    }
+
     @* Stats *@
     <div class="row g-3 section-spacing" id="statsRow">
         <div class="col-6 col-md-3 js-stat" data-stat-key="totalMatches">
@@ -45,7 +60,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
                     <p class="small-muted mb-1">Total Matches</p>
-                    <p class="h5 mb-0">@Model.Stats.TotalMatches</p>
+                    <p class="h5 mb-0 js-stat-value">@Model.Stats.TotalMatches</p>
                 </div>
             </div>
         </div>
@@ -56,7 +71,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
                     <p class="small-muted mb-1">Wins / Losses</p>
-                    <p class="h4 mb-0"><span class="text-success">@Model.Stats.Wins</span> / <span class="text-danger">@Model.Stats.Losses</span></p>
+                    <p class="h4 mb-0 js-stat-value"><span class="text-success">@Model.Stats.Wins</span> / <span class="text-danger">@Model.Stats.Losses</span></p>
                 </div>
             </div>
         </div>
@@ -67,7 +82,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
                     <p class="small-muted mb-1">Total Win Rate</p>
-                    <p class="h4 mb-0">@Model.Stats.WinRate%</p>
+                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRate%</p>
                 </div>
             </div>
         </div>
@@ -78,7 +93,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
                     <p class="small-muted mb-1">Win Rate (CT Start)</p>
-                    <p class="h4 mb-0">@Model.Stats.WinRateCTStart%</p>
+                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRateCTStart%</p>
                 </div>
             </div>
         </div>
@@ -89,7 +104,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
                     <p class="small-muted mb-1">Win Rate (T Start)</p>
-                    <p class="h4 mb-0">@Model.Stats.WinRateTStart%</p>
+                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRateTStart%</p>
                 </div>
             </div>
         </div>
@@ -99,7 +114,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
                     <p class="small-muted mb-1">Overtime Games</p>
-                    <p class="h5 mb-0">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
+                    <p class="h5 mb-0 js-stat-value">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
                 </div>
             </div>
         </div>
@@ -110,7 +125,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
                     <p class="small-muted mb-1">OT Wins / Losses</p>
-                    <p class="h5 mb-0"><span class="text-success">@Model.Stats.OvertimeWins</span> / <span class="text-danger">@Model.Stats.OvertimeLosses</span></p>
+                    <p class="h5 mb-0 js-stat-value"><span class="text-success">@Model.Stats.OvertimeWins</span> / <span class="text-danger">@Model.Stats.OvertimeLosses</span></p>
                 </div>
             </div>
         </div>
@@ -121,7 +136,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
                     <p class="small-muted mb-1">Avg Score Margin</p>
-                    <p class="h5 mb-0">@Model.Stats.AverageScoreMargin</p>
+                    <p class="h5 mb-0 js-stat-value">@Model.Stats.AverageScoreMargin</p>
                 </div>
             </div>
         </div>
@@ -132,7 +147,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
                     <p class="small-muted mb-1">Current Streak</p>
-                    <p class="h5 mb-0 @(Model.Stats.CurrentStreakType == "Win" ? "text-success" : "text-danger")">
+                    <p class="h5 mb-0 js-stat-value @(Model.Stats.CurrentStreakType == "Win" ? "text-success" : "text-danger")">
                         @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
                     </p>
                 </div>
@@ -145,7 +160,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
                     <p class="small-muted mb-1">Best Map</p>
-                    <p class="h5 mb-0">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
+                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
                 </div>
             </div>
         </div>
@@ -156,7 +171,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
                     <p class="small-muted mb-1">Worst Map</p>
-                    <p class="h5 mb-0">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
+                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
                 </div>
             </div>
         </div>
@@ -167,7 +182,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
                     <p class="small-muted mb-1">Best Map (CT Start)</p>
-                    <p class="h5 mb-0">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
+                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
                 </div>
             </div>
         </div>
@@ -178,7 +193,7 @@
                     <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
                        data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
                     <p class="small-muted mb-1">Best Map (T Start)</p>
-                    <p class="h5 mb-0">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
+                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
                 </div>
             </div>
         </div>
@@ -379,17 +394,23 @@
 
                         <div class="col-6">
                             <label class="form-label">Your Team Score</label>
-                            <input asp-for="TeamScore" type="number" min="0" id="addTeamScore" class="form-control js-team-score" />
+                            <input type="number" min="0" name="TeamScore" id="addTeamScore" class="form-control js-team-score" placeholder="e.g. 13" />
                         </div>
 
                         <div class="col-6">
                             <label class="form-label">Opponent Score</label>
-                            <input asp-for="OpponentScore" type="number" min="0" id="addOpponentScore" class="form-control js-opponent-score" />
+                            <input type="number" min="0" name="OpponentScore" id="addOpponentScore" class="form-control js-opponent-score" placeholder="e.g. 7" />
                         </div>
 
                         <div class="col-12 js-ot-wrapper" id="addOtWrapper" style="display: none;">
                             <label class="form-label">Overtime detected — how many overtimes were played?</label>
                             <input asp-for="OvertimeCount" type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" />
+                        </div>
+
+                        <div class="col-12 js-score-warning d-none">
+                            <div class="alert alert-warning mb-0">
+                                This score isn't possible in CS2 &mdash; the losing team would need to have reached at least the previous overtime's tie score for the winning team's score to be this high. Double-check the score before saving.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -455,17 +476,23 @@
 
                         <div class="col-6">
                             <label class="form-label">Your Team Score</label>
-                            <input asp-for="TeamScore" type="number" min="0" id="editTeamScore" class="form-control js-team-score" />
+                            <input type="number" min="0" name="TeamScore" id="editTeamScore" class="form-control js-team-score" />
                         </div>
 
                         <div class="col-6">
                             <label class="form-label">Opponent Score</label>
-                            <input asp-for="OpponentScore" type="number" min="0" id="editOpponentScore" class="form-control js-opponent-score" />
+                            <input type="number" min="0" name="OpponentScore" id="editOpponentScore" class="form-control js-opponent-score" />
                         </div>
 
                         <div class="col-12 js-ot-wrapper" id="editOtWrapper" style="display: none;">
                             <label class="form-label">Overtime detected — how many overtimes were played?</label>
                             <input asp-for="OvertimeCount" type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" />
+                        </div>
+
+                        <div class="col-12 js-score-warning d-none">
+                            <div class="alert alert-warning mb-0">
+                                This score isn't possible in CS2 &mdash; the losing team would need to have reached at least the previous overtime's tie score for the winning team's score to be this high. Double-check the score before saving.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -506,6 +533,35 @@
     </div>
 </div>
 
+@* Delete All Matches Modal *@
+<div class="modal fade" id="deleteAllMatchesModal" tabindex="-1" aria-labelledby="deleteAllMatchesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="deleteAllMatchesModalLabel">Delete all matches</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-3">
+                    This will permanently delete every match you've logged. This action cannot be undone.
+                </p>
+
+                <form method="post" asp-page-handler="DeleteAllMatches" id="deleteAllMatchesForm">
+                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="deleteAllMatchesForm" data-hold-modal="deleteAllMatchesModal">
+                        <span class="hold-delete-fill"></span>
+                        <span class="hold-delete-label position-relative">Hold to delete all matches</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @* Add New Map Modal *@
 <div class="modal fade" id="addMapModal" tabindex="-1" aria-labelledby="addMapModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -534,6 +590,73 @@
                     <button class="btn btn-primary" type="submit">Add map</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+@* Fetch Matches Modal *@
+<div class="modal fade" id="fetchLeetifyModal" tabindex="-1" aria-labelledby="fetchLeetifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="fetchLeetifyModalLabel">Fetch matches from Leetify</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div id="leetifyLoading" class="text-center py-4">
+                    <i class="fa-solid fa-circle-notch fa-spin me-2"></i>Loading matches from Leetify&hellip;
+                </div>
+
+                <div id="leetifyError" class="alert alert-danger d-none"></div>
+
+                <div id="leetifyContent" class="d-none">
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small-muted mb-1">Game types</label>
+                            <div id="leetifyGameTypeFilters" class="d-flex flex-wrap gap-3"></div>
+                        </div>
+                        <div class="col-8 col-md-4">
+                            <p class="small-muted mb-0">
+                                <span id="leetifyFetchedCount">0</span> matches fetched
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="Leetify's public API only ever returns your 100 most recent matches — older matches can't be fetched here."></i>
+                            </p>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="leetifySelectAll" />
+                                <label class="form-check-label small-muted" for="leetifySelectAll">All</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 2rem;"></th>
+                                    <th>Date</th>
+                                    <th>Map</th>
+                                    <th>Game type</th>
+                                    <th>Side</th>
+                                    <th>Score</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leetifyMatchRows"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="small-muted mb-0 d-none" id="leetifyEmptyMessage">No matches found for the selected filters.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" type="button" id="leetifyImportBtn" disabled>
+                    Import selected (<span id="leetifySelectedCount">0</span>)
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -661,6 +784,29 @@
                     </div>
                     <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
                 </div>
+
+                <hr class="my-3" />
+
+                <p class="small-muted mb-3">Choose which matches count toward the stats above.</p>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input js-stat-filter-toggle" type="checkbox" data-filter-key="activeDutyOnly" id="statFilter-activeDutyOnly">
+                        <label class="form-check-label" for="statFilter-activeDutyOnly">Active Duty maps only</label>
+                    </div>
+                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Only count matches played on a map currently in the competitive Active Duty pool (managed in Settings)."></i>
+                </div>
+
+                <p class="small-muted mb-2 mt-3">Game types included</p>
+                @foreach (var gt in Model.GameTypes)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-gametype-toggle" type="checkbox" data-gametype="@gt" id="statFilter-gt-@gt" checked>
+                            <label class="form-check-label" for="statFilter-gt-@gt">@gt</label>
+                        </div>
+                    </div>
+                }
             </div>
 
             <div class="modal-footer">
@@ -719,13 +865,22 @@
         });
 
          function updateOvertimeVisibility($form) {
-            const team = parseInt($form.find('.js-team-score').val()) || 0;
-            const opponent = parseInt($form.find('.js-opponent-score').val()) || 0;
+            const teamRaw = $form.find('.js-team-score').val();
+            const opponentRaw = $form.find('.js-opponent-score').val();
+            const incomplete = teamRaw === '' || opponentRaw === '';
+            const team = parseInt(teamRaw) || 0;
+            const opponent = parseInt(opponentRaw) || 0;
             const total = team + opponent;
             const $wrapper = $form.find('.js-ot-wrapper');
             const $otInput = $form.find('.js-ot-count');
+            const valid = !incomplete && isPlausibleScore(team, opponent);
 
-            if (total > 24) {
+            // While either field is still blank, don't warn — there's nothing implausible about an
+            // unfinished form — but the Save button stays disabled until both scores are entered.
+            $form.find('.js-score-warning').toggleClass('d-none', incomplete || valid);
+            $form.find('button[type="submit"]').prop('disabled', incomplete || !valid);
+
+            if (total > 24 && valid) {
                 $wrapper.show();
                 $otInput.prop('disabled', false);
                 if (!$otInput.val() || $otInput.val() == 0) {
@@ -838,6 +993,282 @@
                 bootstrap.Modal.getOrCreateInstance($(csMatchOriginModalId)[0]).show();
                 csMatchOriginModalId = null;
             }
+        });
+
+        // Fetch matches from Leetify
+        const leetifyModal = document.getElementById('fetchLeetifyModal');
+
+        $('#fetchLeetifyBtn').on('click', function () {
+            if ($(this).data('steam-linked') !== true) {
+                window.location.href = '/Settings?steamRequired=true';
+                return;
+            }
+
+            bootstrap.Modal.getOrCreateInstance(leetifyModal).show();
+        });
+
+        $(leetifyModal).on('show.bs.modal', function () {
+            $('#leetifyLoading').removeClass('d-none');
+            $('#leetifyError').addClass('d-none');
+            $('#leetifyContent').addClass('d-none');
+            $('#leetifyImportBtn').prop('disabled', true);
+            $('#leetifySelectedCount').text('0');
+            $('#leetifySelectAll').prop('checked', false);
+
+            $.getJSON('/api/csmatches/leetify')
+                .done(function (matches) {
+                    renderLeetifyMatches(matches);
+                    $('#leetifyLoading').addClass('d-none');
+                    $('#leetifyContent').removeClass('d-none');
+                })
+                .fail(function (xhr) {
+                    $('#leetifyLoading').addClass('d-none');
+                    $('#leetifyError').text(xhr.responseJSON?.message || 'Could not load matches from Leetify.').removeClass('d-none');
+                });
+        });
+
+        function renderLeetifyMatches(matches) {
+            const $rows = $('#leetifyMatchRows').empty();
+            const $gameTypeFilters = $('#leetifyGameTypeFilters').empty();
+            const gameTypes = [...new Set(matches.map(m => m.gameType))];
+
+            $('#leetifyFetchedCount').text(matches.length);
+
+            gameTypes.forEach(gt => {
+                const id = 'leetifyGtFilter-' + gt.replace(/\s+/g, '');
+                $gameTypeFilters.append(
+                    $('<div class="form-check form-check-inline mb-0">').append(
+                        $('<input class="form-check-input leetify-gt-filter" type="checkbox" checked>').attr('id', id).data('gametype', gt),
+                        $('<label class="form-check-label">').attr('for', id).text(gt)
+                    )
+                );
+            });
+
+            matches.forEach(match => {
+                const isWin = match.teamScore > match.opponentScore;
+
+                const $row = $('<tr>').attr('data-gametype', match.gameType);
+
+                const $checkbox = $('<input type="checkbox" class="form-check-input leetify-match-check">')
+                    .prop('disabled', match.alreadyImported)
+                    .val(match.leetifyMatchId);
+
+                $row.append(
+                    $('<td>').append($checkbox),
+                    $('<td>').text(new Date(match.playedAtUtc).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })),
+                    $('<td>').text(match.mapName),
+                    $('<td>').text(match.gameType),
+                    $('<td>').text(match.startSide),
+                    $('<td>').text(`${match.teamScore} - ${match.opponentScore}`),
+                    $('<td>').append(
+                        match.alreadyImported
+                            ? $('<span class="badge text-bg-secondary">Already added</span>')
+                            : $('<span>').addClass(isWin ? 'text-success' : 'text-danger').text(isWin ? 'Win' : 'Loss')
+                    )
+                );
+
+                if (match.alreadyImported) {
+                    $row.addClass('leetify-row-imported');
+                }
+
+                $rows.append($row);
+            });
+
+            applyLeetifyFilters();
+        }
+
+        function applyLeetifyFilters() {
+            const activeGameTypes = $('.leetify-gt-filter:checked').map(function () { return $(this).data('gametype'); }).get();
+            let visible = 0;
+
+            $('#leetifyMatchRows tr').each(function () {
+                const $row = $(this);
+                const matches = activeGameTypes.includes($row.data('gametype'));
+
+                $row.toggle(matches);
+
+                if (matches) {
+                    visible++;
+                }
+            });
+
+            $('#leetifyEmptyMessage').toggleClass('d-none', visible !== 0);
+            updateLeetifySelectedCount();
+        }
+
+        $(document).on('change', '.leetify-gt-filter', applyLeetifyFilters);
+
+        $(document).on('change', '#leetifySelectAll', function () {
+            const checked = $(this).is(':checked');
+            $('#leetifyMatchRows tr:visible .leetify-match-check:not(:disabled)').prop('checked', checked);
+            updateLeetifySelectedCount();
+        });
+
+        $(document).on('change', '.leetify-match-check', updateLeetifySelectedCount);
+
+        function updateLeetifySelectedCount() {
+            const count = $('.leetify-match-check:checked').length;
+            $('#leetifySelectedCount').text(count);
+            $('#leetifyImportBtn').prop('disabled', count === 0);
+        }
+
+        $('#leetifyImportBtn').on('click', function () {
+            const ids = $('.leetify-match-check:checked').map(function () { return $(this).val(); }).get();
+
+            if (!ids.length) {
+                return;
+            }
+
+            const $btn = $(this).prop('disabled', true);
+
+            $.ajax({
+                url: '/api/csmatches/leetify/import',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() },
+                data: JSON.stringify(ids)
+            }).done(function () {
+                window.location.reload();
+            }).fail(function (xhr) {
+                $('#leetifyError').text(xhr.responseJSON?.message || 'Could not import the selected matches.').removeClass('d-none');
+                $btn.prop('disabled', false);
+            });
+        });
+
+        // Edit Stats: game type / Active Duty filters
+        const STAT_FILTER_KEY = 'csMatchesStatFilters';
+
+        function loadStatFilters() {
+            try {
+                const raw = localStorage.getItem(STAT_FILTER_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveStatFilters(filters) {
+            localStorage.setItem(STAT_FILTER_KEY, JSON.stringify(filters));
+        }
+
+        function applyStatFilterInputs() {
+            const filters = loadStatFilters();
+            $('#statFilter-activeDutyOnly').prop('checked', filters.activeDutyOnly === true);
+            $('.js-stat-gametype-toggle').each(function () {
+                const gt = $(this).data('gametype');
+                const excluded = Array.isArray(filters.excludedGameTypes) && filters.excludedGameTypes.includes(gt);
+                $(this).prop('checked', !excluded);
+            });
+        }
+
+        function renderStats(stats) {
+            $('.js-stat[data-stat-key="totalMatches"] .js-stat-value').text(stats.totalMatches);
+            $('.js-stat[data-stat-key="winsLosses"] .js-stat-value').html(`<span class="text-success">${stats.wins}</span> / <span class="text-danger">${stats.losses}</span>`);
+            $('.js-stat[data-stat-key="totalWinRate"] .js-stat-value').text(stats.winRate + '%');
+            $('.js-stat[data-stat-key="winRateCT"] .js-stat-value').text(stats.winRateCTStart + '%');
+            $('.js-stat[data-stat-key="winRateT"] .js-stat-value').text(stats.winRateTStart + '%');
+            $('.js-stat[data-stat-key="overtimeGames"] .js-stat-value').text(`${stats.overtimeGames} (${stats.overtimeGamePercentage}%)`);
+            $('.js-stat[data-stat-key="otWinLoss"] .js-stat-value').html(`<span class="text-success">${stats.overtimeWins}</span> / <span class="text-danger">${stats.overtimeLosses}</span>`);
+            $('.js-stat[data-stat-key="avgScoreMargin"] .js-stat-value').text(stats.averageScoreMargin);
+
+            $('.js-stat[data-stat-key="currentStreak"] .js-stat-value')
+                .removeClass('text-success text-danger')
+                .addClass(stats.currentStreakType === 'Win' ? 'text-success' : 'text-danger')
+                .text(stats.currentStreak > 0 ? `${stats.currentStreak} ${stats.currentStreakType}${stats.currentStreak > 1 ? 's' : ''}` : '-');
+
+            const mapStat = (key, name, rate) => $('.js-stat[data-stat-key="' + key + '"] .js-stat-value').text(name ? `${name} (${rate}%)` : '-');
+            mapStat('bestMap', stats.bestMap, stats.bestMapWinRate);
+            mapStat('worstMap', stats.worstMap, stats.worstMapWinRate);
+            mapStat('bestMapCT', stats.bestMapCTStart, stats.bestMapCTStartWinRate);
+            mapStat('bestMapT', stats.bestMapTStart, stats.bestMapTStartWinRate);
+        }
+
+        const EMPTY_STATS = {
+            totalMatches: 0, wins: 0, losses: 0, winRate: 0, winRateCTStart: 0, winRateTStart: 0,
+            bestMap: null, bestMapWinRate: 0, worstMap: null, worstMapWinRate: 0,
+            bestMapCTStart: null, bestMapCTStartWinRate: 0, bestMapTStart: null, bestMapTStartWinRate: 0,
+            overtimeGames: 0, overtimeGamePercentage: 0, overtimeWins: 0, overtimeLosses: 0,
+            currentStreak: 0, currentStreakType: '', averageScoreMargin: 0
+        };
+
+        function refreshStats() {
+            const activeDutyOnly = $('#statFilter-activeDutyOnly').is(':checked');
+            const includedGameTypes = $('.js-stat-gametype-toggle:checked').map(function () { return $(this).data('gametype'); }).get();
+
+            $('#mapPoolSuggestionBanner').toggleClass('d-none', !activeDutyOnly);
+
+            if (includedGameTypes.length === 0) {
+                renderStats(EMPTY_STATS);
+                return;
+            }
+
+            let query = '?activeDutyOnly=' + activeDutyOnly;
+            includedGameTypes.forEach(gt => query += '&gameTypes=' + encodeURIComponent(gt));
+
+            $.getJSON('/api/csmatches/stats' + query).done(renderStats);
+        }
+
+        $(document).on('change', '#statFilter-activeDutyOnly, .js-stat-gametype-toggle', function () {
+            saveStatFilters({
+                activeDutyOnly: $('#statFilter-activeDutyOnly').is(':checked'),
+                excludedGameTypes: $('.js-stat-gametype-toggle:not(:checked)').map(function () { return $(this).data('gametype'); }).get()
+            });
+            refreshStats();
+        });
+
+        applyStatFilterInputs();
+
+        const initialStatFilters = loadStatFilters();
+        if (initialStatFilters.activeDutyOnly || (Array.isArray(initialStatFilters.excludedGameTypes) && initialStatFilters.excludedGameTypes.length)) {
+            refreshStats();
+        } else {
+            $('#mapPoolSuggestionBanner').addClass('d-none');
+        }
+
+        // Match score plausibility check: a team can only pass a win threshold (13, then +3 per
+        // overtime) if the match actually reached the tied score that forces that overtime, so the
+        // loser must have at least reached the previous threshold. This still allows any legitimate
+        // early-ended (forfeit/disconnect) score, since those never exceed a threshold without
+        // reaching the required tie first — e.g. 18-6 is impossible outright (18 skips past the
+        // 16 threshold without the loser reaching the required 15), but 14-12 (a forfeit mid-overtime)
+        // is fine.
+        function isPlausibleScore(a, b) {
+            const winner = Math.max(a, b);
+            const loser = Math.min(a, b);
+
+            if (winner === loser) {
+                return false; // a completed match can never end tied, including 0-0
+            }
+
+            let threshold = 13;
+            let minLoserForThreshold = 12;
+
+            while (winner > threshold) {
+                if (loser < minLoserForThreshold) {
+                    return false;
+                }
+
+                threshold += 3;
+                minLoserForThreshold += 3;
+            }
+
+            return true;
+        }
+
+        $('.js-match-form').on('submit', function (e) {
+            const $form = $(this);
+            const teamRaw = $form.find('.js-team-score').val();
+            const opponentRaw = $form.find('.js-opponent-score').val();
+
+            // Safety net — the Save button is disabled while a score is missing or implausible, so
+            // this should never actually trigger, but block the submit anyway just in case.
+            if (teamRaw === '' || opponentRaw === '' || !isPlausibleScore(parseInt(teamRaw) || 0, parseInt(opponentRaw) || 0)) {
+                e.preventDefault();
+            }
+        });
+
+        $('#addMatchModal, #editMatchModal').on('hidden.bs.modal', function () {
+            updateOvertimeVisibility($(this).find('.js-match-form'));
         });
     </script>
 }

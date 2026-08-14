@@ -13,6 +13,7 @@ public interface IAuthData
     Task<bool> IsSessionValid(string sessionId, long userId);
     Task DeleteSession(string sessionId);
     Task SetSteamId(long userId, string steamId);
+    Task ClearSteamId(long userId);
 }
 
 public sealed class AuthData : IAuthData
@@ -27,6 +28,7 @@ public sealed class AuthData : IAuthData
     public async Task<bool> IsSessionValid(string sessionId, long userId) => await _database.GetScalarSP<int>("sp_auth_session_valid", Parameters(("p_session_id", sessionId), ("p_user_id", userId))) == 1;
     public async Task DeleteSession(string sessionId) => await _database.ExecuteSP("sp_auth_session_delete", Parameters(("p_session_id", sessionId)));
     public async Task SetSteamId(long userId, string steamId) => await _database.ExecuteSP("sp_auth_user_set_steam_id", Parameters(("p_user_id", userId), ("p_steam_id", steamId)));
+    public async Task ClearSteamId(long userId) => await _database.ExecuteSP("sp_auth_user_clear_steam_id", Parameters(("p_user_id", userId)));
     private static MySqlParameter[] Parameters(params (string Name, object Value)[] values) => values.Select(value => new MySqlParameter(value.Name, value.Value)).ToArray();
     private static AppUser MapUser(MySqlDataReader reader) => new() { UserId = reader.GetInt64("UserId"), Email = reader.GetString("Email"), DisplayName = reader.GetString("DisplayName"), PasswordHash = reader.GetString("PasswordHash"), IsActive = reader.GetBoolean("IsActive"), SteamId = reader.IsDBNull(reader.GetOrdinal("SteamId")) ? null : reader.GetString("SteamId") };
 }
