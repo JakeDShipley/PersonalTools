@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonalTools.Classes;
+using PersonalTools.Entities;
 using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
 
@@ -12,21 +13,25 @@ public sealed class IndexModel : PageModel
     private readonly IAuthFuncs _auth;
     private readonly ICSMatchReferenceData _referenceData;
     private readonly IMapPoolSuggestionFuncs _mapPoolSuggestion;
+    private readonly IAppSettingsFuncs _settings;
 
     public IndexModel(
         IAuthFuncs auth,
         ICSMatchReferenceData referenceData,
-        IMapPoolSuggestionFuncs mapPoolSuggestion)
+        IMapPoolSuggestionFuncs mapPoolSuggestion,
+        IAppSettingsFuncs settings)
     {
         _auth = auth;
         _referenceData = referenceData;
         _mapPoolSuggestion = mapPoolSuggestion;
+        _settings = settings;
     }
 
     public string? LinkedSteamId { get; private set; }
     public List<CSMapObj> AllMaps { get; private set; } = [];
     public List<string> ActiveDutyPool { get; private set; } = [];
     public List<string>? PendingMapPoolSuggestion { get; private set; }
+    public List<AppSettingView> Settings { get; private set; } = [];
 
     [BindProperty(SupportsGet = true)]
     public bool SteamRequired { get; set; }
@@ -34,10 +39,7 @@ public sealed class IndexModel : PageModel
     [BindProperty]
     public List<string> SelectedActiveDutyMaps { get; set; } = [];
 
-    [BindProperty]
-    public string ManualSteamId { get; set; } = string.Empty;
-
-    private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task OnGet()
     {
@@ -45,27 +47,13 @@ public sealed class IndexModel : PageModel
         AllMaps = await _referenceData.GetMaps();
         ActiveDutyPool = await _referenceData.GetActiveDutyPool();
         PendingMapPoolSuggestion = await _mapPoolSuggestion.GetPendingSuggestion();
+        Settings = await _settings.Get(UserId);
     }
 
     public async Task<IActionResult> OnPostUnlinkSteam()
     {
         await _auth.UnlinkSteam(UserId);
         TempData["SuccessMessage"] = "Steam account unlinked.";
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostLinkSteamManually()
-    {
-        string steamId = ManualSteamId.Trim();
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(steamId, "^7656\\d{13}$"))
-        {
-            TempData["ErrorMessage"] = "Enter a valid 17-digit SteamID64.";
-            return RedirectToPage();
-        }
-
-        await _auth.LinkSteam(UserId, steamId);
-        TempData["SuccessMessage"] = "SteamID added.";
         return RedirectToPage();
     }
 

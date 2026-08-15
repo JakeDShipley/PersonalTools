@@ -9,10 +9,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using PersonalTools.Data.CSMatches;
 using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Local;
@@ -21,18 +23,47 @@ using PersonalTools.Data;
 using PersonalTools.Classes.Monitoring;
 using PersonalTools.Data.Monitoring;
 using PersonalTools.Hubs;
+using PersonalTools.Classes.CSStats;
+using PersonalTools.Data.CSStats;
+using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Console output is captured by Visual Studio locally and systemd in production.
+// Avoid the Windows Event Log provider, which can throw when the current account
+// has no permission to register or write its event source.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// Keep authentication and protected user settings readable across restarts.
+// Never put the key ring in the deployed application directory: production files
+// are owned separately from the account that runs the service.
+string defaultDataProtectionPath = OperatingSystem.IsWindows()
+    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PersonalTools", "DataProtection-Keys")
+    : "/var/lib/personaltools/data-protection-keys";
+string dataProtectionPath = builder.Configuration["DataProtection:KeyDirectory"] ?? defaultDataProtectionPath;
+Directory.CreateDirectory(dataProtectionPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+    .SetApplicationName("PersonalTools");
+
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
-builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IMariaDbDataAccess, MariaDbDataAccess>();
 builder.Services.AddScoped<IAuthData, AuthData>();
 builder.Services.AddScoped<IAuthFuncs, AuthFuncs>();
+builder.Services.AddScoped<IAppSettingsData, AppSettingsData>();
+builder.Services.AddScoped<IAppSettingsFuncs, AppSettingsFuncs>();
 builder.Services.AddScoped<IQuickLinksData, QuickLinksData>();
 builder.Services.AddScoped<IQuickLinksFuncs, QuickLinksFuncs>();
+builder.Services.AddScoped<IDashboardWidgetOrderData, DashboardWidgetOrderData>();
+builder.Services.AddScoped<IDashboardWidgetOrderFuncs, DashboardWidgetOrderFuncs>();
+builder.Services.AddScoped<IDashboardWeatherData, DashboardWeatherData>();
+builder.Services.AddScoped<IDashboardWeatherFuncs, DashboardWeatherFuncs>();
 builder.Services.AddScoped<INotesData, NotesData>();
 builder.Services.AddScoped<ITrackedSkinsData, TrackedSkinsData>();
 builder.Services.AddSingleton<IServerMonitorData, ServerMonitorData>();
@@ -54,7 +85,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         {
             string? userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
             string? sessionId = context.Principal?.FindFirstValue("session_id");
-            if (!long.TryParse(userId, out long id) || string.IsNullOrWhiteSpace(sessionId) || !await context.HttpContext.RequestServices.GetRequiredService<IAuthFuncs>().IsSessionValid(sessionId, id)) context.RejectPrincipal();
+            if (!Guid.TryParse(userId, out Guid id) || !Guid.TryParse(sessionId, out Guid parsedSessionId) || !await context.HttpContext.RequestServices.GetRequiredService<IAuthFuncs>().IsSessionValid(parsedSessionId, id)) context.RejectPrincipal();
         };
     });
 builder.Services.AddAuthorization(options => options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
@@ -68,6 +99,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // Dashboard
 builder.Services.AddScoped<IDashboardFuncs, DashboardFuncs>();
 
+// Storage
+builder.Services.AddScoped<ILocalJsonData, LocalJsonData>();
 
 // Skins
 builder.Services.AddHttpClient<ICs2SkinData, Cs2SkinData>();
@@ -118,8 +151,27 @@ builder.Services.AddHttpClient<ILeetifyData, LeetifyData>(client =>
     client.BaseAddress = new Uri("https://api-public.cs-prod.leetify.com/");
     client.Timeout = TimeSpan.FromSeconds(20);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+    string? apiKey = builder.Configuration["Leetify:ApiKey"];
+    if (!string.IsNullOrWhiteSpace(apiKey)) client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 });
 builder.Services.AddScoped<ILeetifyFuncs, LeetifyFuncs>();
+builder.Services.AddHttpClient<ILeetifyProfileData, LeetifyProfileData>(client =>
+{
+    client.BaseAddress = new Uri("https://api-public.cs-prod.leetify.com/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+    string? apiKey = builder.Configuration["Leetify:ApiKey"];
+    if (!string.IsNullOrWhiteSpace(apiKey)) client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+});
+builder.Services.AddScoped<ICSStatsFuncs, CSStatsFuncs>();
+builder.Services.AddScoped<IReportedPlayersData, ReportedPlayersData>();
+builder.Services.AddScoped<IReportedPlayersFuncs, ReportedPlayersFuncs>();
+builder.Services.AddHttpClient<IAccountStandingData, AccountStandingData>(client =>
+{
+    client.BaseAddress = new Uri("https://api.steampowered.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+});
 builder.Services.AddHttpClient<IMapPoolSuggestionData, MapPoolSuggestionData>(client =>
 {
     client.BaseAddress = new Uri("https://en.wikipedia.org/");
@@ -165,7 +217,7 @@ app.MapGet("/auth/steam/callback", async (HttpContext context, IHttpClientFactor
     string savedState = context.Request.Cookies["PersonalTools.SteamLinkState"] ?? string.Empty;
     context.Response.Cookies.Delete("PersonalTools.SteamLinkState", new CookieOptions { Secure = context.Request.IsHttps, SameSite = SameSiteMode.Lax });
     if (string.IsNullOrEmpty(state) || string.IsNullOrEmpty(savedState) || !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(state), Encoding.UTF8.GetBytes(savedState))) return Results.BadRequest("Steam linking could not be verified. Please try again.");
-    if (!long.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out long userId)) return Results.Challenge();
+    if (!Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out Guid userId)) return Results.Challenge();
     Dictionary<string, string> parameters = context.Request.Query.Where(x => x.Key.StartsWith("openid.", StringComparison.Ordinal)).ToDictionary(x => x.Key, x => x.Value.ToString());
     parameters["openid.mode"] = "check_authentication";
     using HttpClient client = clientFactory.CreateClient();

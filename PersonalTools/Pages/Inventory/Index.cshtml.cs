@@ -17,7 +17,7 @@ public sealed class IndexModel : PageModel
 
     public async Task OnGet()
     {
-        if (long.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out long userId))
+        if (Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out Guid userId))
             LinkedSteamId = (await _auth.GetUser(userId))?.SteamId;
     }
 }

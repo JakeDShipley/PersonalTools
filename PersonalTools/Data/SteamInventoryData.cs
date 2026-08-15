@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Xml.Linq;
+using Microsoft.Extensions.Caching.Memory;
 using PersonalTools.Entities;
 
 namespace PersonalTools.Data;
@@ -7,6 +9,7 @@ public interface ISteamInventoryData
 {
     Task<string> ResolveSteamId(string profileReference, CancellationToken cancellationToken = default);
     Task<SteamProfileLookupResult> ResolveProfile(string profileReference, CancellationToken cancellationToken = default);
+    Task<SteamPublicProfile?> GetPublicProfile(string steamId, CancellationToken cancellationToken = default);
     Task<SteamInventoryResult> LoadCs2Inventory(string steamId, CancellationToken cancellationToken = default);
 }
 
@@ -17,8 +20,13 @@ public sealed class SteamInventoryData : ISteamInventoryData
     private static readonly SemaphoreSlim RequestGate = new(1, 1);
     private static DateTime LastRequestUtc = DateTime.MinValue;
     private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cache;
 
-    public SteamInventoryData(HttpClient httpClient) => _httpClient = httpClient;
+    public SteamInventoryData(HttpClient httpClient, IMemoryCache cache)
+    {
+        _httpClient = httpClient;
+        _cache = cache;
+    }
 
     public async Task<string> ResolveSteamId(string profileReference, CancellationToken cancellationToken = default)
     {
@@ -100,6 +108,38 @@ public sealed class SteamInventoryData : ISteamInventoryData
             ProfileUrl = $"{SteamCommunity}profiles/{steamId}",
             Items = items.OrderBy(item => item.Name).ToList()
         };
+    }
+
+    public async Task<SteamPublicProfile?> GetPublicProfile(string steamId, CancellationToken cancellationToken = default)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(steamId, "^7656\\d{13}$")) return null;
+        string cacheKey = $"steam-public-profile:{steamId}";
+        if (_cache.TryGetValue(cacheKey, out SteamPublicProfile? cachedProfile)) return cachedProfile;
+
+        try
+        {
+            string xml = await GetStringWithPacing(new Uri($"{SteamCommunity}profiles/{steamId}/?xml=1"), cancellationToken);
+            XDocument document = XDocument.Parse(xml, LoadOptions.None);
+            XElement? profile = document.Root;
+            if (profile is null) return null;
+
+            SteamPublicProfile result = new()
+            {
+                SteamId = profile.Element("steamID64")?.Value.Trim() ?? steamId,
+                DisplayName = profile.Element("steamID")?.Value.Trim() ?? string.Empty,
+                AvatarUrl = profile.Element("avatarFull")?.Value.Trim() ?? string.Empty
+            };
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(30));
+            return result;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static SteamInventoryItem MapItem(JsonElement asset, JsonElement description)

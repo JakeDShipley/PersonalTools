@@ -5,10 +5,10 @@ namespace PersonalTools.Data;
 
 public interface ITrackedSkinsData
 {
-    Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default);
-    Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
-    Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
-    Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default);
+    Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default);
+    Task CreateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task UpdateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task DeleteSkin(Guid userId, Guid skinId, CancellationToken cancellationToken = default);
 }
 
 public sealed class TrackedSkinsData : ITrackedSkinsData
@@ -16,19 +16,19 @@ public sealed class TrackedSkinsData : ITrackedSkinsData
     private readonly IMariaDbDataAccess _database;
     public TrackedSkinsData(IMariaDbDataAccess database) => _database = database;
 
-    public Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default) =>
+    public Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default) =>
         _database.GetBulkDataSP("sp_tracked_skins_get", Map, Parameters(("p_user_id", userId)), cancellationToken);
 
-    public async Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default) =>
+    public async Task CreateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default) =>
         await _database.ExecuteSP("sp_tracked_skins_create", WriteParameters(userId, skin), cancellationToken);
 
-    public async Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default) =>
+    public async Task UpdateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default) =>
         await _database.ExecuteSP("sp_tracked_skins_update", WriteParameters(userId, skin), cancellationToken);
 
-    public async Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default) =>
+    public async Task DeleteSkin(Guid userId, Guid skinId, CancellationToken cancellationToken = default) =>
         await _database.ExecuteSP("sp_tracked_skins_delete", Parameters(("p_user_id", userId), ("p_skin_id", skinId.ToString("D"))), cancellationToken);
 
-    private static MySqlParameter[] WriteParameters(long userId, SkinObj skin) => Parameters(
+    private static MySqlParameter[] WriteParameters(Guid userId, SkinObj skin) => Parameters(
         ("p_user_id", userId),
         ("p_skin_id", skin.SkinId.ToString("D")),
         ("p_name", skin.Name),
@@ -42,7 +42,7 @@ public sealed class TrackedSkinsData : ITrackedSkinsData
         ("p_notes", skin.Notes));
 
     private static MySqlParameter[] Parameters(params (string Name, object Value)[] values) =>
-        values.Select(value => new MySqlParameter(value.Name, value.Value)).ToArray();
+        values.Select(value => new MySqlParameter(value.Name, value.Value is Guid id ? id.ToString("D") : value.Value)).ToArray();
 
     private static SkinObj Map(MySqlDataReader reader) => new()
     {

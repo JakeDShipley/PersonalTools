@@ -15,7 +15,7 @@ public sealed class SkinsController : ControllerBase
     private readonly ISkinFuncs _skins;
     private readonly ICs2SkinData _catalogue;
     public SkinsController(ISkinFuncs skins, ICs2SkinData catalogue) { _skins = skins; _catalogue = catalogue; }
-    private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<List<SkinObj>>> Get(CancellationToken cancellationToken) => Ok(await _skins.GetSkins(UserId, cancellationToken));

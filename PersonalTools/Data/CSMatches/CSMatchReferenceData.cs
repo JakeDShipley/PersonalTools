@@ -1,4 +1,6 @@
 ﻿using System.Text.Json;
+using MySqlConnector;
+using PersonalTools.Data;
 using global::PersonalTools.Entities.CSMatches;
 
 namespace PersonalTools.Classes.CSMatches
@@ -16,13 +18,13 @@ namespace PersonalTools.Classes.CSMatches
     {
         private const string MapsFileName = "Maps.json";
         private const string GameTypesFileName = "GameType.json";
-        private const string ActiveDutyPoolFileName = "ActiveDutyPool.json";
-
         private readonly IWebHostEnvironment _env;
+        private readonly IMariaDbDataAccess _database;
 
-        public CSMatchReferenceData(IWebHostEnvironment env)
+        public CSMatchReferenceData(IWebHostEnvironment env, IMariaDbDataAccess database)
         {
             _env = env;
+            _database = database;
         }
 
         private string FolderPath => Path.Combine(_env.ContentRootPath, "Data", "CSMatches");
@@ -78,29 +80,24 @@ namespace PersonalTools.Classes.CSMatches
 
         public async Task<List<string>> GetActiveDutyPool()
         {
-            string filePath = Path.Combine(FolderPath, ActiveDutyPoolFileName);
-
-            if (!File.Exists(filePath))
-            {
-                return new List<string>();
-            }
-
-            string json = await File.ReadAllTextAsync(filePath);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return new List<string>();
-            }
-
-            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            return await _database.GetBulkDataSP(
+                "sp_cs_active_duty_maps_get",
+                reader => reader.GetString("MapName"));
         }
 
         public async Task SetActiveDutyPool(List<string> mapNames)
         {
-            string filePath = Path.Combine(FolderPath, ActiveDutyPoolFileName);
-            string json = JsonSerializer.Serialize(mapNames, new JsonSerializerOptions { WriteIndented = true });
+            HashSet<string> knownMaps = (await GetMaps())
+                .Select(map => map.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            List<string> selectedMaps = mapNames
+                .Where(map => !string.IsNullOrWhiteSpace(map) && knownMaps.Contains(map))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            await File.WriteAllTextAsync(filePath, json);
+            await _database.ExecuteSP(
+                "sp_cs_active_duty_maps_set",
+                [new MySqlParameter("p_map_names", JsonSerializer.Serialize(selectedMaps))]);
         }
     }
 }

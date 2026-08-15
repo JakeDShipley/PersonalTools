@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Notes";
 
-    string successMessage = TempData["SuccessMessage"]?.ToString() ?? Model.SuccessMessage;
 }
 
 <div class="container px-3 px-lg-4">
@@ -36,12 +35,12 @@
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(successMessage))
+    @await Html.PartialAsync("_ToolGuide", new[]
     {
-        <div class="alert alert-success shadow-sm border-0 section-spacing">
-            @successMessage
-        </div>
-    }
+        "Add a note, then choose card or list view to suit the task.",
+        "Select Custom order, then press and hold a note before dragging it into place.",
+        "Open a note to edit it, or hold its delete control to remove it safely."
+    })
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
@@ -52,14 +51,14 @@
 
     @if (Model.Notes.Any())
     {
-        <div class="row g-3 g-lg-4 notes-collection" data-sortable data-sortable-api="/api/notes/order">
+        <div class="row g-3 g-lg-4 notes-collection" data-sortable data-sortable-api="/api/notes/order" data-sortable-payload="noteIds">
             @foreach (var note in Model.Notes)
             {
                 <div class="col-12 col-md-6 col-xl-4 note-sortable-item" data-sortable-id="@note.NoteId" data-note-title="@note.Title" data-note-updated="@note.Updated.Ticks">
                     <div class="card tool-card h-100 shadow-sm">
                         <div class="card-body p-4 d-flex flex-column">
                             <div class="d-flex justify-content-between gap-3 align-items-start mb-2">
-                                <div class="note-title-wrap"><button class="note-drag-handle" type="button" aria-label="Drag to reorder" title="Drag to reorder"><span></span><i class="fa-solid fa-arrow-right-arrow-left"></i><span></span></button><h2 class="h5 fw-semibold mb-0">@note.Title</h2></div>
+                                <div class="note-title-wrap"><h2 class="h5 fw-semibold mb-0">@note.Title</h2></div>
 
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-primary js-edit-note"

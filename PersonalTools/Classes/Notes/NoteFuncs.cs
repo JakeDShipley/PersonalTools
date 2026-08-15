@@ -5,11 +5,11 @@ namespace PersonalTools.Classes.Notes;
 
 public interface INoteFuncs
 {
-    Task<List<NoteObj>> GetNotes(long userId, CancellationToken cancellationToken = default);
-    Task CreateNote(long userId, string title, string body, CancellationToken cancellationToken = default);
-    Task UpdateNote(long userId, Guid noteId, string title, string body, CancellationToken cancellationToken = default);
-    Task DeleteNote(long userId, Guid noteId, CancellationToken cancellationToken = default);
-    Task UpdateOrder(long userId, IReadOnlyList<Guid> noteIds, CancellationToken cancellationToken = default);
+    Task<List<NoteObj>> GetNotes(Guid userId, CancellationToken cancellationToken = default);
+    Task CreateNote(Guid userId, string title, string body, CancellationToken cancellationToken = default);
+    Task UpdateNote(Guid userId, Guid noteId, string title, string body, CancellationToken cancellationToken = default);
+    Task DeleteNote(Guid userId, Guid noteId, CancellationToken cancellationToken = default);
+    Task UpdateOrder(Guid userId, IReadOnlyList<Guid> noteIds, CancellationToken cancellationToken = default);
 }
 
 public sealed class NoteFuncs : INoteFuncs
@@ -17,29 +17,29 @@ public sealed class NoteFuncs : INoteFuncs
     private readonly INotesData _data;
     public NoteFuncs(INotesData data) => _data = data;
 
-    public Task<List<NoteObj>> GetNotes(long userId, CancellationToken cancellationToken = default) =>
+    public Task<List<NoteObj>> GetNotes(Guid userId, CancellationToken cancellationToken = default) =>
         _data.GetNotes(userId, cancellationToken);
 
-    public Task CreateNote(long userId, string title, string body, CancellationToken cancellationToken = default)
+    public Task CreateNote(Guid userId, string title, string body, CancellationToken cancellationToken = default)
     {
         Validate(title, body);
         return _data.CreateNote(userId, new NoteObj { NoteId = Guid.NewGuid(), Title = title.Trim(), Body = body.Trim() }, cancellationToken);
     }
 
-    public Task UpdateNote(long userId, Guid noteId, string title, string body, CancellationToken cancellationToken = default)
+    public Task UpdateNote(Guid userId, Guid noteId, string title, string body, CancellationToken cancellationToken = default)
     {
         ValidateId(noteId);
         Validate(title, body);
         return _data.UpdateNote(userId, new NoteObj { NoteId = noteId, Title = title.Trim(), Body = body.Trim() }, cancellationToken);
     }
 
-    public Task DeleteNote(long userId, Guid noteId, CancellationToken cancellationToken = default)
+    public Task DeleteNote(Guid userId, Guid noteId, CancellationToken cancellationToken = default)
     {
         ValidateId(noteId);
         return _data.DeleteNote(userId, noteId, cancellationToken);
     }
 
-    public Task UpdateOrder(long userId, IReadOnlyList<Guid> noteIds, CancellationToken cancellationToken = default)
+    public Task UpdateOrder(Guid userId, IReadOnlyList<Guid> noteIds, CancellationToken cancellationToken = default)
     {
         if (noteIds.Count > 1000 || noteIds.Any(id => id == Guid.Empty))
             throw new InvalidOperationException("The note order was invalid.");

@@ -16,6 +16,13 @@
         <p class="page-subtitle">A focused view of a public CS2 inventory, directly from Steam.</p>
     </div>
 
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Load your linked Steam account or paste any public Steam profile.",
+        "Browse the CS2 items in cards or a sortable, paginated list.",
+        "Open an item for its full details and Steam actions."
+    })
+
     <div class="inventory-steam-account section-spacing">
         <div class="inventory-steam-account-copy">
             <span class="inventory-steam-mark" aria-hidden="true"><i class="fa-brands fa-steam"></i></span>

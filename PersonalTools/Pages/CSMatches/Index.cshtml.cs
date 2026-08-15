@@ -25,7 +25,7 @@ namespace PersonalTools.Pages.CSMatches
             _profileFuncs = profileFuncs;
         }
 
-        private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         public List<CSMatchObj> Matches { get; set; } = new();
         public List<CSMapObj> Maps { get; set; } = new();

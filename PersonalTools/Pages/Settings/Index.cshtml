@@ -1,10 +1,12 @@
 @page
 @model PersonalTools.Pages.Settings.IndexModel
+@using PersonalTools.Entities
 @{
     ViewData["Title"] = "Settings";
-    string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
-    string errorMessage = TempData["ErrorMessage"]?.ToString() ?? string.Empty;
+    var settingGroups = Model.Settings.GroupBy(setting => setting.Definition.Group).ToList();
 }
+
+@section Head { <link rel="stylesheet" href="~/css/pages/page-settings.css" asp-append-version="true" /> }
 
 <div class="container px-3 px-lg-4">
     <div class="section-spacing">
@@ -12,22 +14,6 @@
         <h1 class="page-title">Settings</h1>
         <p class="page-subtitle">Manage connected accounts and shared tool preferences.</p>
     </div>
-
-    @if (!string.IsNullOrWhiteSpace(successMessage))
-    {
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-2" role="status">
-            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-            <span>@successMessage</span>
-        </div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(errorMessage))
-    {
-        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center gap-2" role="alert">
-            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-            <span>@errorMessage</span>
-        </div>
-    }
 
     @if (Model.SteamRequired && string.IsNullOrWhiteSpace(Model.LinkedSteamId))
     {
@@ -38,6 +24,27 @@
     }
 
     <div class="row g-3">
+        <div class="col-12">
+            <section class="settings-hero card border-0 shadow-sm">
+                <div class="card-body p-4 p-lg-5"><p class="eyebrow mb-2">Control centre</p><h2 class="h4 mb-2">Set the app up around how you use it.</h2><p class="small-muted mb-0">Changes save instantly. Sensitive fields are intentionally blank after saving, so a key is never sent back to the browser.</p></div>
+            </section>
+        </div>
+        @foreach (var group in settingGroups)
+        {
+            <div class="col-12"><section class="card settings-group border-0 shadow-sm"><div class="card-body p-4"><div class="mb-3"><p class="eyebrow mb-1">@group.Key</p><h2 class="h5 mb-0">@group.Key settings</h2></div><div class="vstack gap-3">
+                @foreach (var setting in group)
+                {
+                    <article class="settings-item" data-setting-key="@setting.Definition.Key" data-secret="@setting.Definition.IsServerSecret.ToString().ToLowerInvariant()"><div><h3 class="h6 mb-1">@setting.Definition.Name</h3><p class="small-muted mb-0">@setting.Definition.Description</p></div><div class="settings-control">
+                    @if (setting.Definition.InputType == AppSettingInputType.Select)
+                    { <select class="form-select" aria-label="@setting.Definition.Name">@foreach (var option in setting.Definition.Options!) { <option value="@option.Value" selected="@(setting.Value == option.Value)">@option.Label</option> }</select> }
+                    else if (setting.Definition.InputType == AppSettingInputType.Switch)
+                    { <div class="form-check form-switch"><input class="form-check-input pt-switch" type="checkbox" role="switch" checked="@(setting.Value == "true")" aria-label="@setting.Definition.Name" /></div> }
+                    else
+                    { <div class="input-group"><input class="form-control" type="password" autocomplete="new-password" placeholder="@(setting.IsConfigured ? "Key saved — enter a new one to replace it" : "Paste Steam Web API key")" /><button class="btn btn-outline-primary" type="button">Save key</button></div><small class="text-success-emphasis @(setting.IsConfigured ? "" : "d-none")"><i class="fa-solid fa-lock me-1"></i>Protected key saved</small> }
+                </div></article>
+                }
+            </div></div></section></div>
+        }
         <div class="col-12">
             <section class="card tool-card border-0 shadow-sm">
                 <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -71,23 +78,6 @@
                         </a>
                     }
                 </div>
-
-                @if (string.IsNullOrWhiteSpace(Model.LinkedSteamId))
-                {
-                    <div class="card-body border-top pt-3">
-                        <p class="small-muted mb-2">Alternatively, you can add a SteamID directly instead of connecting through Steam.</p>
-                        <form method="post" asp-page-handler="LinkSteamManually" class="d-flex flex-column flex-sm-row gap-2 align-items-sm-start">
-                            <div class="js-steam-lookup flex-grow-1">
-                                <div class="input-group">
-                                    <input asp-for="ManualSteamId" id="settingsManualSteamId" class="form-control js-steam-lookup-input" placeholder="SteamID64, profile URL, custom URL, or name" pattern="^7656\d{13}$" required />
-                                    <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Look up this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
-                                </div>
-                                <div class="js-steam-lookup-result d-none mt-2 small"></div>
-                            </div>
-                            <button class="btn btn-outline-secondary flex-shrink-0" type="submit">Save SteamID</button>
-                        </form>
-                    </div>
-                }
             </section>
         </div>
 
@@ -123,13 +113,20 @@
                     }
 
                     <form method="post" asp-page-handler="UpdateActiveDutyPool">
-                        <div class="row g-2 mb-3">
+                        <div class="row g-3 mb-3 active-duty-map-grid">
                             @foreach (var map in Model.AllMaps)
                             {
-                                <div class="col-6 col-md-4 col-xl-3">
-                                    <div class="form-check rounded-3 border p-3 ps-5 h-100">
-                                        <input class="form-check-input" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
-                                        <label class="form-check-label fw-semibold" for="activeDuty-@map.Name">@map.Name</label>
+                                <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                                    <div class="active-duty-map-tile h-100">
+                                        <img src="@map.ImagePath" alt="" class="active-duty-map-image" loading="lazy" />
+                                        <div class="active-duty-map-shade"></div>
+                                        <div class="active-duty-map-content">
+                                            <span class="active-duty-map-name">@map.Name</span>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input pt-switch" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
+                                                <label class="visually-hidden" for="activeDuty-@map.Name">Include @map.Name in Active Duty</label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -147,7 +144,7 @@
                         <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-database"></i></span>
                         <div>
                             <h2 class="h5 fw-semibold mb-2">Data storage</h2>
-                            <p class="small-muted mb-0">Notes, tracked skins and CS Match Tracker data are all stored privately per account in MariaDB.</p>
+                            <p class="small-muted mb-0">Notes, tracked skins and CS Match Tracker data are stored privately per account in MariaDB.</p>
                         </div>
                     </div>
                     <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis px-3 py-2">Account scoped</span>
@@ -156,6 +153,8 @@
         </div>
     </div>
 </div>
+
+@section Scripts { <script src="~/js/pages/page-settings.js" asp-append-version="true"></script> }
 
 <div class="modal fade" id="unlinkSteamModal" tabindex="-1" aria-labelledby="unlinkSteamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

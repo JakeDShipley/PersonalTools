@@ -64,6 +64,6 @@ namespace PersonalTools.Pages.Skins
             return new JsonResult(skins.Select(s => new { id = s.MarketHashName, text = s.MarketHashName, skin = new { s.Name, s.Weapon, s.Exterior, s.MarketHashName, s.Image } }));
         }
 
-        private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 }

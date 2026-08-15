@@ -7,6 +7,7 @@ $(function () {
     const $connection = $('#monitorConnectionState');
     let loading = false;
     let fallbackTimer = null;
+    const previousMetrics = new Map();
 
     const chart = createChart();
     const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -98,7 +99,13 @@ $(function () {
     function setPercentMetric(key, value) {
         const numeric = Number(value);
         const available = Number.isFinite(numeric);
-        $(`[data-server-value="${key}"]`).text(available ? formatPercent(numeric) : 'Warming up');
+        const $value = $(`[data-server-value="${key}"]`);
+        $value.text(available ? formatPercent(numeric) : 'Warming up');
+        const previous = previousMetrics.get(key);
+        if (available && previous !== undefined && Math.abs(previous - numeric) >= .1) {
+            window.personalToolsMotion?.flash($value.closest('.monitor-metric-card').get(0));
+        }
+        if (available) previousMetrics.set(key, numeric);
         const $bar = $(`[data-server-bar="${key}"]`);
         const width = available ? Math.max(0, Math.min(100, numeric)) : 0;
         $bar.removeClass('is-watch is-danger').toggleClass('is-watch', width >= 75 && width < 90).toggleClass('is-danger', width >= 90);

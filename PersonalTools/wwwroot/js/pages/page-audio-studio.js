@@ -78,6 +78,10 @@
             updateRange();
             editor.classList.remove('d-none');
             message.className = 'alert d-none mt-4 mb-0';
+            window.requestAnimationFrame(() => {
+                window.personalToolsMotion?.pop(dropZone, { fromScale: .985, fromOpacity: .7, duration: 260 });
+                window.personalToolsMotion?.reveal(editor.querySelectorAll('.audio-file-summary, .audio-preview-shell, .audio-trim-panel, .audio-trim-panel + .row'), { fromY: 12, delay: 55, duration: 340 });
+            });
         };
         player.onerror = () => showMessage('This browser could not preview the selected file. Try MP4, WebM, MP3, WAV, or M4A.', 'danger');
         document.getElementById('audioFileName').textContent = file.name;
@@ -143,6 +147,8 @@
             setTimeout(() => URL.revokeObjectURL(link.href), 1000);
             await Promise.allSettled([ffmpeg.deleteFile(inputName), ffmpeg.deleteFile(outputName)]);
             showMessage('Your trimmed audio was created and downloaded on this device.', 'success');
+            window.personalToolsMotion?.flash(exportButton);
+            window.personalToolsMotion?.reveal([message], { fromY: 8, duration: 260 });
         } catch (error) {
             console.error(error);
             showMessage(error?.message || 'The audio export could not be completed in this browser.', 'danger');

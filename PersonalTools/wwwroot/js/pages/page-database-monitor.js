@@ -7,6 +7,7 @@ $(function () {
     const $connection = $('#monitorConnectionState');
     let loading = false;
     let fallbackTimer = null;
+    const previousMetrics = new Map();
 
     const chart = createChart();
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => new bootstrap.Tooltip(element));
@@ -62,10 +63,10 @@ $(function () {
         $('#monitorUnavailable').addClass('d-none');
         setHealth(snapshot.health, snapshot.summary);
         $('#monitorUpdated').text(formatTime(snapshot.capturedUtc));
-        $('[data-database-value="responseTimeMs"]').text(Number(snapshot.responseTimeMs).toFixed(1));
-        $('[data-database-value="connectionUsagePercent"]').text(formatPercent(snapshot.connectionUsagePercent));
-        $('[data-database-value="queriesPerSecond"]').text(Number(snapshot.queriesPerSecond).toLocaleString(undefined, { maximumFractionDigits: 2 }));
-        $('[data-database-value="structures"]').text(`${snapshot.requiredStructuresAvailable}/${snapshot.requiredStructuresTotal}`);
+        setMetric('responseTimeMs', Number(snapshot.responseTimeMs).toFixed(1), snapshot.responseTimeMs);
+        setMetric('connectionUsagePercent', formatPercent(snapshot.connectionUsagePercent), snapshot.connectionUsagePercent);
+        setMetric('queriesPerSecond', Number(snapshot.queriesPerSecond).toLocaleString(undefined, { maximumFractionDigits: 2 }), snapshot.queriesPerSecond);
+        setMetric('structures', `${snapshot.requiredStructuresAvailable}/${snapshot.requiredStructuresTotal}`, snapshot.requiredStructuresAvailable);
         setBar(snapshot.connectionUsagePercent);
         $('[data-database-detail="runningOperations"]').text(Number(snapshot.runningOperations).toLocaleString());
         $('[data-database-detail="uptimeSeconds"]').text(formatDuration(snapshot.uptimeSeconds));
@@ -92,6 +93,17 @@ $(function () {
         $bar.removeClass('is-watch is-danger').toggleClass('is-watch', width >= 70 && width < 90).toggleClass('is-danger', width >= 90);
         $bar.parent().attr('aria-valuenow', width);
         requestAnimationFrame(() => $bar.css('width', `${width}%`));
+    }
+
+    function setMetric(key, displayValue, numericValue) {
+        const $value = $(`[data-database-value="${key}"]`);
+        $value.text(displayValue);
+        const numeric = Number(numericValue);
+        const previous = previousMetrics.get(key);
+        if (Number.isFinite(numeric) && previous !== undefined && Math.abs(previous - numeric) >= .01) {
+            window.personalToolsMotion?.flash($value.closest('.monitor-metric-card').get(0));
+        }
+        if (Number.isFinite(numeric)) previousMetrics.set(key, numeric);
     }
 
     function addChartSample(snapshot) {

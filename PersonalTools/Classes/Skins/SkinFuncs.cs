@@ -6,10 +6,10 @@ namespace PersonalTools.Classes.Skins;
 
 public interface ISkinFuncs
 {
-    Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default);
-    Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
-    Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
-    Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default);
+    Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default);
+    Task CreateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task UpdateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task DeleteSkin(Guid userId, Guid skinId, CancellationToken cancellationToken = default);
     Task<int> RefreshCs2SkinData();
 }
 
@@ -24,23 +24,23 @@ public sealed class SkinFuncs : ISkinFuncs
         _catalogue = catalogue;
     }
 
-    public Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default) =>
+    public Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default) =>
         _data.GetSkins(userId, cancellationToken);
 
-    public Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default)
+    public Task CreateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default)
     {
         NormaliseAndValidate(skin, requireId: false);
         skin.SkinId = Guid.NewGuid();
         return _data.CreateSkin(userId, skin, cancellationToken);
     }
 
-    public Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default)
+    public Task UpdateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default)
     {
         NormaliseAndValidate(skin, requireId: true);
         return _data.UpdateSkin(userId, skin, cancellationToken);
     }
 
-    public Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default)
+    public Task DeleteSkin(Guid userId, Guid skinId, CancellationToken cancellationToken = default)
     {
         if (skinId == Guid.Empty) throw new InvalidOperationException("The tracked skin identifier was invalid.");
         return _data.DeleteSkin(userId, skinId, cancellationToken);

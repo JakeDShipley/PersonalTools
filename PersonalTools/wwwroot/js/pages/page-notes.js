@@ -7,6 +7,7 @@ $(function () {
 
     function applySort(mode) {
         if (!collection.length) return;
+        window.personalToolsSortable?.setEnabled(collection.get(0), mode === 'custom');
         const items = collection.children('.note-sortable-item').get();
         if (mode !== 'custom') {
             collection.addClass('is-sorting');
@@ -21,7 +22,11 @@ $(function () {
 
     sortSelect.val(localStorage.getItem(sortKey) || 'custom');
     applySort(sortSelect.val());
-    sortSelect.on('change', function () { localStorage.setItem(sortKey, this.value); applySort(this.value); });
+    sortSelect.on('change', function () {
+        localStorage.setItem(sortKey, this.value);
+        if (this.value === 'custom') { location.reload(); return; }
+        applySort(this.value);
+    });
 
     $(document).on('click', '.js-edit-note', function () {
         $('#editNoteId').val($(this).data('note-id')); $('#editTitle').val($(this).data('note-title')); $('#editBody').val($(this).data('note-body'));
@@ -31,12 +36,12 @@ $(function () {
     function submitNote(form, url, method, onSuccess) {
         const button = form.find('button[type="submit"]');
         button.prop('disabled', true).addClass('is-loading');
-        $.ajax({ url, method, data: form.serialize(), headers: { RequestVerificationToken: form.find('input[name="__RequestVerificationToken"]').val() } })
-            .done(onSuccess).fail(xhr => alert(xhr.responseJSON?.message || 'The note could not be saved. Please try again.'))
+        $.ajax({ url, method, successToast: false, data: form.serialize(), headers: { RequestVerificationToken: form.find('input[name="__RequestVerificationToken"]').val() } })
+            .done(onSuccess)
             .always(() => button.prop('disabled', false).removeClass('is-loading'));
     }
 
-    $('#addNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); submitNote(form, '/api/notes', 'POST', () => { bootstrap.Modal.getInstance(document.getElementById('addNoteModal')).hide(); window.setTimeout(() => location.reload(), 180); }); });
-    $('#editNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); submitNote(form, `/api/notes/${encodeURIComponent($('#editNoteId').val())}`, 'PUT', () => { bootstrap.Modal.getInstance(document.getElementById('editNoteModal')).hide(); window.setTimeout(() => location.reload(), 180); }); });
-    $('#deleteNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); const item = $(`.note-sortable-item[data-sortable-id="${$('#deleteNoteId').val()}"]`); submitNote(form, `/api/notes/${encodeURIComponent($('#deleteNoteId').val())}`, 'DELETE', () => { bootstrap.Modal.getInstance(document.getElementById('deleteNoteModal')).hide(); item.addClass('is-removing'); window.setTimeout(() => location.reload(), 280); }); });
+    $('#addNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); submitNote(form, '/api/notes', 'POST', () => { window.personalToolsToast.queue('Note added successfully.', 'success'); bootstrap.Modal.getInstance(document.getElementById('addNoteModal')).hide(); window.setTimeout(() => location.reload(), 180); }); });
+    $('#editNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); submitNote(form, `/api/notes/${encodeURIComponent($('#editNoteId').val())}`, 'PUT', () => { window.personalToolsToast.queue('Note updated successfully.', 'success'); bootstrap.Modal.getInstance(document.getElementById('editNoteModal')).hide(); window.setTimeout(() => location.reload(), 180); }); });
+    $('#deleteNoteForm').on('submit', function (event) { event.preventDefault(); const form = $(this); const item = $(`.note-sortable-item[data-sortable-id="${$('#deleteNoteId').val()}"]`); submitNote(form, `/api/notes/${encodeURIComponent($('#deleteNoteId').val())}`, 'DELETE', () => { window.personalToolsToast.queue('Note deleted successfully.', 'success'); bootstrap.Modal.getInstance(document.getElementById('deleteNoteModal')).hide(); item.addClass('is-removing'); window.setTimeout(() => location.reload(), 280); }); });
 });

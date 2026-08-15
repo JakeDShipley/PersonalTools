@@ -13,7 +13,7 @@ public sealed class NotesController : ControllerBase
 {
     private readonly INoteFuncs _notes;
     public NotesController(INoteFuncs notes) => _notes = notes;
-    private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<List<NoteObj>>> Get(CancellationToken cancellationToken) =>

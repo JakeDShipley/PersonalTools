@@ -106,14 +106,13 @@
         const $grid = $('#inventoryCardGrid').empty();
         if (inventoryView !== 'cards') return;
         currentPageItems().forEach(item => $grid.append(createCard(item)));
-        window.requestAnimationFrame(() => $grid.find('.inventory-card-column').addClass('inventory-card-enter'));
+        window.requestAnimationFrame(() => window.personalToolsMotion?.reveal($grid.find('.inventory-card-column').get(), { fromY: 12, delay: 24, duration: 320 }));
     }
 
     function animateVisibleRows() {
         if (inventoryView !== 'list') return;
         const $rows = $('#inventoryTable tbody tr');
-        $rows.removeClass('inventory-row-enter');
-        window.requestAnimationFrame(() => $rows.addClass('inventory-row-enter'));
+        window.requestAnimationFrame(() => window.personalToolsMotion?.reveal($rows.get(), { fromY: 8, fromScale: 1, delay: 18, duration: 260 }));
     }
 
     function setInventoryView(view, remember) {
@@ -262,5 +261,11 @@
 
     setInventoryView(inventoryView, false);
     const initialProfile = String($('#inventoryProfile').val() || '').trim();
-    if (initialProfile) loadInventory(initialProfile);
+    const linkedSteamId = String($('#viewLinkedInventory').data('steam-id') || '').trim();
+    if (initialProfile) {
+        loadInventory(initialProfile);
+    } else if (linkedSteamId) {
+        $('#inventoryProfile').val(linkedSteamId);
+        loadInventory(linkedSteamId);
+    }
 })(jQuery);

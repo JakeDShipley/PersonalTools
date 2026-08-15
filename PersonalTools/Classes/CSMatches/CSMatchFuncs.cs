@@ -5,13 +5,13 @@ namespace PersonalTools.Classes.CSMatches
 {
     public interface ICSMatchFuncs
     {
-        Task<List<CSMatchObj>> GetMatches(long userId, string? profileId);
-        Task CreateMatch(long userId, string? profileId, CSMatchObj match);
-        Task UpdateMatch(long userId, string matchId, CSMatchObj match);
-        Task DeleteMatch(long userId, string matchId);
-        Task DeleteAllMatches(long userId, string? profileId);
-        Task ImportMatches(long userId, string? profileId, List<CSMatchObj> matches);
-        Task<CSMatchStatsObj> GetStats(long userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null);
+        Task<List<CSMatchObj>> GetMatches(Guid userId, string? profileId);
+        Task CreateMatch(Guid userId, string? profileId, CSMatchObj match);
+        Task UpdateMatch(Guid userId, string matchId, CSMatchObj match);
+        Task DeleteMatch(Guid userId, string matchId);
+        Task DeleteAllMatches(Guid userId, string? profileId);
+        Task ImportMatches(Guid userId, string? profileId, List<CSMatchObj> matches);
+        Task<CSMatchStatsObj> GetStats(Guid userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null);
     }
 
     public class CSMatchFuncs : ICSMatchFuncs
@@ -23,7 +23,7 @@ namespace PersonalTools.Classes.CSMatches
             _matchesData = matchesData;
         }
 
-        public async Task<List<CSMatchObj>> GetMatches(long userId, string? profileId)
+        public async Task<List<CSMatchObj>> GetMatches(Guid userId, string? profileId)
         {
             List<CSMatchObj> matches = await _matchesData.GetMatches(userId, profileId);
 
@@ -32,29 +32,29 @@ namespace PersonalTools.Classes.CSMatches
                 .ToList();
         }
 
-        public async Task CreateMatch(long userId, string? profileId, CSMatchObj match)
+        public async Task CreateMatch(Guid userId, string? profileId, CSMatchObj match)
         {
             match.MatchId = Guid.NewGuid().ToString();
 
             await _matchesData.CreateMatch(userId, profileId, match);
         }
 
-        public async Task UpdateMatch(long userId, string matchId, CSMatchObj updated)
+        public async Task UpdateMatch(Guid userId, string matchId, CSMatchObj updated)
         {
             await _matchesData.UpdateMatch(userId, matchId, updated);
         }
 
-        public async Task DeleteMatch(long userId, string matchId)
+        public async Task DeleteMatch(Guid userId, string matchId)
         {
             await _matchesData.DeleteMatch(userId, matchId);
         }
 
-        public async Task DeleteAllMatches(long userId, string? profileId)
+        public async Task DeleteAllMatches(Guid userId, string? profileId)
         {
             await _matchesData.DeleteAllMatches(userId, profileId);
         }
 
-        public async Task ImportMatches(long userId, string? profileId, List<CSMatchObj> matches)
+        public async Task ImportMatches(Guid userId, string? profileId, List<CSMatchObj> matches)
         {
             if (matches.Count == 0)
             {
@@ -79,7 +79,7 @@ namespace PersonalTools.Classes.CSMatches
             }
         }
 
-        public async Task<CSMatchStatsObj> GetStats(long userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null)
+        public async Task<CSMatchStatsObj> GetStats(Guid userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null)
         {
             List<CSMatchObj> matches = await GetMatches(userId, profileId);
 

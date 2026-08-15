@@ -11,7 +11,7 @@ public interface IDatabaseMonitorFuncs
 
 public sealed class DatabaseMonitorFuncs : IDatabaseMonitorFuncs
 {
-    private const int RequiredStructureCount = 5;
+    private const int RequiredStructureCount = 12;
     private readonly IDatabaseMonitorData _data;
     private readonly ILogger<DatabaseMonitorFuncs> _logger;
     private readonly IMemoryCache _cache;

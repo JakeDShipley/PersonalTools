@@ -51,11 +51,11 @@ $(function () {
         return $.ajax({
             url,
             method,
+            successToast: false,
             contentType: 'application/json',
             data: data === undefined ? undefined : JSON.stringify(data),
             headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() }
-        }).fail(xhr => window.alert(xhr.responseJSON?.message || 'The skin tracker could not be updated.'))
-          .always(() => button.prop('disabled', false));
+        }).always(() => button.prop('disabled', false));
     }
 
     $('#addSkinModal').on('shown.bs.modal', () => initSkinSelect($('#addSkinSelect'), $('#addSkinModal'), 'Search for a CS2 skin...'));
@@ -92,20 +92,20 @@ $(function () {
 
     $('#addSkinForm').on('submit', function (event) {
         event.preventDefault();
-        request('/api/skins', 'POST', skinPayload('add'), $(this).find('button[type="submit"]')).done(() => location.reload());
+        request('/api/skins', 'POST', skinPayload('add'), $(this).find('button[type="submit"]')).done(() => { window.personalToolsToast.queue('Skin added successfully.', 'success'); location.reload(); });
     });
     $('#editSkinForm').on('submit', function (event) {
         event.preventDefault();
         const payload = skinPayload('edit');
-        request(`/api/skins/${encodeURIComponent(payload.skinId)}`, 'PUT', payload, $(this).find('button[type="submit"]')).done(() => location.reload());
+        request(`/api/skins/${encodeURIComponent(payload.skinId)}`, 'PUT', payload, $(this).find('button[type="submit"]')).done(() => { window.personalToolsToast.queue('Skin updated successfully.', 'success'); location.reload(); });
     });
     $('#deleteSkinForm').on('submit', function (event) {
         event.preventDefault();
-        request(`/api/skins/${encodeURIComponent($('#deleteSkinId').val())}`, 'DELETE', undefined, $(this).find('button[type="submit"]')).done(() => location.reload());
+        request(`/api/skins/${encodeURIComponent($('#deleteSkinId').val())}`, 'DELETE', undefined, $(this).find('button[type="submit"]')).done(() => { window.personalToolsToast.queue('Skin deleted successfully.', 'success'); location.reload(); });
     });
     $('#refreshSkinCatalogueForm').on('submit', function (event) {
         event.preventDefault();
-        request('/api/skins/refresh-catalogue', 'POST', undefined, $(this).find('button[type="submit"]')).done(() => location.reload());
+        request('/api/skins/refresh-catalogue', 'POST', undefined, $(this).find('button[type="submit"]')).done(() => { window.personalToolsToast.queue('CS2 skin catalogue refreshed.', 'success'); location.reload(); });
     });
 
     const chartElement = document.getElementById('skinValueChart');

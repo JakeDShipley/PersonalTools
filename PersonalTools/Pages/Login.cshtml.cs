@@ -23,14 +23,13 @@ public class LoginModel : PageModel
         var user = await _auth.Authenticate(Email, Password);
         if (user is null) { ErrorMessage = "Email or password is incorrect."; return Page(); }
         var session = await _auth.CreateSession(user.UserId, RememberMe, Request.Headers.UserAgent.ToString());
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()), new Claim(ClaimTypes.Name, user.DisplayName), new Claim(ClaimTypes.Email, user.Email), new Claim("session_id", session.SessionId) };
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString("D")), new Claim(ClaimTypes.Name, user.DisplayName), new Claim(ClaimTypes.Email, user.Email), new Claim("session_id", session.SessionId.ToString("D")) };
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)), new AuthenticationProperties { IsPersistent = RememberMe, ExpiresUtc = session.ExpiresUtc });
         return LocalRedirect(!string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : "/");
     }
     public async Task<IActionResult> OnPostSignOutAsync()
     {
-        string? sessionId = User.FindFirstValue("session_id");
-        if (!string.IsNullOrWhiteSpace(sessionId)) await _auth.DeleteSession(sessionId);
+        if (Guid.TryParse(User.FindFirstValue("session_id"), out Guid sessionId)) await _auth.DeleteSession(sessionId);
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToPage();
     }

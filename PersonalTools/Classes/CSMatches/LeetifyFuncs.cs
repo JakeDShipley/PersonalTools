@@ -6,8 +6,8 @@ namespace PersonalTools.Classes.CSMatches
 {
     public interface ILeetifyFuncs
     {
-        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId, string? profileId);
-        Task<List<CSMatchObj>> BuildImportBatch(long userId, string? profileId, List<string> selectedLeetifyMatchIds);
+        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, string? profileId);
+        Task<List<CSMatchObj>> BuildImportBatch(Guid userId, string? profileId, List<string> selectedLeetifyMatchIds);
     }
 
     public class LeetifyFuncs : ILeetifyFuncs
@@ -32,7 +32,7 @@ namespace PersonalTools.Classes.CSMatches
             _profileFuncs = profileFuncs;
         }
 
-        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId, string? profileId)
+        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, string? profileId)
         {
             string steamId = await ResolveSteamId(userId, profileId);
 
@@ -75,7 +75,7 @@ namespace PersonalTools.Classes.CSMatches
             return previews.OrderByDescending(p => p.PlayedAtUtc).ToList();
         }
 
-        public async Task<List<CSMatchObj>> BuildImportBatch(long userId, string? profileId, List<string> selectedLeetifyMatchIds)
+        public async Task<List<CSMatchObj>> BuildImportBatch(Guid userId, string? profileId, List<string> selectedLeetifyMatchIds)
         {
             List<CSMatchLeetifyPreviewObj> available = await GetAvailableMatches(userId, profileId);
             HashSet<string> selected = selectedLeetifyMatchIds.ToHashSet();
@@ -98,7 +98,7 @@ namespace PersonalTools.Classes.CSMatches
                 .ToList();
         }
 
-        private async Task<string> ResolveSteamId(long userId, string? profileId)
+        private async Task<string> ResolveSteamId(Guid userId, string? profileId)
         {
             if (!string.IsNullOrWhiteSpace(profileId))
             {

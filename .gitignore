@@ -364,3 +364,8 @@ FodyWeavers.xsd
 
 # Claude Code
 .claude/
+
+# Local coding-agent project memory (never commit)
+AGENTS.md
+PersonalTools/PersonalTools.SeedUsers.sql
+PersonalTools/App_Data/DataProtection-Keys/

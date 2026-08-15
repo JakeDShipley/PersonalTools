@@ -18,6 +18,13 @@
         </div>
     </div>
 
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Paste a public page URL or the page's HTML source.",
+        "Parse it, then preview the useful images, video and audio found.",
+        "Select individual files or download several results together."
+    })
+
     <div class="card shadow-sm border-0 section-spacing">
         <div class="card-body p-4">
 
@@ -365,7 +372,7 @@
                 let urls = getSelectedItems().map(x => x.url);
 
                 if (!urls.length) {
-                    alert("No items selected");
+                    window.personalToolsToast.warning("Select at least one media item to create an archive.");
                     return;
                 }
 
@@ -387,7 +394,7 @@
                     URL.revokeObjectURL(link.href);
 
                 })
-                .catch(error => alert(error.message));
+                .catch(error => window.personalToolsToast.error(error.message));
 
                 window.personalToolsLoader.wrap(downloadRequest, {
                     title: "Preparing download",

@@ -6,11 +6,11 @@ namespace PersonalTools.Classes.CSMatches
 {
     public interface IMatchProfileFuncs
     {
-        Task<List<MatchProfileObj>> GetProfiles(long userId);
-        Task<MatchProfileObj?> GetProfile(long userId, string? profileId);
-        Task<string> CreateProfile(long userId, string name, string steamId);
-        Task UpdateProfile(long userId, string profileId, string name, string steamId);
-        Task DeleteProfile(long userId, string profileId);
+        Task<List<MatchProfileObj>> GetProfiles(Guid userId);
+        Task<MatchProfileObj?> GetProfile(Guid userId, string? profileId);
+        Task<string> CreateProfile(Guid userId, string name, string steamId);
+        Task UpdateProfile(Guid userId, string profileId, string name, string steamId);
+        Task DeleteProfile(Guid userId, string profileId);
     }
 
     public class MatchProfileFuncs : IMatchProfileFuncs
@@ -20,12 +20,12 @@ namespace PersonalTools.Classes.CSMatches
         private readonly IMatchProfilesData _data;
         public MatchProfileFuncs(IMatchProfilesData data) => _data = data;
 
-        public Task<List<MatchProfileObj>> GetProfiles(long userId) => _data.GetProfiles(userId);
+        public Task<List<MatchProfileObj>> GetProfiles(Guid userId) => _data.GetProfiles(userId);
 
-        public Task<MatchProfileObj?> GetProfile(long userId, string? profileId) =>
+        public Task<MatchProfileObj?> GetProfile(Guid userId, string? profileId) =>
             string.IsNullOrWhiteSpace(profileId) ? Task.FromResult<MatchProfileObj?>(null) : _data.GetProfile(userId, profileId);
 
-        public async Task<string> CreateProfile(long userId, string name, string steamId)
+        public async Task<string> CreateProfile(Guid userId, string name, string steamId)
         {
             (string trimmedName, string trimmedSteamId) = Validate(name, steamId);
             string profileId = Guid.NewGuid().ToString();
@@ -33,13 +33,13 @@ namespace PersonalTools.Classes.CSMatches
             return profileId;
         }
 
-        public Task UpdateProfile(long userId, string profileId, string name, string steamId)
+        public Task UpdateProfile(Guid userId, string profileId, string name, string steamId)
         {
             (string trimmedName, string trimmedSteamId) = Validate(name, steamId);
             return _data.UpdateProfile(userId, profileId, trimmedName, trimmedSteamId);
         }
 
-        public Task DeleteProfile(long userId, string profileId) => _data.DeleteProfile(userId, profileId);
+        public Task DeleteProfile(Guid userId, string profileId) => _data.DeleteProfile(userId, profileId);
 
         private static (string Name, string SteamId) Validate(string name, string steamId)
         {

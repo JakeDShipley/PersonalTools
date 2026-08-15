@@ -4,8 +4,7 @@
 @{
     ViewData["Title"] = "CS2 Skin Tracker";
 
-    string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
-    string errorMessage = TempData["ErrorMessage"]?.ToString() ?? Model.ErrorMessage;
+    string errorMessage = Model.ErrorMessage;
 }
 
 <div class="container px-3 px-lg-4">
@@ -57,6 +56,13 @@
         </div>
     </div>
 
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Add a skin by searching the fast local CS2 catalogue.",
+        "Record purchase details, current value and any useful notes.",
+        "Sort the collection, update an entry, or remove it when it is no longer tracked."
+    })
+
     @if (Model.Skins.Any())
     {
         string profitClass = Model.TotalProfitLoss > 0 ? "text-success" : Model.TotalProfitLoss < 0 ? "text-danger" : "text-warning";
@@ -94,13 +100,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(successMessage))
-    {
-        <div class="alert alert-success shadow-sm border-0 section-spacing">
-            @successMessage
         </div>
     }
 

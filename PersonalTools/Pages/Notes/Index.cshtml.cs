@@ -98,6 +98,6 @@ namespace PersonalTools.Pages.Notes
             return RedirectToPage();
         }
 
-        private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 }

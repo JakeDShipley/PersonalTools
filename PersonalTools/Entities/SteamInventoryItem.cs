@@ -29,4 +29,11 @@ namespace PersonalTools.Entities
         public string AvatarUrl { get; set; } = string.Empty;
         public string ProfileUrl { get; set; } = string.Empty;
     }
+
+    public sealed class SteamPublicProfile
+    {
+        public string SteamId { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+    }
 }

@@ -1,4 +1,97 @@
 (() => {
+    const appToast = (() => {
+        const container = document.getElementById('appToastContainer');
+        const queuedToastKey = 'personal-tools-pending-toast';
+        const types = {
+            success: { title: 'Completed', icon: 'fa-circle-check' },
+            error: { title: 'Something went wrong', icon: 'fa-circle-xmark' },
+            warning: { title: 'Please check', icon: 'fa-triangle-exclamation' },
+            info: { title: 'Personal Tools', icon: 'fa-circle-info' }
+        };
+
+        function normalise(input, fallbackType) {
+            if (typeof input === 'string') return { message: input, type: fallbackType || 'info' };
+            return { ...(input || {}), type: input?.type || fallbackType || 'info' };
+        }
+
+        function show(input, fallbackType) {
+            if (!container || typeof bootstrap === 'undefined') return null;
+            const options = normalise(input, fallbackType);
+            const type = types[options.type] ? options.type : 'info';
+            const appearance = types[type];
+            const element = document.createElement('div');
+            element.className = `toast app-toast app-toast-${type}`;
+            element.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            element.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+            element.setAttribute('aria-atomic', 'true');
+
+            const accent = document.createElement('span');
+            accent.className = 'app-toast-accent';
+            accent.setAttribute('aria-hidden', 'true');
+
+            const icon = document.createElement('span');
+            icon.className = 'app-toast-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.innerHTML = `<i class="fa-solid ${appearance.icon}"></i>`;
+
+            const copy = document.createElement('span');
+            copy.className = 'app-toast-copy';
+            const heading = document.createElement('strong');
+            heading.textContent = options.title || appearance.title;
+            const message = document.createElement('span');
+            message.textContent = options.message || '';
+            copy.append(heading, message);
+
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'btn-close app-toast-close';
+            close.dataset.bsDismiss = 'toast';
+            close.setAttribute('aria-label', 'Dismiss notification');
+
+            element.append(accent, icon, copy, close);
+            container.appendChild(element);
+            window.requestAnimationFrame(() => window.personalToolsMotion?.pop(element, { fromScale: .96, fromOpacity: 0 }));
+
+            while (container.children.length > 4) container.firstElementChild?.remove();
+            const instance = bootstrap.Toast.getOrCreateInstance(element, {
+                animation: true,
+                autohide: options.autohide !== false,
+                delay: options.delay || (type === 'error' ? 6500 : 4300)
+            });
+            element.addEventListener('hidden.bs.toast', () => element.remove(), { once: true });
+            instance.show();
+            return instance;
+        }
+
+        function queue(input, fallbackType) {
+            const options = normalise(input, fallbackType);
+            try { sessionStorage.setItem(queuedToastKey, JSON.stringify(options)); } catch { }
+        }
+
+        function showQueued() {
+            try {
+                const value = sessionStorage.getItem(queuedToastKey);
+                if (!value) return;
+                sessionStorage.removeItem(queuedToastKey);
+                show(JSON.parse(value));
+            } catch {
+                try { sessionStorage.removeItem(queuedToastKey); } catch { }
+            }
+        }
+
+        return {
+            show,
+            queue,
+            success: input => show(input, 'success'),
+            error: input => show(input, 'error'),
+            warning: input => show(input, 'warning'),
+            info: input => show(input, 'info'),
+            showQueued
+        };
+    })();
+
+    window.personalToolsToast = appToast;
+
     const appLoader = (() => {
         const overlay = document.getElementById('appLoader');
         const title = overlay?.querySelector('[data-loader-title]');
@@ -109,7 +202,39 @@
         appLoader.hide();
     });
 
+    function ajaxToastMessage(xhr, fallback) {
+        return xhr?.responseJSON?.message || xhr?.responseJSON?.error || fallback;
+    }
+
+    function isWriteRequest(settings) {
+        return !['GET', 'HEAD', 'OPTIONS'].includes(String(settings.type || settings.method || 'GET').toUpperCase());
+    }
+
+    function isAuthenticationRequest(settings) {
+        return /^\/api\/auth\/(login|logout)(?:\?|$)/i.test(String(settings.url || ''));
+    }
+
+    $(document).on('ajaxSuccess.personalToolsToast', function (_event, xhr, settings) {
+        if (!isWriteRequest(settings) || settings.showToast === false || settings.successToast === false || isAuthenticationRequest(settings)) return;
+        const method = String(settings.type || settings.method || 'POST').toUpperCase();
+        const fallback = method === 'DELETE' ? 'Deleted successfully.' : method === 'PUT' || method === 'PATCH' ? 'Changes saved successfully.' : 'Saved successfully.';
+        appToast.success(typeof settings.successToast === 'string' ? settings.successToast : ajaxToastMessage(xhr, fallback));
+    });
+
+    $(document).on('ajaxError.personalToolsToast', function (_event, xhr, settings) {
+        if (!isWriteRequest(settings) || settings.showToast === false || settings.errorToast === false || isAuthenticationRequest(settings)) return;
+        appToast.error(typeof settings.errorToast === 'string' ? settings.errorToast : ajaxToastMessage(xhr, 'The request could not be completed. Please try again.'));
+    });
+
     window.addEventListener('pageshow', () => appLoader.reset());
+
+    const serverMessages = document.getElementById('appToastMessages');
+    const serverSuccess = serverMessages?.dataset.successMessage?.trim();
+    const serverError = serverMessages?.dataset.errorMessage?.trim();
+    if (serverSuccess) appToast.success(serverSuccess);
+    if (serverError) appToast.error(serverError);
+    appToast.showQueued();
+    window.requestAnimationFrame(() => window.personalToolsMotion?.reveal(document.querySelectorAll('.tool-guide'), { fromY: 10, duration: 320 }));
 
     window.personalToolsApi = {
         request: (url, method, data) => $.ajax({
@@ -165,7 +290,7 @@
     $(document).on('submit', '.js-signout-form', function (event) {
         event.preventDefault();
         const form = $(this);
-        $.ajax({ url: '/api/auth/logout', method: 'POST', headers: { RequestVerificationToken: form.find('input[name="__RequestVerificationToken"]').val() } })
+        $.ajax({ url: '/api/auth/logout', method: 'POST', showToast: false, headers: { RequestVerificationToken: form.find('input[name="__RequestVerificationToken"]').val() } })
             .always(() => window.location.href = '/Login');
     });
 
@@ -244,13 +369,20 @@
             if (icon) icon.className = `fa-solid fa-${dark ? 'sun' : 'moon'}`;
             if (label) label.textContent = dark ? 'Light mode' : 'Dark mode';
             if (hint) hint.textContent = dark ? 'Use light appearance' : 'Use dark appearance';
-            button.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
-            button.setAttribute('title', `Switch to ${dark ? 'light' : 'dark'} theme`);
+            const tooltipText = `Switch to ${dark ? 'light' : 'dark'} theme`;
+            button.setAttribute('aria-label', tooltipText);
+            button.setAttribute('title', tooltipText);
+            button.setAttribute('data-bs-original-title', tooltipText);
+            bootstrap.Tooltip.getInstance(button)?.setContent({ '.tooltip-inner': tooltipText });
         });
     }
 
     setTheme(savedTheme || 'light');
-    document.querySelectorAll('[data-theme-toggle]').forEach((button) => button.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')));
+    document.querySelectorAll('[data-theme-toggle]').forEach((button) => button.addEventListener('click', () => {
+        setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+        window.personalToolsMotion?.pop(button, { fromScale: .78, fromOpacity: .45, duration: 300 });
+    }));
+    document.querySelectorAll('.app-sidebar-utilities [data-bs-toggle="tooltip"]').forEach(element => bootstrap.Tooltip.getOrCreateInstance(element));
 
     const sidebarKey = 'personal-tools-sidebar-collapsed';
     const dockButton = document.querySelector('[data-sidebar-dock]');
@@ -267,37 +399,79 @@
 
     if (dockButton) {
         setSidebarCollapsed(localStorage.getItem(sidebarKey) === 'true');
-        dockButton.addEventListener('click', () => setSidebarCollapsed(!document.body.classList.contains('app-sidebar-collapsed')));
+        dockButton.addEventListener('click', () => {
+            setSidebarCollapsed(!document.body.classList.contains('app-sidebar-collapsed'));
+            window.personalToolsMotion?.pop(dockButton, { fromScale: .8, fromOpacity: .35, duration: 260 });
+        });
     }
 
-    document.querySelectorAll('[data-sortable]').forEach((container) => {
-        if (typeof Sortable === 'undefined') return;
-        const storageKey = container.dataset.sortableKey;
+    document.addEventListener('shown.bs.modal', (event) => {
+        const modal = event.target;
+        if (!(modal instanceof HTMLElement) || modal.id === 'comparePlayersModal') return;
+        const targets = modal.querySelectorAll('.modal-header > *, .modal-body > :not(.d-none), .modal-footer > *');
+        window.personalToolsMotion?.reveal(targets, { fromY: 12, fromScale: .99, delay: 34, duration: 300 });
+    });
+
+    const sortableInstances = new WeakMap();
+    const sortableAntiForgeryToken = () => $('input[name="__RequestVerificationToken"]').first().val();
+
+    function initialiseSortable(container) {
+        if (!container || typeof Sortable === 'undefined' || sortableInstances.has(container)) return sortableInstances.get(container);
+        const payloadKey = container.dataset.sortablePayload;
         const apiUrl = container.dataset.sortableApi;
-        const savedOrder = storageKey ? JSON.parse(localStorage.getItem(storageKey) || '[]') : [];
-        const children = Array.from(container.children);
-        savedOrder.forEach((id) => {
-            const item = children.find((child) => child.dataset.sortableId === id);
-            if (item) container.appendChild(item);
-        });
-        new Sortable(container, {
-            animation: 180, draggable: '.note-sortable-item', handle: '.note-drag-handle', ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
+        const linkItems = container.dataset.sortableLinkItems === 'true';
+        let draggedAt = 0;
+
+        container.addEventListener('click', (event) => {
+            if (Date.now() - draggedAt < 280) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+
+        const instance = new Sortable(container, {
+            animation: 220,
+            easing: 'cubic-bezier(.22, 1, .36, 1)',
+            draggable: '[data-sortable-id]',
+            delay: 180,
+            delayOnTouchOnly: false,
+            touchStartThreshold: 6,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            filter: linkItems ? 'button, input, textarea, select, option, [contenteditable="true"], [data-sortable-no-drag]' : 'a, button, input, textarea, select, option, [contenteditable="true"], [data-sortable-no-drag]',
+            preventOnFilter: false,
+            onStart: () => container.classList.add('is-dragging'),
             onEnd: () => {
-                const itemIds = Array.from(container.children).map((item) => item.dataset.sortableId);
-                if (apiUrl) {
-                    $.ajax({
-                        url: apiUrl,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ noteIds: itemIds }),
-                        headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() }
-                    });
-                } else if (storageKey) {
-                    localStorage.setItem(storageKey, JSON.stringify(itemIds));
-                }
+                container.classList.remove('is-dragging');
+                draggedAt = Date.now();
+                const itemIds = Array.from(container.querySelectorAll(':scope > [data-sortable-id]')).map(item => item.dataset.sortableId);
+                if (!apiUrl || !payloadKey || !itemIds.length) return;
+
+                $.ajax({
+                    url: apiUrl,
+                    method: 'PUT',
+                    showToast: false,
+                    contentType: 'application/json',
+                    data: JSON.stringify({ [payloadKey]: itemIds }),
+                    headers: { RequestVerificationToken: sortableAntiForgeryToken() }
+                }).fail(() => window.personalToolsToast?.queue('Your new order could not be saved. Please try again.', 'error'));
             }
         });
-    });
+
+        sortableInstances.set(container, instance);
+        return instance;
+    }
+
+    window.personalToolsSortable = {
+        initialise: initialiseSortable,
+        setEnabled(container, enabled) {
+            const instance = initialiseSortable(container);
+            if (instance) instance.option('disabled', !enabled);
+        }
+    };
+
+    document.querySelectorAll('[data-sortable]:not([data-sortable-deferred="true"])').forEach(initialiseSortable);
 
     const viewKey = 'personal-tools-notes-view';
     const notesCollection = document.querySelector('.notes-collection');
