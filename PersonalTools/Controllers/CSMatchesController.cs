@@ -14,12 +14,14 @@ public sealed class CSMatchesController : ControllerBase
     private readonly ILeetifyFuncs _leetify;
     private readonly ICSMatchFuncs _matches;
     private readonly ICSMatchReferenceData _referenceData;
+    private readonly ILogger<CSMatchesController> _logger;
 
-    public CSMatchesController(ILeetifyFuncs leetify, ICSMatchFuncs matches, ICSMatchReferenceData referenceData)
+    public CSMatchesController(ILeetifyFuncs leetify, ICSMatchFuncs matches, ICSMatchReferenceData referenceData, ILogger<CSMatchesController> logger)
     {
         _leetify = leetify;
         _matches = matches;
         _referenceData = referenceData;
+        _logger = logger;
     }
 
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -34,6 +36,11 @@ public sealed class CSMatchesController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return BadRequest(new ApiResponse(false, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Leetify match lookup failed for user {UserId} and profile {ProfileId}.", UserId, profileId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse(false, "Leetify matches could not be loaded. Please try again."));
         }
     }
 
@@ -54,6 +61,11 @@ public sealed class CSMatchesController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return BadRequest(new ApiResponse(false, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Leetify match import failed for user {UserId} and profile {ProfileId}.", UserId, profileId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse(false, "The selected matches could not be imported. Please try again."));
         }
     }
 
