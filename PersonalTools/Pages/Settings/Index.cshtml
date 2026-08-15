@@ -78,6 +78,26 @@
                         </a>
                     }
                 </div>
+                @if (string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                {
+                    <div class="card-body border-top pt-3">
+                        <div class="mb-3">
+                            <h3 class="h6 mb-1">Link a public profile manually</h3>
+                            <p class="small-muted mb-0">Search using a SteamID64, profile URL, custom URL or display name. Check the matched account, then link it to Personal Tools.</p>
+                        </div>
+                        <form id="settingsSteamLinkForm" class="d-flex flex-column flex-sm-row gap-2 align-items-sm-start">
+                            @Html.AntiForgeryToken()
+                            <div class="js-steam-lookup flex-grow-1">
+                                <div class="input-group">
+                                    <input id="settingsManualSteamId" class="form-control js-steam-lookup-input" placeholder="SteamID64, profile URL, custom URL or name" autocomplete="off" required />
+                                    <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Search for this Steam profile" aria-label="Search for this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                </div>
+                                <div class="js-steam-lookup-result d-none mt-2 small" aria-live="polite"></div>
+                            </div>
+                            <button class="btn btn-outline-primary flex-shrink-0" type="submit"><i class="fa-solid fa-link me-1"></i>Link account</button>
+                        </form>
+                    </div>
+                }
             </section>
         </div>
 
