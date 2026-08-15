@@ -1,16 +1,143 @@
 @page
 @model PersonalTools.Pages.Inventory.IndexModel
-@{ ViewData["Title"] = "Steam Inventory"; }
-@section Head { <link rel="stylesheet" href="~/css/pages/page-inventory.css" asp-append-version="true" /> }
+@{
+    ViewData["Title"] = "Steam Inventory";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/lib/datatables/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/pages/page-inventory.css" asp-append-version="true" />
+}
+
 <div class="container px-3 px-lg-4 inventory-page">
-    <div class="section-spacing"><p class="eyebrow">Counter-Strike 2</p><h1 class="page-title">Steam inventory</h1><p class="page-subtitle">A focused view of a public CS2 inventory, directly from Steam.</p></div>
-    <div class="alert alert-light border inventory-signed-in mb-3">
-        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId)) { <span><i class="fa-brands fa-steam me-2"></i>Steam account linked. <a href="?Profile=@Model.LinkedSteamId">View my CS2 inventory</a></span> }
-        else { <span><i class="fa-brands fa-steam me-2"></i><a href="/Settings?steamRequired=true">Link your Steam account in Settings</a> to view your own inventory without pasting a profile URL.</span> }
+    <div class="section-spacing">
+        <p class="eyebrow">Counter-Strike 2</p>
+        <h1 class="page-title">Steam inventory</h1>
+        <p class="page-subtitle">A focused view of a public CS2 inventory, directly from Steam.</p>
     </div>
-    <div class="card inventory-search-card border-0 shadow-sm section-spacing"><div class="card-body p-3 p-lg-4"><form method="get" class="row g-2 align-items-end"><div class="col-12 col-lg"><label asp-for="Profile" class="form-label fw-semibold">Steam profile</label><input asp-for="Profile" class="form-control form-control-lg" placeholder="Profile URL, custom Steam URL, or SteamID64" autocomplete="off" /><div class="form-text">The profile and inventory must be public. Results are cached briefly to treat Steam gently.</div></div><div class="col-12 col-lg-auto"><button class="btn btn-primary btn-lg w-100" type="submit"><i class="fa-brands fa-steam me-2"></i>View inventory</button></div></form></div></div>
-    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage)) { <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div> }
-    @if (Model.Inventory is not null) { <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3"><div><h2 class="h5 mb-1 fw-semibold">Inventory</h2><a href="@Model.Inventory.ProfileUrl" class="small-muted" target="_blank" rel="noopener">SteamID64: @Model.Inventory.SteamId <i class="fa-solid fa-arrow-up-right-from-square ms-1"></i></a></div><span class="inventory-count">@Model.Inventory.Items.Count item@(Model.Inventory.Items.Count == 1 ? "" : "s")</span></div>
-        @if (Model.Inventory.Items.Any()) { <div class="row g-3 inventory-grid">@foreach (var item in Model.Inventory.Items) { <div class="col-6 col-md-4 col-xl-3"><button class="card inventory-item h-100 w-100 text-start" type="button" data-bs-toggle="modal" data-bs-target="#item-@item.AssetId"><div class="card-body p-3"><img src="@item.IconUrl" alt="@item.Name" loading="lazy" class="inventory-item-image" /><p class="inventory-item-name mb-1">@item.Name</p><p class="small-muted mb-0 text-truncate">@item.Type</p></div></button></div><div class="modal fade" id="item-@item.AssetId" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5">@item.Name</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><img src="@item.IconUrl" alt="" class="inventory-modal-image mb-3" /><dl class="row small mb-0"><dt class="col-5">Type</dt><dd class="col-7">@item.Type</dd><dt class="col-5">Quality</dt><dd class="col-7">@(string.IsNullOrWhiteSpace(item.Quality) ? "—" : item.Quality)</dd><dt class="col-5">Quantity</dt><dd class="col-7">@item.Amount</dd><dt class="col-5">Tradable</dt><dd class="col-7">@(item.Tradable ? "Yes" : "No")</dd><dt class="col-5">Marketable</dt><dd class="col-7">@(item.Marketable ? "Yes" : "No")</dd></dl>@if (item.Details.Any()) { <hr /> <div class="small-muted">@foreach (string detail in item.Details) { <p class="mb-2">@detail</p> }</div> }</div></div></div></div> }</div> } else { <div class="card border-0 shadow-sm"><div class="card-body p-4 small-muted">This public CS2 inventory is empty.</div></div> }
-    }
+
+    <div class="inventory-steam-account section-spacing">
+        <div class="inventory-steam-account-copy">
+            <span class="inventory-steam-mark" aria-hidden="true"><i class="fa-brands fa-steam"></i></span>
+            <span>
+        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+        {
+                    <strong>Steam account connected</strong>
+                    <small>Load the CS2 inventory linked to your Personal Tools account.</small>
+        }
+        else
+        {
+                    <strong>Connect your Steam account</strong>
+                    <small>Link Steam once to load your own public inventory instantly.</small>
+        }
+            </span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+        {
+            <button class="btn steam-account-button" id="viewLinkedInventory" type="button" data-steam-id="@Model.LinkedSteamId">
+                <i class="fa-brands fa-steam"></i><span>View my inventory</span>
+            </button>
+        }
+        else
+        {
+            <a class="btn steam-account-button" href="/Settings?steamRequired=true">
+                <i class="fa-brands fa-steam"></i><span>Manage Steam connection</span>
+            </a>
+        }
+    </div>
+
+    <div class="card inventory-search-card border-0 shadow-sm section-spacing">
+        <div class="card-body p-3 p-lg-4">
+            <form id="inventorySearchForm" novalidate>
+                <label for="inventoryProfile" class="form-label fw-semibold">Look up a public inventory</label>
+                <div class="inventory-search-controls">
+                    <div class="input-group input-group-lg inventory-profile-input">
+                        <span class="input-group-text" aria-hidden="true"><i class="fa-solid fa-link"></i></span>
+                        <input id="inventoryProfile" name="profile" value="@Model.Profile" class="form-control" placeholder="Steam profile URL, custom name, or SteamID64" autocomplete="off" required />
+                    </div>
+                    <button class="btn steam-search-button btn-lg" id="loadInventoryButton" type="submit">
+                        <i class="fa-brands fa-steam"></i><span>Load inventory</span>
+                    </button>
+                </div>
+                <div class="form-text mt-2">The Steam profile and CS2 inventory must be public. Results are cached briefly to reduce requests to Steam.</div>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-danger border-0 shadow-sm d-none" id="inventoryError" role="alert"></div>
+
+    <section id="inventoryResults" class="d-none" aria-live="polite">
+        <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1 fw-semibold">Inventory</h2>
+                <a id="inventoryProfileLink" class="small-muted" target="_blank" rel="noopener">
+                    <span id="inventorySteamId"></span>
+                    <i class="fa-solid fa-arrow-up-right-from-square ms-1"></i>
+                </a>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="inventory-count" id="inventoryCount"></span>
+                <div class="inventory-view-switcher" role="group" aria-label="Inventory view">
+                    <button class="inventory-view-button active" type="button" data-inventory-view="list" aria-pressed="true" title="List view">
+                        <i class="fa-solid fa-list" aria-hidden="true"></i><span>List</span>
+                    </button>
+                    <button class="inventory-view-button" type="button" data-inventory-view="cards" aria-pressed="false" title="Card view">
+                        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Cards</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card inventory-table-card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="inventory-data-region">
+                    <table id="inventoryTable" class="table table-hover align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">Item</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Quality</th>
+                                <th scope="col">Quantity</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="text-end">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div id="inventoryCardGrid" class="row g-3 inventory-card-grid d-none" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
+
+<div class="modal fade" id="inventoryItemModal" tabindex="-1" aria-labelledby="inventoryItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="inventoryItemModalLabel"></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img id="inventoryModalImage" alt="" class="inventory-modal-image mb-3" />
+                <dl class="row small mb-0">
+                    <dt class="col-5">Type</dt><dd class="col-7" id="inventoryModalType"></dd>
+                    <dt class="col-5">Quality</dt><dd class="col-7" id="inventoryModalQuality"></dd>
+                    <dt class="col-5">Quantity</dt><dd class="col-7" id="inventoryModalAmount"></dd>
+                    <dt class="col-5">Tradable</dt><dd class="col-7" id="inventoryModalTradable"></dd>
+                    <dt class="col-5">Marketable</dt><dd class="col-7" id="inventoryModalMarketable"></dd>
+                </dl>
+                <div id="inventoryModalDetails"></div>
+            </div>
+            <div class="modal-footer d-none" id="inventoryModalFooter">
+                <a class="btn btn-primary" id="inventoryInspectLink" href="#">Inspect in game</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/datatables/dataTables.min.js"></script>
+    <script src="~/lib/datatables/dataTables.bootstrap5.min.js"></script>
+    <script src="~/js/pages/page-inventory.js" asp-append-version="true"></script>
+}

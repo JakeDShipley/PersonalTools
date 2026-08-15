@@ -1,122 +1,81 @@
-﻿using PersonalTools.Data.Local;
+using PersonalTools.Data;
 using PersonalTools.Data.Skins;
 using PersonalTools.Entities.Skins;
 
-namespace PersonalTools.Classes.Skins
+namespace PersonalTools.Classes.Skins;
+
+public interface ISkinFuncs
 {
-    public interface ISkinFuncs
+    Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default);
+    Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default);
+    Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default);
+    Task<int> RefreshCs2SkinData();
+}
+
+public sealed class SkinFuncs : ISkinFuncs
+{
+    private readonly ITrackedSkinsData _data;
+    private readonly ICs2SkinData _catalogue;
+
+    public SkinFuncs(ITrackedSkinsData data, ICs2SkinData catalogue)
     {
-        Task<List<SkinObj>> GetSkins();
-        Task CreateSkin(SkinObj skin);
-        Task UpdateSkin(SkinObj skin);
-        Task DeleteSkin(string skinId);
-        Task<int> RefreshCs2SkinData();
+        _data = data;
+        _catalogue = catalogue;
     }
 
-    public class SkinFuncs : ISkinFuncs
+    public Task<List<SkinObj>> GetSkins(long userId, CancellationToken cancellationToken = default) =>
+        _data.GetSkins(userId, cancellationToken);
+
+    public Task CreateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default)
     {
-        private const string FileName = "skins.json";
+        NormaliseAndValidate(skin, requireId: false);
+        skin.SkinId = Guid.NewGuid();
+        return _data.CreateSkin(userId, skin, cancellationToken);
+    }
 
-        private readonly ILocalJsonData _localJsonData;
-        private readonly ICs2SkinData _cs2SkinData;
+    public Task UpdateSkin(long userId, SkinObj skin, CancellationToken cancellationToken = default)
+    {
+        NormaliseAndValidate(skin, requireId: true);
+        return _data.UpdateSkin(userId, skin, cancellationToken);
+    }
 
-        public SkinFuncs(ILocalJsonData localJsonData, ICs2SkinData cs2SkinData)
-        {
-            _localJsonData = localJsonData;
-            _cs2SkinData = cs2SkinData;
-        }
+    public Task DeleteSkin(long userId, Guid skinId, CancellationToken cancellationToken = default)
+    {
+        if (skinId == Guid.Empty) throw new InvalidOperationException("The tracked skin identifier was invalid.");
+        return _data.DeleteSkin(userId, skinId, cancellationToken);
+    }
 
-        public async Task<List<SkinObj>> GetSkins()
-        {
-            List<SkinObj> skins = await _localJsonData.LoadList<SkinObj>(FileName);
-
-            return skins
-                .OrderByDescending(x => x.Updated)
-                .ToList();
-        }
-
-        public async Task CreateSkin(SkinObj skin)
-        {
-            List<SkinObj> skins = await _localJsonData.LoadList<SkinObj>(FileName);
-
-            skin.SkinId = Guid.NewGuid().ToString();
-
-            skin.Name = skin.Name?.Trim() ?? string.Empty;
-            skin.Weapon = skin.Weapon?.Trim() ?? string.Empty;
-            skin.Exterior = skin.Exterior?.Trim() ?? string.Empty;
-            skin.MarketHashName = skin.MarketHashName?.Trim() ?? string.Empty;
-            skin.ExternalImageUrl = skin.ExternalImageUrl?.Trim() ?? string.Empty;
-            skin.Notes = skin.Notes?.Trim() ?? string.Empty;
-
-            skin.Created = DateTime.Now;
-            skin.Updated = DateTime.Now;
-
-            skins.Add(skin);
-
-            await _localJsonData.SaveList(FileName, skins);
-        }
-
-        public async Task UpdateSkin(SkinObj skin)
-        {
-            List<SkinObj> skins = await _localJsonData.LoadList<SkinObj>(FileName);
-
-            SkinObj? existingSkin = skins.FirstOrDefault(x => x.SkinId == skin.SkinId);
-
-            if (existingSkin == null)
+    public async Task<int> RefreshCs2SkinData()
+    {
+        List<Cs2ApiSkinObj> apiSkins = await _catalogue.GetApiSkins();
+        List<Cs2LocalSkinObj> localSkins = apiSkins
+            .Where(skin => !string.IsNullOrWhiteSpace(skin.MarketHashName))
+            .Select(skin => new Cs2LocalSkinObj
             {
-                return;
-            }
+                Name = skin.Name,
+                Weapon = skin.Weapon?.Name ?? string.Empty,
+                Exterior = skin.Wear?.Name ?? string.Empty,
+                MarketHashName = skin.MarketHashName,
+                Image = skin.Image
+            })
+            .OrderBy(skin => skin.MarketHashName)
+            .ToList();
+        await _catalogue.SaveLocalSkins(localSkins);
+        return localSkins.Count;
+    }
 
-            existingSkin.Name = skin.Name?.Trim() ?? string.Empty;
-            existingSkin.Weapon = skin.Weapon?.Trim() ?? string.Empty;
-            existingSkin.Exterior = skin.Exterior?.Trim() ?? string.Empty;
-            existingSkin.MarketHashName = skin.MarketHashName?.Trim() ?? string.Empty;
-            existingSkin.ExternalImageUrl = skin.ExternalImageUrl?.Trim() ?? string.Empty;
-            existingSkin.PurchasePrice = skin.PurchasePrice;
-            existingSkin.CurrentPrice = skin.CurrentPrice;
-            existingSkin.PurchaseDate = skin.PurchaseDate;
-            existingSkin.Notes = skin.Notes?.Trim() ?? string.Empty;
-            existingSkin.Updated = DateTime.Now;
-
-            await _localJsonData.SaveList(FileName, skins);
-        }
-
-        public async Task DeleteSkin(string skinId)
-        {
-            List<SkinObj> skins = await _localJsonData.LoadList<SkinObj>(FileName);
-
-            SkinObj? skin = skins.FirstOrDefault(x => x.SkinId == skinId);
-
-            if (skin == null)
-            {
-                return;
-            }
-
-            skins.Remove(skin);
-
-            await _localJsonData.SaveList(FileName, skins);
-        }
-
-        public async Task<int> RefreshCs2SkinData()
-        {
-            List<Cs2ApiSkinObj> apiSkins = await _cs2SkinData.GetApiSkins();
-
-            List<Cs2LocalSkinObj> localSkins = apiSkins
-                .Where(x => !string.IsNullOrWhiteSpace(x.MarketHashName))
-                .Select(x => new Cs2LocalSkinObj
-                {
-                    Name = x.Name,
-                    Weapon = x.Weapon?.Name ?? string.Empty,
-                    Exterior = x.Wear?.Name ?? string.Empty,
-                    MarketHashName = x.MarketHashName,
-                    Image = x.Image
-                })
-                .OrderBy(x => x.MarketHashName)
-                .ToList();
-
-            await _cs2SkinData.SaveLocalSkins(localSkins);
-
-            return localSkins.Count;
-        }
+    private static void NormaliseAndValidate(SkinObj skin, bool requireId)
+    {
+        if (requireId && skin.SkinId == Guid.Empty) throw new InvalidOperationException("The tracked skin identifier was invalid.");
+        skin.Name = skin.Name?.Trim() ?? string.Empty;
+        skin.Weapon = skin.Weapon?.Trim() ?? string.Empty;
+        skin.Exterior = skin.Exterior?.Trim() ?? string.Empty;
+        skin.MarketHashName = skin.MarketHashName?.Trim() ?? string.Empty;
+        skin.ExternalImageUrl = skin.ExternalImageUrl?.Trim() ?? string.Empty;
+        skin.Notes = skin.Notes?.Trim() ?? string.Empty;
+        if (skin.Name.Length is < 1 or > 200 || skin.Weapon.Length > 100 || skin.Exterior.Length > 100 || skin.MarketHashName.Length > 255 || skin.ExternalImageUrl.Length > 2048 || skin.Notes.Length > 20_000)
+            throw new InvalidOperationException("One or more tracked skin fields were invalid or too long.");
+        if (skin.PurchasePrice < 0 || skin.CurrentPrice < 0) throw new InvalidOperationException("Prices cannot be negative.");
     }
 }

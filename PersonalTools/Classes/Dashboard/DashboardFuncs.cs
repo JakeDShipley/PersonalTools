@@ -55,7 +55,7 @@ namespace PersonalTools.Classes.Dashboard
                 },
                 new DashboardToolObj
                 {
-                    Title = "CS2 Match Tracker",
+                    Title = "CS Match Tracker",
                     Description = "Track your CS2 match results and stats.",
                     IconClass = "fa-solid fa-bomb",
                     PageUrl = "/CSMatches",

@@ -2,112 +2,135 @@
 @model PersonalTools.Pages.Settings.IndexModel
 @{
     ViewData["Title"] = "Settings";
-
     string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
 }
 
 <div class="container px-3 px-lg-4">
-    @if (Model.SteamRequired && string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+    <div class="section-spacing">
+        <p class="eyebrow">Personal Tools</p>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage connected accounts and shared tool preferences.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
     {
-        <div class="alert alert-info shadow-sm border-0 mb-3">
-            <i class="fa-brands fa-steam me-2"></i>Link your Steam account below to view your inventory or fetch matches from Leetify.
+        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-2" role="status">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <span>@successMessage</span>
         </div>
     }
 
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <h2 class="h5 fw-semibold mb-2">Steam Account</h2>
-            @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
-            {
-                <p class="small-muted mb-0">
-                    Linked to SteamID64 <strong>@Model.LinkedSteamId</strong>. Used to view your CS2 inventory and fetch matches from Leetify.
-                </p>
-            }
-            else
-            {
-                <p class="small-muted mb-0">
-                    Link your Steam account to view your own CS2 inventory and fetch matches from Leetify without pasting a profile URL.
-                </p>
-            }
+    @if (Model.SteamRequired && string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+    {
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2" role="alert">
+            <i class="fa-brands fa-steam" aria-hidden="true"></i>
+            <span>Connect Steam below to view your inventory or import matches from Leetify.</span>
         </div>
+    }
 
-        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
-        {
-            <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#unlinkSteamModal">
-                <i class="fa-solid fa-link-slash me-1"></i>Unlink
-            </button>
-        }
-        else
-        {
-            <a class="btn btn-primary flex-shrink-0" href="/auth/steam/link">
-                <i class="fa-brands fa-steam me-1"></i>Link your Steam account
-            </a>
-        }
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body p-4">
-            <h2 class="h5 fw-semibold mb-2">Active Duty Map Pool</h2>
-            <p class="small-muted mb-3">
-                Used by the "Active Duty maps only" option on the CS Matches stats. Valve rotates this pool most seasons, so update it here when that happens.
-            </p>
-
-            @if (Model.PendingMapPoolSuggestion is { Count: > 0 })
-            {
-                <div class="alert alert-info shadow-sm border-0 d-flex flex-wrap justify-content-between align-items-center gap-2" id="mapPoolSuggestionBanner">
-                    <span>
-                        <i class="fa-solid fa-circle-info me-1"></i>
-                        A check of public map pool info suggests: <strong>@string.Join(", ", Model.PendingMapPoolSuggestion)</strong>. This is best-effort — please confirm before applying.
-                    </span>
-                    <span class="d-flex gap-2 flex-shrink-0">
-                        <form method="post" asp-page-handler="UpdateActiveDutyPool">
-                            @foreach (string map in Model.PendingMapPoolSuggestion)
+    <div class="row g-3">
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-brands fa-steam"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Steam account</h2>
+                            @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
                             {
-                                <input type="hidden" name="SelectedActiveDutyMaps" value="@map" />
+                                <p class="small-muted mb-0">
+                                    Connected as SteamID64 <strong class="text-body">@Model.LinkedSteamId</strong>. This account is used by Steam Inventory and Leetify match import.
+                                </p>
                             }
-                            <button class="btn btn-sm btn-primary" type="submit">Apply</button>
-                        </form>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="document.getElementById('mapPoolSuggestionBanner').remove()">Dismiss</button>
-                    </span>
-                </div>
-            }
-
-            <form method="post" asp-page-handler="UpdateActiveDutyPool">
-                <div class="row g-2 mb-3">
-                    @foreach (var map in Model.AllMaps)
-                    {
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
-                                <label class="form-check-label" for="activeDuty-@map.Name">@map.Name</label>
-                            </div>
+                            else
+                            {
+                                <p class="small-muted mb-0">Connect Steam once to use your public CS2 inventory and Leetify match history.</p>
+                            }
                         </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                    {
+                        <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#unlinkSteamModal">
+                            <i class="fa-solid fa-link-slash me-1"></i>Unlink Steam
+                        </button>
+                    }
+                    else
+                    {
+                        <a class="btn steam-account-button flex-shrink-0" href="/auth/steam/link">
+                            <i class="fa-brands fa-steam"></i><span>Connect Steam</span>
+                        </a>
                     }
                 </div>
-                <button class="btn btn-outline-primary" type="submit">Save map pool</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <h2 class="h5 fw-semibold mb-2">Data</h2>
-            <p class="small-muted mb-0">
-                Permanently delete all locally stored data, including your CS2 skins list.
-            </p>
+            </section>
         </div>
 
-        <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllDataModal">
-            <i class="fa-solid fa-trash me-1"></i>Delete all data
-        </button>
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-map"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Active Duty map pool</h2>
+                            <p class="small-muted mb-0">Controls the Active Duty filter in CS Match Tracker. Changes are always reviewed and applied manually.</p>
+                        </div>
+                    </div>
+
+                    @if (Model.PendingMapPoolSuggestion is { Count: > 0 })
+                    {
+                        <div class="alert alert-info border-0 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3" id="mapPoolSuggestionBanner">
+                            <span>
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Public map-pool information suggests <strong>@string.Join(", ", Model.PendingMapPoolSuggestion)</strong>. Confirm it before applying.
+                            </span>
+                            <span class="d-flex gap-2 flex-shrink-0">
+                                <form method="post" asp-page-handler="UpdateActiveDutyPool">
+                                    @foreach (string map in Model.PendingMapPoolSuggestion)
+                                    {
+                                        <input type="hidden" name="SelectedActiveDutyMaps" value="@map" />
+                                    }
+                                    <button class="btn btn-sm btn-primary" type="submit">Apply suggestion</button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-dismiss="alert" data-bs-target="#mapPoolSuggestionBanner">Dismiss</button>
+                            </span>
+                        </div>
+                    }
+
+                    <form method="post" asp-page-handler="UpdateActiveDutyPool">
+                        <div class="row g-2 mb-3">
+                            @foreach (var map in Model.AllMaps)
+                            {
+                                <div class="col-6 col-md-4 col-xl-3">
+                                    <div class="form-check rounded-3 border p-3 ps-5 h-100">
+                                        <input class="form-check-input" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
+                                        <label class="form-check-label fw-semibold" for="activeDuty-@map.Name">@map.Name</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button class="btn btn-outline-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save map pool</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-database"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Data storage</h2>
+                            <p class="small-muted mb-0">Notes and tracked skins are stored privately per account in MariaDB. CS Match Tracker remains in its current local storage flow for now.</p>
+                        </div>
+                    </div>
+                    <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis px-3 py-2">Account scoped</span>
+                </div>
+            </section>
         </div>
     </div>
 </div>
 
-@* Unlink Steam Modal *@
 <div class="modal fade" id="unlinkSteamModal" tabindex="-1" aria-labelledby="unlinkSteamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -116,49 +139,14 @@
                     <h2 class="modal-title h5" id="unlinkSteamModalLabel">Unlink Steam account</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-
                 <div class="modal-body">
-                    <p class="mb-0">Are you sure you want to unlink your Steam account? You'll need to relink it to view your inventory or fetch Leetify matches automatically.</p>
+                    <p class="mb-0">Steam Inventory and Leetify import will be unavailable until you connect Steam again. Your saved Personal Tools data will not be removed.</p>
                 </div>
-
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-danger" type="submit">Unlink</button>
+                    <button class="btn btn-danger" type="submit"><i class="fa-solid fa-link-slash me-1"></i>Unlink Steam</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-
-@* Delete All Data Modal *@
-<div class="modal fade" id="deleteAllDataModal" tabindex="-1" aria-labelledby="deleteAllDataModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header">
-                <h2 class="modal-title h5" id="deleteAllDataModalLabel">Delete all data</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <p class="mb-3">
-                    This will permanently delete all locally stored data. This action cannot be undone.
-                </p>
-
-                <form method="post" asp-page-handler="DeleteAllData" id="deleteAllDataForm">
-                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="deleteAllDataForm" data-hold-modal="deleteAllDataModal">
-                        <span class="hold-delete-fill"></span>
-                        <span class="hold-delete-label position-relative">Hold to delete all data</span>
-                    </button>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-

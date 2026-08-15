@@ -52,7 +52,7 @@
 
     @if (Model.Notes.Any())
     {
-        <div class="row g-3 g-lg-4 notes-collection" data-sortable data-sortable-key="personal-tools-notes-order">
+        <div class="row g-3 g-lg-4 notes-collection" data-sortable data-sortable-api="/api/notes/order">
             @foreach (var note in Model.Notes)
             {
                 <div class="col-12 col-md-6 col-xl-4 note-sortable-item" data-sortable-id="@note.NoteId" data-note-title="@note.Title" data-note-updated="@note.Updated.Ticks">

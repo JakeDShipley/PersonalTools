@@ -1,4 +1,9 @@
-﻿﻿
+@{
+    bool showNavigation = User.Identity?.IsAuthenticated == true;
+    string currentPath = Context.Request.Path.Value ?? "/";
+    string ActivePage(string path, bool exact = false) =>
+        (exact ? currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) : currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,125 +15,133 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
-
     <link rel="stylesheet" href="~/lib/viewerjs/viewer.min.css" />
     <link rel="stylesheet" href="~/lib/video.js/video-js.min.css" />
-
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/mediaextractor.css" />
-
-
     @await RenderSectionAsync("Head", required: false)
 </head>
-<body>
-    <nav class="navbar navbar-expand-xl app-navbar">
-        <div class="container px-3 px-lg-4">
+<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")">
+    @if (showNavigation)
+    {
+        <header class="app-mobile-header d-lg-none">
             <a class="navbar-brand" asp-page="/Index" aria-label="Personal Tools dashboard">
-                <span class="brand-mark" aria-hidden="true">
-                    <span></span><span></span><span></span>
-                </span>
+                <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
                 <span class="brand-wordmark">Personal<span>Tools</span></span>
             </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+            <button class="btn app-menu-button" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Open navigation">
+                <i class="fa-solid fa-bars"></i>
             </button>
+        </header>
 
-            <div id="mainNavbar" class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-xl-4 me-auto app-nav-links">
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/Index">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/Inventory/Index">Steam Inventory</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/Skins/Index">CS2 Skins</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/Notes/Index">Notes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-page="/GrandExchange/Index">Grand Exchange</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Media
-                        </a>
-                        <ul class="dropdown-menu media-menu">
-                            <li><span class="dropdown-header">Media tools</span></li>
-                            <li><a class="dropdown-item" asp-page="/MediaExtractor/Index"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Media Extractor</a></li>
-                            <li><a class="dropdown-item" asp-page="/AudioStudio/Index"><i class="fa-solid fa-wave-square me-2"></i>Audio Studio</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link blits-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Blits
-                        </a>
-                        <ul class="dropdown-menu blits-menu">
-                            <li><span class="dropdown-header">Blits' workshop</span></li>
-                            <li><a class="dropdown-item" asp-page="/CSMatches/Index"><i class="fa-solid fa-crosshairs me-2"></i>CS Match Tracker</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            System
-                        </a>
-                        <ul class="dropdown-menu system-menu">
-                            <li><span class="dropdown-header">Infrastructure</span></li>
-                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-server me-2"></i>Server monitor <span class="badge text-bg-light float-end">Soon</span></a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-database me-2"></i>Database monitor <span class="badge text-bg-light float-end">Soon</span></a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-scroll me-2"></i>Logs viewer <span class="badge text-bg-light float-end">Soon</span></a></li>
-                        </ul>
-                    </li>
-                </ul>
+        <aside class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="appSidebar" aria-label="Main navigation">
+            <div class="offcanvas-header app-sidebar-header">
+                <a class="navbar-brand" asp-page="/Index" aria-label="Personal Tools dashboard">
+                    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+                    <span class="brand-copy sidebar-label">
+                        <span class="brand-wordmark">Personal<span>Tools</span></span>
+                        <span class="sidebar-greeting">Hello, <strong>@User.Identity?.Name</strong></span>
+                    </span>
+                </a>
+                <button class="btn-close d-lg-none" type="button" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Close navigation"></button>
+                <button class="sidebar-dock-button d-none d-lg-inline-flex" type="button" data-sidebar-dock aria-label="Collapse navigation" title="Collapse navigation">
+                    <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+                </button>
+            </div>
 
-                <div class="nav-utilities">
-                    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme">
-                        <i class="fa-solid fa-moon" aria-hidden="true"></i>
+            <div class="offcanvas-body app-sidebar-body">
+                <nav class="app-navigation" aria-label="Personal Tools">
+                    <div class="app-nav-group">
+                        <span class="app-nav-heading sidebar-label">Workspace</span>
+                        <a class="app-sidebar-link @ActivePage("/", true)" asp-page="/Index" title="Dashboard">
+                            <span class="app-nav-icon"><i class="fa-solid fa-table-cells-large"></i></span><span class="sidebar-label">Dashboard</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/Inventory")" asp-page="/Inventory/Index" title="Steam Inventory">
+                            <span class="app-nav-icon"><i class="fa-brands fa-steam"></i></span><span class="sidebar-label">Steam Inventory</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/Skins")" asp-page="/Skins/Index" title="CS2 Skin Tracker">
+                            <span class="app-nav-icon"><i class="fa-solid fa-gun"></i></span><span class="sidebar-label">CS2 Skin Tracker</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/Notes")" asp-page="/Notes/Index" title="Notes">
+                            <span class="app-nav-icon"><i class="fa-solid fa-note-sticky"></i></span><span class="sidebar-label">Notes</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/GrandExchange")" asp-page="/GrandExchange/Index" title="Grand Exchange">
+                            <span class="app-nav-icon"><i class="fa-solid fa-coins"></i></span><span class="sidebar-label">Grand Exchange</span>
+                        </a>
+                    </div>
+
+                    <div class="app-nav-group">
+                        <span class="app-nav-heading sidebar-label">Media</span>
+                        <a class="app-sidebar-link @ActivePage("/MediaExtractor")" asp-page="/MediaExtractor/Index" title="Media Extractor">
+                            <span class="app-nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="sidebar-label">Media Extractor</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/AudioStudio")" asp-page="/AudioStudio/Index" title="Audio Studio">
+                            <span class="app-nav-icon"><i class="fa-solid fa-wave-square"></i></span><span class="sidebar-label">Audio Studio</span>
+                        </a>
+                    </div>
+
+                    <div class="app-nav-group app-nav-group-blits">
+                        <span class="app-nav-heading sidebar-label">Blits</span>
+                        <a class="app-sidebar-link blits-sidebar-link @ActivePage("/CSMatches")" asp-page="/CSMatches/Index" title="CS Match Tracker">
+                            <span class="app-nav-icon"><i class="fa-solid fa-crosshairs"></i></span><span class="sidebar-label">CS Match Tracker</span>
+                        </a>
+                    </div>
+
+                    <div class="app-nav-group">
+                        <span class="app-nav-heading sidebar-label">System</span>
+                        <span class="app-sidebar-link is-disabled" title="Server Monitor — coming soon" aria-disabled="true">
+                            <span class="app-nav-icon"><i class="fa-solid fa-server"></i></span><span class="sidebar-label">Server Monitor <span class="app-nav-soon">Soon</span></span>
+                        </span>
+                        <span class="app-sidebar-link is-disabled" title="Database Monitor — coming soon" aria-disabled="true">
+                            <span class="app-nav-icon"><i class="fa-solid fa-database"></i></span><span class="sidebar-label">Database Monitor <span class="app-nav-soon">Soon</span></span>
+                        </span>
+                        <span class="app-sidebar-link is-disabled" title="Logs Viewer — coming soon" aria-disabled="true">
+                            <span class="app-nav-icon"><i class="fa-solid fa-file-lines"></i></span><span class="sidebar-label">Logs Viewer <span class="app-nav-soon">Soon</span></span>
+                        </span>
+                    </div>
+                </nav>
+
+                <div class="app-sidebar-utilities">
+                    <button class="app-utility-link theme-utility" type="button" data-theme-toggle title="Switch theme">
+                        <span class="app-nav-icon"><i class="fa-solid fa-moon" aria-hidden="true"></i></span>
+                        <span class="sidebar-label"><strong class="theme-toggle-label">Dark mode</strong><small class="theme-toggle-hint">Switch appearance</small></span>
                     </button>
-                    <a class="settings-link" asp-page="/Settings/Index" title="Settings" aria-label="Settings">
-                        <i class="fa-solid fa-gear"></i>
+                    <a class="app-utility-link settings-utility @ActivePage("/Settings")" asp-page="/Settings/Index" title="Settings">
+                        <span class="app-nav-icon"><i class="fa-solid fa-sliders"></i></span>
+                        <span class="sidebar-label"><strong>Settings</strong><small>Preferences &amp; account</small></span>
                     </a>
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <form method="post" asp-page="/Login" asp-page-handler="SignOut" class="d-inline js-signout-form">
-                            <button class="settings-link" type="submit" title="Sign out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
-                        </form>
-                    }
-                    else
-                    {
-                        <a class="settings-link" asp-page="/Login" asp-route-returnUrl="@Context.Request.Path" title="Sign in" aria-label="Sign in"><i class="fa-solid fa-right-to-bracket"></i></a>
-                    }
+                    <form method="post" asp-page="/Login" asp-page-handler="SignOut" class="js-signout-form">
+                        <button class="app-utility-link signout-utility" type="submit" title="Sign out">
+                            <span class="app-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+                            <span class="sidebar-label"><strong>Sign out</strong><small>End this session</small></span>
+                        </button>
+                    </form>
                 </div>
             </div>
-        </div>
-    </nav>
+        </aside>
+    }
 
-    <main class="app-main">
-        @RenderBody()
-    </main>
+    <div class="app-content-shell">
+        <main class="app-main">
+            @RenderBody()
+        </main>
 
-    <footer class="app-footer">
-        <div class="container px-3 px-lg-4 d-flex flex-wrap justify-content-between gap-2">
-            <span>&copy; @DateTime.Now.Year Personal Tools</span>
-            <span class="d-flex gap-3"><a asp-page="/Privacy" class="link-secondary text-decoration-none">Privacy</a><a asp-page="/Cookies" class="link-secondary text-decoration-none">Cookies</a></span>
-        </div>
-    </footer>
+        <footer class="app-footer">
+            <div class="container px-3 px-lg-4 d-flex flex-wrap justify-content-between gap-2">
+                <span>&copy; @DateTime.Now.Year Personal Tools</span>
+                <span class="d-flex gap-3"><a asp-page="/Privacy">Privacy</a><a asp-page="/Cookies">Cookies</a></span>
+            </div>
+        </footer>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-
     <script src="~/js/site.js" asp-append-version="true"></script>
-
     <script src="~/lib/viewerjs/viewer.min.js"></script>
     <script src="~/lib/video.js/video.min.js"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-
 </html>

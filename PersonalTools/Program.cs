@@ -4,7 +4,6 @@ using PersonalTools.Classes.Dashboard;
 using PersonalTools.Classes.GrandExchange;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
-using PersonalTools.Classes.Settings;
 using PersonalTools.Classes.Skins;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -30,6 +29,8 @@ builder.Services.AddScoped<IAuthData, AuthData>();
 builder.Services.AddScoped<IAuthFuncs, AuthFuncs>();
 builder.Services.AddScoped<IQuickLinksData, QuickLinksData>();
 builder.Services.AddScoped<IQuickLinksFuncs, QuickLinksFuncs>();
+builder.Services.AddScoped<INotesData, NotesData>();
+builder.Services.AddScoped<ITrackedSkinsData, TrackedSkinsData>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -71,9 +72,8 @@ builder.Services.AddScoped<INoteFuncs, NoteFuncs>();
 // Grand Exchange
 string? osrsWikiUserAgent = builder.Configuration["OsrsWikiPrices:UserAgent"];
 
-//Settings
-builder.Services.AddScoped<ISettingsFuncs, SettingsFuncs>();
-builder.Services.AddHttpClient<ISteamInventoryFuncs, SteamInventoryFuncs>(client =>
+builder.Services.AddScoped<ISteamInventoryFuncs, SteamInventoryFuncs>();
+builder.Services.AddHttpClient<ISteamInventoryData, SteamInventoryData>(client =>
 {
     client.BaseAddress = new Uri("https://steamcommunity.com/");
     client.Timeout = TimeSpan.FromSeconds(25);
@@ -100,7 +100,7 @@ builder.Services.AddHttpClient<IMediaExtractorFuncs, MediaExtractorFuncs>(client
     client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalToolsMediaExtractor/1.0");
 });
 
-// CSMatches
+// CS Match Tracker
 builder.Services.AddScoped<ICSMatchFuncs, CSMatchFuncs>();
 builder.Services.AddScoped<ICSMatchReferenceData, CSMatchReferenceData>();
 builder.Services.AddHttpClient<ILeetifyData, LeetifyData>(client =>

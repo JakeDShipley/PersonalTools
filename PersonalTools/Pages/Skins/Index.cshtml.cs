@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonalTools.Classes.Skins;
 using PersonalTools.Data.Skins;
 using PersonalTools.Entities.Skins;
+using System.Security.Claims;
 
 namespace PersonalTools.Pages.Skins
 {
@@ -22,7 +23,7 @@ namespace PersonalTools.Pages.Skins
 
         public async Task OnGet()
         {
-            Skins = await _skinFuncs.GetSkins();
+            Skins = await _skinFuncs.GetSkins(UserId);
             Skins = SortBy switch
             {
                 "name" => SortDirection == "asc" ? Skins.OrderBy(x => x.Name).ToList() : Skins.OrderByDescending(x => x.Name).ToList(),
@@ -38,17 +39,17 @@ namespace PersonalTools.Pages.Skins
         public async Task<IActionResult> OnPostCreate()
         {
             if (string.IsNullOrWhiteSpace(Skin.Name)) { TempData["ErrorMessage"] = "Please select a skin."; return RedirectToPage(); }
-            await _skinFuncs.CreateSkin(Skin); TempData["SuccessMessage"] = "Skin added successfully."; return RedirectToPage();
+            await _skinFuncs.CreateSkin(UserId, Skin); TempData["SuccessMessage"] = "Skin added successfully."; return RedirectToPage();
         }
         public async Task<IActionResult> OnPostEdit()
         {
-            if (string.IsNullOrWhiteSpace(Skin.SkinId)) { TempData["ErrorMessage"] = "Could not find the skin to update."; return RedirectToPage(); }
+            if (Skin.SkinId == Guid.Empty) { TempData["ErrorMessage"] = "Could not find the skin to update."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(Skin.Name)) { TempData["ErrorMessage"] = "Please select a skin."; return RedirectToPage(); }
-            await _skinFuncs.UpdateSkin(Skin); TempData["SuccessMessage"] = "Skin updated successfully."; return RedirectToPage();
+            await _skinFuncs.UpdateSkin(UserId, Skin); TempData["SuccessMessage"] = "Skin updated successfully."; return RedirectToPage();
         }
-        public async Task<IActionResult> OnPostDelete(string skinId)
+        public async Task<IActionResult> OnPostDelete(Guid skinId)
         {
-            if (!string.IsNullOrWhiteSpace(skinId)) { await _skinFuncs.DeleteSkin(skinId); TempData["SuccessMessage"] = "Skin deleted successfully."; }
+            if (skinId != Guid.Empty) { await _skinFuncs.DeleteSkin(UserId, skinId); TempData["SuccessMessage"] = "Skin deleted successfully."; }
             return RedirectToPage();
         }
         public async Task<IActionResult> OnPostRefreshSkinData()
@@ -62,5 +63,7 @@ namespace PersonalTools.Pages.Skins
             List<Cs2LocalSkinObj> skins = await _cs2SkinData.SearchLocalSkins(term);
             return new JsonResult(skins.Select(s => new { id = s.MarketHashName, text = s.MarketHashName, skin = new { s.Name, s.Weapon, s.Exterior, s.MarketHashName, s.Image } }));
         }
+
+        private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 }

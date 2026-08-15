@@ -65,18 +65,43 @@
         localStorage.setItem(themeKey, theme);
         document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
             const dark = theme === 'dark';
-            button.innerHTML = `<i class="fa-solid fa-${dark ? 'sun' : 'moon'}" aria-hidden="true"></i>`;
+            const icon = button.querySelector('i');
+            const label = button.querySelector('.theme-toggle-label');
+            const hint = button.querySelector('.theme-toggle-hint');
+            if (icon) icon.className = `fa-solid fa-${dark ? 'sun' : 'moon'}`;
+            if (label) label.textContent = dark ? 'Light mode' : 'Dark mode';
+            if (hint) hint.textContent = dark ? 'Use light appearance' : 'Use dark appearance';
             button.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
+            button.setAttribute('title', `Switch to ${dark ? 'light' : 'dark'} theme`);
         });
     }
 
     setTheme(savedTheme || 'light');
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => button.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')));
 
+    const sidebarKey = 'personal-tools-sidebar-collapsed';
+    const dockButton = document.querySelector('[data-sidebar-dock]');
+
+    function setSidebarCollapsed(collapsed) {
+        document.body.classList.toggle('app-sidebar-collapsed', collapsed);
+        localStorage.setItem(sidebarKey, collapsed ? 'true' : 'false');
+        if (!dockButton) return;
+        const icon = dockButton.querySelector('i');
+        if (icon) icon.className = `fa-solid fa-angles-${collapsed ? 'right' : 'left'}`;
+        dockButton.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+        dockButton.setAttribute('title', collapsed ? 'Expand navigation' : 'Collapse navigation');
+    }
+
+    if (dockButton) {
+        setSidebarCollapsed(localStorage.getItem(sidebarKey) === 'true');
+        dockButton.addEventListener('click', () => setSidebarCollapsed(!document.body.classList.contains('app-sidebar-collapsed')));
+    }
+
     document.querySelectorAll('[data-sortable]').forEach((container) => {
         if (typeof Sortable === 'undefined') return;
         const storageKey = container.dataset.sortableKey;
-        const savedOrder = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const apiUrl = container.dataset.sortableApi;
+        const savedOrder = storageKey ? JSON.parse(localStorage.getItem(storageKey) || '[]') : [];
         const children = Array.from(container.children);
         savedOrder.forEach((id) => {
             const item = children.find((child) => child.dataset.sortableId === id);
@@ -84,7 +109,20 @@
         });
         new Sortable(container, {
             animation: 180, draggable: '.note-sortable-item', handle: '.note-drag-handle', ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen',
-            onEnd: () => localStorage.setItem(storageKey, JSON.stringify(Array.from(container.children).map((item) => item.dataset.sortableId)))
+            onEnd: () => {
+                const itemIds = Array.from(container.children).map((item) => item.dataset.sortableId);
+                if (apiUrl) {
+                    $.ajax({
+                        url: apiUrl,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ noteIds: itemIds }),
+                        headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() }
+                    });
+                } else if (storageKey) {
+                    localStorage.setItem(storageKey, JSON.stringify(itemIds));
+                }
+            }
         });
     });
 

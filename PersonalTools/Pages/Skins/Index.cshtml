@@ -1,6 +1,6 @@
 ﻿@page
 @model PersonalTools.Pages.Skins.IndexModel
-@using System.Text.Encodings.Web
+@using System.Text.Json
 @{
     ViewData["Title"] = "CS2 Skin Tracker";
 
@@ -44,7 +44,7 @@
                     </button>
                 </form>
 
-                <form method="post" asp-page-handler="RefreshSkinData">
+                <form method="post" asp-page-handler="RefreshSkinData" id="refreshSkinCatalogueForm">
                     <button class="btn btn-outline-secondary" type="submit">
                         <i class="fa-solid fa-rotate me-1"></i>Refresh skin data
                     </button>
@@ -123,7 +123,10 @@
                 </div>
 
                 <div class="chart-wrap">
-                    <canvas id="skinValueChart"></canvas>
+                    <canvas id="skinValueChart"
+                            data-labels="@JsonSerializer.Serialize(Model.Skins.Select(skin => !string.IsNullOrWhiteSpace(skin.MarketHashName) ? skin.MarketHashName : skin.Name))"
+                            data-purchase-values="@JsonSerializer.Serialize(Model.Skins.Select(skin => skin.PurchasePrice))"
+                            data-current-values="@JsonSerializer.Serialize(Model.Skins.Select(skin => skin.CurrentPrice ?? skin.PurchasePrice))"></canvas>
                 </div>
             </div>
         </div>
@@ -240,7 +243,7 @@
 <div class="modal fade" id="addSkinModal" tabindex="-1" aria-labelledby="addSkinModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Create">
+            <form method="post" asp-page-handler="Create" id="addSkinForm">
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="addSkinModalLabel">Add skin</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -261,23 +264,23 @@
 
                         <div class="col-12 col-md-4">
                             <label asp-for="Skin.PurchasePrice" class="form-label">Purchase price</label>
-                            <input asp-for="Skin.PurchasePrice" class="form-control" type="number" step="0.01" min="0" />
+                            <input asp-for="Skin.PurchasePrice" id="addSkinPurchasePrice" class="form-control" type="number" step="0.01" min="0" />
                         </div>
 
                         <div class="col-12 col-md-4">
                             <label asp-for="Skin.CurrentPrice" class="form-label">Current price</label>
-                            <input asp-for="Skin.CurrentPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <input asp-for="Skin.CurrentPrice" id="addSkinCurrentPrice" class="form-control" type="number" step="0.01" min="0" />
                         </div>
 
                         <div class="col-12 col-md-4">
                             <label asp-for="Skin.PurchaseDate" class="form-label">Purchase date</label>
-                            <input asp-for="Skin.PurchaseDate" class="form-control" type="date" />
+                            <input asp-for="Skin.PurchaseDate" id="addSkinPurchaseDate" class="form-control" type="date" />
                         </div>
 
 
                         <div class="col-12">
                             <label asp-for="Skin.Notes" class="form-label">Notes</label>
-                            <textarea asp-for="Skin.Notes" class="form-control" rows="4"></textarea>
+                            <textarea asp-for="Skin.Notes" id="addSkinNotes" class="form-control" rows="4"></textarea>
                         </div>
                     </div>
                 </div>
@@ -295,7 +298,7 @@
 <div class="modal fade" id="editSkinModal" tabindex="-1" aria-labelledby="editSkinModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Edit">
+            <form method="post" asp-page-handler="Edit" id="editSkinForm">
                 <input type="hidden" asp-for="Skin.SkinId" id="editSkinId" />
 
                 <div class="modal-header">
@@ -350,7 +353,7 @@
 <div class="modal fade" id="deleteSkinModal" tabindex="-1" aria-labelledby="deleteSkinModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Delete">
+            <form method="post" asp-page-handler="Delete" id="deleteSkinForm">
                 <input type="hidden" name="skinId" id="deleteSkinId" />
 
                 <div class="modal-header">
@@ -375,154 +378,5 @@
 
 
 @section Scripts {
-    <script>
-        $(function () {
-            let skinValueChart = null;
-
-            function initSkinSelect($select, $modal, placeholder) {
-                if ($select.hasClass('select2-hidden-accessible')) return;
-                $select.select2({
-                    width: '100%', dropdownParent: $modal, placeholder: placeholder, allowClear: true, minimumInputLength: 2,
-                    ajax: {
-                        url: '?handler=SkinSearch', dataType: 'json', delay: 180,
-                        data: params => ({ term: params.term }),
-                        processResults: results => ({ results: results })
-                    }
-                });
-            }
-
-                    function setAddSkinFields(skin) {
-            $('#addSkinName').val(skin ? skin.Name || '' : '');
-            $('#addSkinWeapon').val(skin ? skin.Weapon || '' : '');
-            $('#addSkinExterior').val(skin ? skin.Exterior || '' : '');
-            $('#addMarketHashName').val(skin ? skin.MarketHashName || '' : '');
-            $('#addExternalImageUrl').val(skin ? skin.Image || '' : '');
-        }
-
-        function setEditSkinFields(skin) {
-            $('#editSkinName').val(skin ? skin.Name || '' : '');
-            $('#editSkinWeapon').val(skin ? skin.Weapon || '' : '');
-            $('#editSkinExterior').val(skin ? skin.Exterior || '' : '');
-            $('#editMarketHashName').val(skin ? skin.MarketHashName || '' : '');
-            $('#editExternalImageUrl').val(skin ? skin.Image || '' : '');
-        }
-
-            $('#addSkinModal').on('shown.bs.modal', function () {
-                initSkinSelect($('#addSkinSelect'), $('#addSkinModal'), 'Search for a CS2 skin...');
-            });
-
-            $('#editSkinModal').on('shown.bs.modal', function () {
-                initSkinSelect($('#editSkinSelect'), $('#editSkinModal'), 'Search for a CS2 skin...');
-            });
-
-            $('#addSkinSelect').on('select2:select', function (e) {
-                setAddSkinFields(e.params.data.skin);
-            });
-
-            $('#addSkinSelect').on('select2:clear', function () {
-                setAddSkinFields(null);
-            });
-
-            $('#editSkinSelect').on('select2:select', function (e) {
-                setEditSkinFields(e.params.data.skin);
-            });
-
-            $('#editSkinSelect').on('select2:clear', function () {
-                setEditSkinFields(null);
-            });
-
-            $(document).on('click', '.js-edit-skin', function () {
-                const marketHashName = $(this).data('market-hash-name');
-
-                $('#editSkinId').val($(this).data('skin-id'));
-                $('#editSkinName').val($(this).data('name'));
-                $('#editSkinWeapon').val($(this).data('weapon'));
-                $('#editSkinExterior').val($(this).data('exterior'));
-                $('#editMarketHashName').val(marketHashName);
-                $('#editExternalImageUrl').val($(this).data('external-image-url'));
-                $('#editSkinPurchasePrice').val($(this).data('purchase-price'));
-                $('#editSkinCurrentPrice').val($(this).data('current-price'));
-                $('#editSkinPurchaseDate').val($(this).data('purchase-date'));
-                $('#editSkinNotes').val($(this).data('notes'));
-
-                initSkinSelect($('#editSkinSelect'), $('#editSkinModal'), 'Search for a CS2 skin...');
-                const $editSelect = $('#editSkinSelect');
-                if (marketHashName && $editSelect.find("option[value='" + marketHashName.replace(/'/g, "\\'") + "']").length === 0) {
-                    $editSelect.append(new Option(marketHashName, marketHashName, true, true));
-                }
-                $editSelect.val(marketHashName).trigger('change');
-            });
-
-            $(document).on('click', '.js-delete-skin', function () {
-                $('#deleteSkinId').val($(this).data('skin-id'));
-                $('#deleteSkinName').text($(this).data('name'));
-            });
-
-            function buildSkinChart() {
-                const chartEl = document.getElementById('skinValueChart');
-
-                if (!chartEl) {
-                    return;
-                }
-
-                const labels = [
-                    @foreach (var skin in Model.Skins)
-                    {
-                            <text>'@JavaScriptEncoder.Default.Encode(!string.IsNullOrWhiteSpace(skin.MarketHashName) ? skin.MarketHashName : skin.Name)',</text>
-                    }
-                ];
-
-                const purchaseValues = [
-                    @foreach (var skin in Model.Skins)
-                    {
-                            <text>@skin.PurchasePrice,</text>
-                    }
-                ];
-
-                const currentValues = [
-                    @foreach (var skin in Model.Skins)
-                    {
-                            <text>@(skin.CurrentPrice ?? skin.PurchasePrice),</text>
-                    }
-                ];
-
-                if (skinValueChart) {
-                    skinValueChart.destroy();
-                }
-
-                skinValueChart = new Chart(chartEl, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Purchase value',
-                                data: purchaseValues
-                            },
-                            {
-                                label: 'Current value',
-                                data: currentValues
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-
-            buildSkinChart();
-        });
-    </script>
+    <script src="~/js/pages/page-skins.js" asp-append-version="true"></script>
 }
