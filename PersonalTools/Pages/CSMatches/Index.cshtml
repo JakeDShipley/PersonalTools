@@ -1,275 +1,313 @@
-﻿@page
+@page
 @model PersonalTools.Pages.CSMatches.IndexModel
 @{
     ViewData["Title"] = "CS2 Matches";
 }
 
+@section Head {
+    <link rel="stylesheet" href="~/css/cs-matches.css" asp-append-version="true" />
+}
+
 <div class="container px-3 px-lg-4">
-    @Html.AntiForgeryToken()
-    <div class="row align-items-start gy-3 section-spacing">
-        <div class="col-12 col-lg">
-            <h1 class="page-title">CS Matches</h1>
-            <p class="page-subtitle">
-                Track your CS2 match results and stats.
-            </p>
-        </div>
+    <div class="csm-page">
+        @Html.AntiForgeryToken()
+        <div class="row align-items-start gy-3 section-spacing">
+            <div class="col-12 col-lg">
+                <h1 class="page-title"><span class="csm-accent-dot"></span>CS Matches</h1>
+                <p class="page-subtitle">
+                    Track your CS2 match results and stats.
+                </p>
+            </div>
 
-        <div class="col-12 col-lg-auto d-flex flex-wrap gap-2">
-            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
-                <i class="fa-solid fa-sliders me-1"></i>Edit Stats
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="fetchLeetifyBtn" data-steam-linked="@Model.HasLinkedSteamId.ToString().ToLowerInvariant()">
-                <i class="fa-solid fa-cloud-arrow-down me-1"></i>Fetch matches from Leetify
-            </button>
-            <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllMatchesModal">
-                <i class="fa-solid fa-trash me-1"></i>Delete all matches
-            </button>
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
-                <i class="fa-solid fa-plus me-1"></i>Add match
-            </button>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
-    {
-        <div class="alert alert-success shadow-sm border-0 section-spacing">
-            @Model.SuccessMessage
-        </div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-    {
-        <div class="alert alert-danger shadow-sm border-0 section-spacing">
-            @Model.ErrorMessage
-        </div>
-    }
-
-    @if (Model.MapPoolSuggestionPending)
-    {
-        <div class="alert alert-info shadow-sm border-0 section-spacing d-none" id="mapPoolSuggestionBanner">
-            <i class="fa-solid fa-circle-info me-1"></i>
-            The Active Duty map pool may have changed. <a href="/Settings">Review it in Settings</a>.
-        </div>
-    }
-
-    @* Stats *@
-    <div class="row g-3 section-spacing" id="statsRow">
-        <div class="col-6 col-md-3 js-stat" data-stat-key="totalMatches">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
-                    <p class="small-muted mb-1">Total Matches</p>
-                    <p class="h5 mb-0 js-stat-value">@Model.Stats.TotalMatches</p>
-                </div>
+            <div class="col-12 col-lg-auto csm-actions">
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
+                    <i class="fa-solid fa-sliders me-1"></i>Edit Stats
+                </button>
+                <button class="btn btn-outline-secondary" type="button" id="fetchLeetifyBtn" data-steam-linked="@Model.HasLinkedSteamId.ToString().ToLowerInvariant()">
+                    <i class="fa-solid fa-cloud-arrow-down me-1"></i>Fetch matches from Leetify
+                </button>
+                <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllMatchesModal">
+                    <i class="fa-solid fa-trash me-1"></i>Delete all matches
+                </button>
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                    <i class="fa-solid fa-plus me-1"></i>Add match
+                </button>
             </div>
         </div>
 
-        <div class="col-6 col-md-3 js-stat" data-stat-key="winsLosses">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
-                    <p class="small-muted mb-1">Wins / Losses</p>
-                    <p class="h4 mb-0 js-stat-value"><span class="text-success">@Model.Stats.Wins</span> / <span class="text-danger">@Model.Stats.Losses</span></p>
-                </div>
+        @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+        {
+            <div class="alert alert-success shadow-sm border-0 section-spacing">
+                @Model.SuccessMessage
             </div>
-        </div>
+        }
 
-        <div class="col-6 col-md-3 js-stat" data-stat-key="totalWinRate">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
-                    <p class="small-muted mb-1">Total Win Rate</p>
-                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRate%</p>
-                </div>
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger shadow-sm border-0 section-spacing">
+                @Model.ErrorMessage
             </div>
-        </div>
+        }
 
-        <div class="col-6 col-md-3 js-stat" data-stat-key="winRateCT">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
-                    <p class="small-muted mb-1">Win Rate (CT Start)</p>
-                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRateCTStart%</p>
-                </div>
+        @if (Model.MapPoolSuggestionPending)
+        {
+            <div class="alert alert-info shadow-sm border-0 section-spacing d-none" id="mapPoolSuggestionBanner">
+                <i class="fa-solid fa-circle-info me-1"></i>
+                The Active Duty map pool may have changed. <a href="/Settings">Review it in Settings</a>.
             </div>
-        </div>
+        }
 
-        <div class="col-6 col-md-3 js-stat" data-stat-key="winRateT">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
-                    <p class="small-muted mb-1">Win Rate (T Start)</p>
-                    <p class="h4 mb-0 js-stat-value">@Model.Stats.WinRateTStart%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 js-stat" data-stat-key="overtimeGames">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
-                    <p class="small-muted mb-1">Overtime Games</p>
-                    <p class="h5 mb-0 js-stat-value">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
-                </div>
-            </div>
-        </div>
+        @* Profile tabs *@
+        <nav class="csm-tabs section-spacing" id="profileTabs">
+            <a href="?ProfileId=" class="csm-tab @(Model.ActiveProfile == null ? "active" : "")">You</a>
 
-        <div class="col-6 col-md-3 js-stat" data-stat-key="otWinLoss">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
-                    <p class="small-muted mb-1">OT Wins / Losses</p>
-                    <p class="h5 mb-0 js-stat-value"><span class="text-success">@Model.Stats.OvertimeWins</span> / <span class="text-danger">@Model.Stats.OvertimeLosses</span></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="avgScoreMargin">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
-                    <p class="small-muted mb-1">Avg Score Margin</p>
-                    <p class="h5 mb-0 js-stat-value">@Model.Stats.AverageScoreMargin</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="currentStreak">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
-                    <p class="small-muted mb-1">Current Streak</p>
-                    <p class="h5 mb-0 js-stat-value @(Model.Stats.CurrentStreakType == "Win" ? "text-success" : "text-danger")">
-                        @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMap">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
-                    <p class="small-muted mb-1">Best Map</p>
-                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="worstMap">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
-                    <p class="small-muted mb-1">Worst Map</p>
-                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMapCT">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
-                    <p class="small-muted mb-1">Best Map (CT Start)</p>
-                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3 js-stat" data-stat-key="bestMapT">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 position-relative">
-                    <i class="fa-solid fa-circle-info small-muted position-absolute top-0 end-0 mt-2 me-2"
-                       data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
-                    <p class="small-muted mb-1">Best Map (T Start)</p>
-                    <p class="h5 mb-0 js-stat-value">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @* Filters *@
-    <div class="card shadow-sm border-0 section-spacing">
-        <div class="card-body p-3">
-            <div class="row g-2 align-items-end">
-                <div class="col-6 col-md-3">
-                    <label class="form-label small-muted mb-1">Map</label>
-                    <select class="form-select form-select-sm" id="filterMap">
-                        <option value="">All maps</option>
-                        @foreach (var map in Model.Maps)
-                        {
-                            <option value="@map.Name">@map.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-6 col-md-3">
-                    <label class="form-label small-muted mb-1">Result</label>
-                    <select class="form-select form-select-sm" id="filterResult">
-                        <option value="">All</option>
-                        <option value="win">Wins</option>
-                        <option value="loss">Losses</option>
-                    </select>
-                </div>
-                <div class="col-6 col-md-3">
-                    <label class="form-label small-muted mb-1">Start Side</label>
-                    <select class="form-select form-select-sm" id="filterSide">
-                        <option value="">All</option>
-                        <option value="CT">CT</option>
-                        <option value="T">T</option>
-                    </select>
-                </div>
-                <div class="col-6 col-md-3">
-                    <label class="form-label small-muted mb-1">Overtime</label>
-                    <select class="form-select form-select-sm" id="filterOvertime">
-                        <option value="">All</option>
-                        <option value="yes">Overtime only</option>
-                        <option value="no">Regulation only</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @* Match cards *@
-    @if (Model.Matches.Any())
-    {
-        <div class="row g-3 g-lg-4" id="matchList">
-            @foreach (var match in Model.Matches)
+            @foreach (var profile in Model.Profiles)
             {
-                var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
-                var isWin = match.TeamScore > match.OpponentScore;
-                var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+                bool isActive = Model.ActiveProfile?.ProfileId == profile.ProfileId;
 
-                <div class="col-12 col-md-6 col-xl-4 match-card-wrapper"
-                     data-map="@match.MapName"
-                     data-result="@(isWin ? "win" : "loss")"
-                     data-side="@match.StartSide"
-                     data-overtime="@(isOvertime ? "yes" : "no")">
-                    <div class="card tool-card h-100 shadow-sm">
+                <span class="csm-tab-group">
+                    <a href="?ProfileId=@profile.ProfileId" class="csm-tab @(isActive ? "active" : "")">@profile.Name</a>
+                    @if (isActive)
+                    {
+                        <button class="csm-tab-edit js-edit-profile"
+                                type="button"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editProfileModal"
+                                data-profile-id="@profile.ProfileId"
+                                data-profile-name="@profile.Name"
+                                data-profile-steamid="@profile.SteamId"
+                                title="Edit profile">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    }
+                </span>
+            }
+
+            <button class="csm-tab-add" type="button" data-bs-toggle="modal" data-bs-target="#addProfileModal">
+                + Add Profile
+            </button>
+        </nav>
+
+        @* Stats *@
+        <div class="csm-stats section-spacing" id="statsRow">
+            <div class="csm-stat js-stat" data-stat-key="totalMatches">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
+                <p class="csm-stat-label mb-1">Total Matches</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.TotalMatches</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="winsLosses">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
+                <p class="csm-stat-label mb-1">Wins / Losses</p>
+                <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.Wins</span> / <span class="loss">@Model.Stats.Losses</span></p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="totalWinRate">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
+                <p class="csm-stat-label mb-1">Total Win Rate</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRate%</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="winRateCT">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
+                <p class="csm-stat-label mb-1">Win Rate (CT Start)</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateCTStart%</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="winRateT">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
+                <p class="csm-stat-label mb-1">Win Rate (T Start)</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateTStart%</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="overtimeGames">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
+                <p class="csm-stat-label mb-1">Overtime Games</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="otWinLoss">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
+                <p class="csm-stat-label mb-1">OT Wins / Losses</p>
+                <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.OvertimeWins</span> / <span class="loss">@Model.Stats.OvertimeLosses</span></p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="avgScoreMargin">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
+                <p class="csm-stat-label mb-1">Avg Score Margin</p>
+                <p class="csm-stat-value js-stat-value">@Model.Stats.AverageScoreMargin</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="currentStreak">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
+                <p class="csm-stat-label mb-1">Current Streak</p>
+                <p class="csm-stat-value js-stat-value @(Model.Stats.CurrentStreakType == "Win" ? "win" : "loss")">
+                    @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
+                </p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="bestMap">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
+                <p class="csm-stat-label mb-1">Best Map</p>
+                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="worstMap">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
+                <p class="csm-stat-label mb-1">Worst Map</p>
+                <p class="csm-stat-value js-stat-value">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="bestMapCT">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
+                <p class="csm-stat-label mb-1">Best Map (CT Start)</p>
+                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
+            </div>
+
+            <div class="csm-stat js-stat" data-stat-key="bestMapT">
+                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
+                <p class="csm-stat-label mb-1">Best Map (T Start)</p>
+                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
+            </div>
+        </div>
+
+        @* Filters + view toggle *@
+        <div class="card shadow-sm border-0 section-spacing">
+            <div class="card-body p-3">
+                <div class="csm-filters">
+                    <div class="csm-filter-field">
+                        <label for="filterMap">Map</label>
+                        <select class="form-select form-select-sm" id="filterMap">
+                            <option value="">All maps</option>
+                            @foreach (var map in Model.Maps)
+                            {
+                                <option value="@map.Name">@map.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="csm-filter-field">
+                        <label for="filterResult">Result</label>
+                        <select class="form-select form-select-sm" id="filterResult">
+                            <option value="">All</option>
+                            <option value="win">Wins</option>
+                            <option value="loss">Losses</option>
+                        </select>
+                    </div>
+                    <div class="csm-filter-field">
+                        <label for="filterSide">Start Side</label>
+                        <select class="form-select form-select-sm" id="filterSide">
+                            <option value="">All</option>
+                            <option value="CT">CT</option>
+                            <option value="T">T</option>
+                        </select>
+                    </div>
+                    <div class="csm-filter-field">
+                        <label for="filterOvertime">Overtime</label>
+                        <select class="form-select form-select-sm" id="filterOvertime">
+                            <option value="">All</option>
+                            <option value="yes">Overtime only</option>
+                            <option value="no">Regulation only</option>
+                        </select>
+                    </div>
+
+                    <div class="csm-view-toggle" role="group" aria-label="Match view">
+                        <button type="button" class="js-view-toggle" data-view="list" title="List view"><i class="fa-solid fa-list"></i></button>
+                        <button type="button" class="js-view-toggle" data-view="cards" title="Card view"><i class="fa-solid fa-table-cells-large"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Match list / cards *@
+        @if (Model.Matches.Any())
+        {
+            <div class="csm-matches-list" id="matchListView">
+                @foreach (var match in Model.Matches)
+                {
+                    var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
+                    var isWin = match.TeamScore > match.OpponentScore;
+                    var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+
+                    <div class="csm-match-row match-card-wrapper @(isWin ? "is-win" : "is-loss")"
+                         data-map="@match.MapName"
+                         data-result="@(isWin ? "win" : "loss")"
+                         data-side="@match.StartSide"
+                         data-overtime="@(isOvertime ? "yes" : "no")">
+                        <span class="csm-match-cell">
+                            @if (map != null && !string.IsNullOrWhiteSpace(map.ImagePath))
+                            {
+                                <img src="@map.ImagePath" class="csm-thumb" alt="" />
+                            }
+                            <span class="csm-map-name">@match.MapName</span>
+                        </span>
+
+                        <span class="csm-chip">@match.GameType</span>
+
+                        <img class="csm-side-icon" src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" />
+
+                        <span class="csm-match-cell">
+                            <span class="csm-score @(isWin ? "win" : "loss")">@match.TeamScore&ndash;@match.OpponentScore</span>
+                            @if (isOvertime)
+                            {
+                                <span class="csm-ot-chip">OT@(match.OvertimeCount)</span>
+                            }
+                        </span>
+
+                        <span class="csm-date" title="@match.Created.ToString("dd MMM yyyy HH:mm")">@match.Created.ToString("dd MMM")</span>
+
+                        <span class="csm-match-actions">
+                            <button class="csm-icon-btn js-edit-match"
+                                    type="button"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editMatchModal"
+                                    data-match-id="@match.MatchId"
+                                    data-match-side="@match.StartSide"
+                                    data-match-map="@match.MapName"
+                                    data-match-gametype="@match.GameType"
+                                    data-match-teamscore="@match.TeamScore"
+                                    data-match-opponentscore="@match.OpponentScore"
+                                    data-match-ot="@match.OvertimeCount"
+                                    title="Edit match">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="csm-icon-btn is-danger js-delete-match"
+                                    type="button"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteMatchModal"
+                                    data-match-id="@match.MatchId"
+                                    data-match-title="@match.MapName"
+                                    title="Delete match">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </span>
+                    </div>
+                }
+            </div>
+
+            <div class="csm-matches-cards d-none" id="matchCardView">
+                @foreach (var match in Model.Matches)
+                {
+                    var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
+                    var isWin = match.TeamScore > match.OpponentScore;
+                    var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+
+                    <div class="csm-match-card match-card-wrapper @(isWin ? "is-win" : "is-loss")"
+                         data-map="@match.MapName"
+                         data-result="@(isWin ? "win" : "loss")"
+                         data-side="@match.StartSide"
+                         data-overtime="@(isOvertime ? "yes" : "no")">
                         @if (map != null && !string.IsNullOrWhiteSpace(map.ImagePath))
                         {
-                            <img src="@map.ImagePath" class="card-img-top" alt="@match.MapName" style="height: 140px; object-fit: cover;" />
+                            <img src="@map.ImagePath" class="csm-card-img" alt="@match.MapName" />
                         }
-                        <div class="card-body p-4 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <div class="d-flex align-items-center gap-2">
-                                    <h2 class="h5 fw-semibold mb-0">@match.MapName</h2>
-                                    <img src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" style="height: 20px; width: 20px; object-fit: contain;" />
+                        <div class="csm-card-body">
+                            <div class="csm-card-top">
+                                <div class="csm-card-title">
+                                    <h2 class="h6 fw-bold mb-0">@match.MapName</h2>
+                                    <img class="csm-side-icon" src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" />
                                 </div>
-
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-primary js-edit-match"
+                                <span class="csm-match-actions">
+                                    <button class="csm-icon-btn js-edit-match"
                                             type="button"
                                             data-bs-toggle="modal"
                                             data-bs-target="#editMatchModal"
@@ -279,69 +317,51 @@
                                             data-match-gametype="@match.GameType"
                                             data-match-teamscore="@match.TeamScore"
                                             data-match-opponentscore="@match.OpponentScore"
-                                            data-match-ot="@match.OvertimeCount">
+                                            data-match-ot="@match.OvertimeCount"
+                                            title="Edit match">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
-
-                                    <button class="btn btn-sm btn-outline-danger js-delete-match"
+                                    <button class="csm-icon-btn is-danger js-delete-match"
                                             type="button"
                                             data-bs-toggle="modal"
                                             data-bs-target="#deleteMatchModal"
                                             data-match-id="@match.MatchId"
-                                            data-match-title="@match.MapName">
+                                            data-match-title="@match.MapName"
+                                            title="Delete match">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
-                                </div>
+                                </span>
                             </div>
 
-                            <div class="mb-2">
-                                <span class="badge text-bg-light border">@match.GameType</span>
-                            </div>
+                            <span class="csm-chip align-self-start">@match.GameType</span>
 
-                            <hr class="my-2" />
-
-                            <div class="text-center py-2">
-                                <p class="mb-0 fw-bold" style="font-size: 2rem;">
-                                    <span class="@(isWin ? "text-success" : "text-danger")">@match.TeamScore</span>
-                                    <span class="small-muted">-</span>
-                                    <span class="@(!isWin ? "text-success" : "text-danger")">@match.OpponentScore</span>
-                                </p>
-
+                            <div class="csm-card-score @(isWin ? "win" : "loss")">
+                                @match.TeamScore<span class="sep">&ndash;</span>@match.OpponentScore
                                 @if (isOvertime)
                                 {
-                                    <span class="badge text-bg-warning mt-1">
-                                        Overtime (@match.OvertimeCount)
-                                    </span>
+                                    <span class="csm-ot-chip align-middle ms-2">OT@(match.OvertimeCount)</span>
                                 }
                             </div>
 
-                            <p class="small-muted mb-0 mt-auto" style="font-size: 0.75rem;">
-                                @match.Created.ToString("dd MMM yyyy HH:mm")
-                            </p>
+                            <div class="csm-card-foot">
+                                <span class="csm-date" title="@match.Created.ToString("dd MMM yyyy HH:mm")">@match.Created.ToString("dd MMM yyyy")</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
 
-        <div class="col-12 d-none" id="noMatchesMessage">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
-                    <p class="mb-0 small-muted">No matches found for the selected filters.</p>
-                </div>
+            <div class="csm-empty d-none" id="noMatchesMessage">
+                No matches found for the selected filters.
             </div>
-        </div>
-    }
-    else
-    {
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <p class="mb-0 small-muted">
-                    No matches yet. Click <strong>Add match</strong> to record your first one.
-                </p>
+        }
+        else
+        {
+            <div class="csm-empty">
+                No matches yet. Click <strong>Add match</strong> to record your first one.
             </div>
-        </div>
-    }
+        }
+    </div>
 </div>
 
 @* Add Match Modal *@
@@ -349,23 +369,33 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form method="post" asp-page-handler="Create" class="js-match-form">
+                <input type="hidden" asp-for="ProfileId" id="addMatchProfileId" />
+
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="addMatchModalLabel">Add match</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label">Start Side</label>
-                            <select asp-for="StartSide" id="addStartSide" class="form-select">
+                    <div class="csm-form-grid">
+                        <div class="csm-form-field">
+                            <label>Start Side</label>
+                            <select asp-for="StartSide" id="addStartSide" class="d-none">
                                 <option value="CT">CT</option>
                                 <option value="T">T</option>
                             </select>
+                            <div class="csm-side-toggle">
+                                <button type="button" class="csm-side-toggle-btn active js-side-toggle" data-side-target="addStartSide" data-side-value="CT">
+                                    <img src="/images/cs/teams/ct.png" alt="" />CT
+                                </button>
+                                <button type="button" class="csm-side-toggle-btn js-side-toggle" data-side-target="addStartSide" data-side-value="T">
+                                    <img src="/images/cs/teams/t.png" alt="" />T
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Game Type</label>
+                        <div class="csm-form-field">
+                            <label>Game Type</label>
                             <select asp-for="GameType" id="addGameType" class="form-select">
                                 @foreach (var gt in Model.GameTypes)
                                 {
@@ -374,40 +404,38 @@
                             </select>
                         </div>
 
-                        <div class="col-12">
-                            <label class="form-label">Map</label>
-                            <div class="d-flex gap-2 align-items-start">
-                                <select asp-for="MapName" id="addMapName" class="form-select js-map-select" data-preview-target="addMapPreview">
+                        <div class="csm-form-field full">
+                            <label>Map</label>
+                            <div class="csm-map-preview">
+                                <img src="" id="addMapPreview" class="js-map-preview" style="display: none;" alt="Map preview" />
+                                <select asp-for="MapName" id="addMapName" class="form-select js-map-select" data-preview-target="addMapPreview" style="flex:1;">
                                     @foreach (var map in Model.Maps)
                                     {
                                         <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
                                     }
                                 </select>
                                 <button class="btn btn-outline-secondary text-nowrap js-open-add-map" type="button" data-bs-toggle="modal" data-bs-target="#addMapModal">
-                                    <i class="fa-solid fa-plus me-1"></i>Add New Map
+                                    <i class="fa-solid fa-plus me-1"></i>New Map
                                 </button>
-                            </div>
-                            <div class="mt-2">
-                                <img src="" id="addMapPreview" class="js-map-preview rounded" style="max-height: 100px; display: none;" alt="Map preview" />
                             </div>
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Your Team Score</label>
+                        <div class="csm-form-field">
+                            <label>Your Team Score</label>
                             <input type="number" min="0" name="TeamScore" id="addTeamScore" class="form-control js-team-score" placeholder="e.g. 13" />
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Opponent Score</label>
+                        <div class="csm-form-field">
+                            <label>Opponent Score</label>
                             <input type="number" min="0" name="OpponentScore" id="addOpponentScore" class="form-control js-opponent-score" placeholder="e.g. 7" />
                         </div>
 
-                        <div class="col-12 js-ot-wrapper" id="addOtWrapper" style="display: none;">
-                            <label class="form-label">Overtime detected — how many overtimes were played?</label>
-                            <input asp-for="OvertimeCount" type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" />
+                        <div class="csm-form-field full js-ot-wrapper" id="addOtWrapper" style="display: none;">
+                            <label>Overtime detected &mdash; how many overtimes were played?</label>
+                            <input asp-for="OvertimeCount" type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
                         </div>
 
-                        <div class="col-12 js-score-warning d-none">
+                        <div class="csm-form-field full js-score-warning d-none">
                             <div class="alert alert-warning mb-0">
                                 This score isn't possible in CS2 &mdash; the losing team would need to have reached at least the previous overtime's tie score for the winning team's score to be this high. Double-check the score before saving.
                             </div>
@@ -430,6 +458,7 @@
         <div class="modal-content border-0 shadow">
             <form method="post" asp-page-handler="Edit" class="js-match-form">
                 <input type="hidden" asp-for="MatchId" id="editMatchId" />
+                <input type="hidden" asp-for="ProfileId" id="editMatchProfileId" />
 
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="editMatchModalLabel">Edit match</h2>
@@ -437,17 +466,25 @@
                 </div>
 
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label">Start Side</label>
-                            <select asp-for="StartSide" id="editStartSide" class="form-select">
+                    <div class="csm-form-grid">
+                        <div class="csm-form-field">
+                            <label>Start Side</label>
+                            <select asp-for="StartSide" id="editStartSide" class="d-none">
                                 <option value="CT">CT</option>
                                 <option value="T">T</option>
                             </select>
+                            <div class="csm-side-toggle">
+                                <button type="button" class="csm-side-toggle-btn active js-side-toggle" data-side-target="editStartSide" data-side-value="CT">
+                                    <img src="/images/cs/teams/ct.png" alt="" />CT
+                                </button>
+                                <button type="button" class="csm-side-toggle-btn js-side-toggle" data-side-target="editStartSide" data-side-value="T">
+                                    <img src="/images/cs/teams/t.png" alt="" />T
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Game Type</label>
+                        <div class="csm-form-field">
+                            <label>Game Type</label>
                             <select asp-for="GameType" id="editGameType" class="form-select">
                                 @foreach (var gt in Model.GameTypes)
                                 {
@@ -456,40 +493,38 @@
                             </select>
                         </div>
 
-                        <div class="col-12">
-                            <label class="form-label">Map</label>
-                            <div class="d-flex gap-2 align-items-start">
-                                <select asp-for="MapName" id="editMapName" class="form-select js-map-select" data-preview-target="editMapPreview">
+                        <div class="csm-form-field full">
+                            <label>Map</label>
+                            <div class="csm-map-preview">
+                                <img src="" id="editMapPreview" class="js-map-preview" style="display: none;" alt="Map preview" />
+                                <select asp-for="MapName" id="editMapName" class="form-select js-map-select" data-preview-target="editMapPreview" style="flex:1;">
                                     @foreach (var map in Model.Maps)
                                     {
                                         <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
                                     }
                                 </select>
                                 <button class="btn btn-outline-secondary text-nowrap js-open-add-map" type="button" data-bs-toggle="modal" data-bs-target="#addMapModal">
-                                    <i class="fa-solid fa-plus me-1"></i>Add New Map
+                                    <i class="fa-solid fa-plus me-1"></i>New Map
                                 </button>
-                            </div>
-                            <div class="mt-2">
-                                <img src="" id="editMapPreview" class="js-map-preview rounded" style="max-height: 100px; display: none;" alt="Map preview" />
                             </div>
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Your Team Score</label>
+                        <div class="csm-form-field">
+                            <label>Your Team Score</label>
                             <input type="number" min="0" name="TeamScore" id="editTeamScore" class="form-control js-team-score" />
                         </div>
 
-                        <div class="col-6">
-                            <label class="form-label">Opponent Score</label>
+                        <div class="csm-form-field">
+                            <label>Opponent Score</label>
                             <input type="number" min="0" name="OpponentScore" id="editOpponentScore" class="form-control js-opponent-score" />
                         </div>
 
-                        <div class="col-12 js-ot-wrapper" id="editOtWrapper" style="display: none;">
-                            <label class="form-label">Overtime detected — how many overtimes were played?</label>
-                            <input asp-for="OvertimeCount" type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" />
+                        <div class="csm-form-field full js-ot-wrapper" id="editOtWrapper" style="display: none;">
+                            <label>Overtime detected &mdash; how many overtimes were played?</label>
+                            <input asp-for="OvertimeCount" type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
                         </div>
 
-                        <div class="col-12 js-score-warning d-none">
+                        <div class="csm-form-field full js-score-warning d-none">
                             <div class="alert alert-warning mb-0">
                                 This score isn't possible in CS2 &mdash; the losing team would need to have reached at least the previous overtime's tie score for the winning team's score to be this high. Double-check the score before saving.
                             </div>
@@ -512,6 +547,7 @@
         <div class="modal-content border-0 shadow">
             <form method="post" asp-page-handler="Delete">
                 <input type="hidden" name="matchId" id="deleteMatchId" />
+                <input type="hidden" asp-for="ProfileId" id="deleteMatchProfileId" />
 
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="deleteMatchModalLabel">Delete match</h2>
@@ -548,6 +584,7 @@
                 </p>
 
                 <form method="post" asp-page-handler="DeleteAllMatches" id="deleteAllMatchesForm">
+                    <input type="hidden" asp-for="ProfileId" id="deleteAllMatchesProfileId" />
                     <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="deleteAllMatchesForm" data-hold-modal="deleteAllMatchesModal">
                         <span class="hold-delete-fill"></span>
                         <span class="hold-delete-label position-relative">Hold to delete all matches</span>
@@ -562,11 +599,114 @@
     </div>
 </div>
 
+@* Add Profile Modal *@
+<div class="modal fade" id="addProfileModal" tabindex="-1" aria-labelledby="addProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="CreateProfile">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="addProfileModalLabel">Add profile</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input asp-for="ProfileName" id="addProfileName" class="form-control" placeholder="e.g. Ragnar" maxlength="100" required />
+                    </div>
+
+                    <div class="js-steam-lookup mb-0" data-name-target="#addProfileName">
+                        <label class="form-label">SteamID64</label>
+                        <div class="input-group">
+                            <input asp-for="ProfileSteamId" id="addProfileSteamId" class="form-control js-steam-lookup-input" placeholder="SteamID64, profile URL, custom URL, or name" pattern="^7656\d{13}$" required />
+                            <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Look up this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                        <div class="js-steam-lookup-result d-none mt-2 small"></div>
+                        <div class="form-text">Enter a SteamID64 directly, or a profile URL/name and search to look it up.</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Add profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Edit Profile Modal *@
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="UpdateProfile">
+                <input type="hidden" asp-for="ProfileId" id="editProfileId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="editProfileModalLabel">Edit profile</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input asp-for="ProfileName" id="editProfileName" class="form-control" maxlength="100" required />
+                    </div>
+
+                    <div class="js-steam-lookup mb-0" data-name-target="#editProfileName">
+                        <label class="form-label">SteamID64</label>
+                        <div class="input-group">
+                            <input asp-for="ProfileSteamId" id="editProfileSteamId" class="form-control js-steam-lookup-input" pattern="^7656\d{13}$" required />
+                            <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Look up this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                        <div class="js-steam-lookup-result d-none mt-2 small"></div>
+                        <div class="form-text">Enter a SteamID64 directly, or a profile URL/name and search to look it up.</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-danger me-auto" type="button" data-bs-toggle="modal" data-bs-target="#deleteProfileModal">Remove profile</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Delete Profile Modal *@
+<div class="modal fade" id="deleteProfileModal" tabindex="-1" aria-labelledby="deleteProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="DeleteProfile">
+                <input type="hidden" asp-for="ProfileId" id="deleteProfileId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="deleteProfileModalLabel">Remove profile</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-1">Are you sure you want to remove <strong>@(Model.ActiveProfile?.Name)</strong>?</p>
+                    <p class="small-muted mb-0">This will also permanently delete every match logged under this profile. This action cannot be undone.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="submit">Remove profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @* Add New Map Modal *@
 <div class="modal fade" id="addMapModal" tabindex="-1" aria-labelledby="addMapModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form method="post" asp-page-handler="AddMap" enctype="multipart/form-data">
+                <input type="hidden" asp-for="ProfileId" id="addMapProfileId" />
+
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="addMapModalLabel">Add new map</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -611,27 +751,20 @@
                 <div id="leetifyError" class="alert alert-danger d-none"></div>
 
                 <div id="leetifyContent" class="d-none">
-                    <div class="row g-2 align-items-end mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small-muted mb-1">Game types</label>
-                            <div id="leetifyGameTypeFilters" class="d-flex flex-wrap gap-3"></div>
-                        </div>
-                        <div class="col-8 col-md-4">
-                            <p class="small-muted mb-0">
-                                <span id="leetifyFetchedCount">0</span> matches fetched
-                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="Leetify's public API only ever returns your 100 most recent matches — older matches can't be fetched here."></i>
-                            </p>
-                        </div>
-                        <div class="col-4 col-md-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="leetifySelectAll" />
-                                <label class="form-check-label small-muted" for="leetifySelectAll">All</label>
-                            </div>
+                    <div class="csm-filter-row">
+                        <div class="csm-gt-pills" id="leetifyGameTypeFilters"></div>
+                        <span class="csm-fetch-count">
+                            <span id="leetifyFetchedCount">0</span> matches fetched
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Leetify's public API only ever returns your 100 most recent matches — older matches can't be fetched here."></i>
+                        </span>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="leetifySelectAll" />
+                            <label class="form-check-label small-muted" for="leetifySelectAll">Select all</label>
                         </div>
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-sm align-middle">
+                        <table class="csm-fetch-table">
                             <thead>
                                 <tr>
                                     <th style="width: 2rem;"></th>
@@ -663,7 +796,7 @@
 
 @* Edit Stats Modal *@
 <div class="modal fade" id="editStatsModal" tabindex="-1" aria-labelledby="editStatsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header">
                 <h2 class="modal-title h5" id="editStatsModalLabel">Edit Stats</h2>
@@ -673,140 +806,178 @@
             <div class="modal-body">
                 <p class="small-muted mb-3">Choose which stats to show at the top of the page.</p>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalMatches" id="statToggle-totalMatches">
-                        <label class="form-check-label" for="statToggle-totalMatches">Total Matches</label>
+                <div class="csm-toggle-grid">
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-totalMatches">Total Matches</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalMatches" id="statToggle-totalMatches">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winsLosses" id="statToggle-winsLosses">
-                        <label class="form-check-label" for="statToggle-winsLosses">Wins / Losses</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-winsLosses">Wins / Losses</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winsLosses" id="statToggle-winsLosses">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalWinRate" id="statToggle-totalWinRate">
-                        <label class="form-check-label" for="statToggle-totalWinRate">Total Win Rate</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-totalWinRate">Total Win Rate</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="totalWinRate" id="statToggle-totalWinRate">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateCT" id="statToggle-winRateCT">
-                        <label class="form-check-label" for="statToggle-winRateCT">Win Rate (CT Start)</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-winRateCT">Win Rate (CT Start)</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateCT" id="statToggle-winRateCT">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateT" id="statToggle-winRateT">
-                        <label class="form-check-label" for="statToggle-winRateT">Win Rate (T Start)</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-winRateT">Win Rate (T Start)</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateT" id="statToggle-winRateT">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateGameType" id="statToggle-winRateGameType">
-                        <label class="form-check-label" for="statToggle-winRateGameType">Win Rate by Game Type</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-winRateGameType">Win Rate by Game Type</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Your win rate broken down by game type (e.g. Competitive, Premier, FaceIT)."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="winRateGameType" id="statToggle-winRateGameType">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your win rate broken down by game type (e.g. Competitive, Premier, FaceIT)."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="overtimeGames" id="statToggle-overtimeGames">
-                        <label class="form-check-label" for="statToggle-overtimeGames">Overtime Games</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-overtimeGames">Overtime Games</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="overtimeGames" id="statToggle-overtimeGames">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="otWinLoss" id="statToggle-otWinLoss">
-                        <label class="form-check-label" for="statToggle-otWinLoss">OT Wins / Losses</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-otWinLoss">OT Wins / Losses</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="otWinLoss" id="statToggle-otWinLoss">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="avgScoreMargin" id="statToggle-avgScoreMargin">
-                        <label class="form-check-label" for="statToggle-avgScoreMargin">Avg Score Margin</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-avgScoreMargin">Avg Score Margin</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="avgScoreMargin" id="statToggle-avgScoreMargin">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="currentStreak" id="statToggle-currentStreak">
-                        <label class="form-check-label" for="statToggle-currentStreak">Current Streak</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-currentStreak">Current Streak</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="currentStreak" id="statToggle-currentStreak">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMap" id="statToggle-bestMap">
-                        <label class="form-check-label" for="statToggle-bestMap">Best Map</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-bestMap">Best Map</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMap" id="statToggle-bestMap">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="worstMap" id="statToggle-worstMap">
-                        <label class="form-check-label" for="statToggle-worstMap">Worst Map</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-worstMap">Worst Map</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="worstMap" id="statToggle-worstMap">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapCT" id="statToggle-bestMapCT">
-                        <label class="form-check-label" for="statToggle-bestMapCT">Best Map (CT Start)</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-bestMapCT">Best Map (CT Start)</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapCT" id="statToggle-bestMapCT">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-0">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapT" id="statToggle-bestMapT">
-                        <label class="form-check-label" for="statToggle-bestMapT">Best Map (T Start)</label>
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statToggle-bestMapT">Best Map (T Start)</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input js-stat-toggle" type="checkbox" data-stat-key="bestMapT" id="statToggle-bestMapT">
+                        </div>
                     </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
                 </div>
 
                 <hr class="my-3" />
 
                 <p class="small-muted mb-3">Choose which matches count toward the stats above.</p>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input js-stat-filter-toggle" type="checkbox" data-filter-key="activeDutyOnly" id="statFilter-activeDutyOnly">
-                        <label class="form-check-label" for="statFilter-activeDutyOnly">Active Duty maps only</label>
-                    </div>
-                    <i class="fa-solid fa-circle-info small-muted" data-bs-toggle="tooltip" title="Only count matches played on a map currently in the competitive Active Duty pool (managed in Settings)."></i>
-                </div>
-
-                <p class="small-muted mb-2 mt-3">Game types included</p>
-                @foreach (var gt in Model.GameTypes)
-                {
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="csm-toggle-grid">
+                    <div class="csm-toggle-cell">
+                        <div class="csm-toggle-cell-head">
+                            <label for="statFilter-activeDutyOnly">Active Duty maps only</label>
+                            <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Only count matches played on a map currently in the competitive Active Duty pool (managed in Settings)."></i>
+                        </div>
                         <div class="form-check form-switch mb-0">
-                            <input class="form-check-input js-stat-gametype-toggle" type="checkbox" data-gametype="@gt" id="statFilter-gt-@gt" checked>
-                            <label class="form-check-label" for="statFilter-gt-@gt">@gt</label>
+                            <input class="form-check-input js-stat-filter-toggle" type="checkbox" data-filter-key="activeDutyOnly" id="statFilter-activeDutyOnly">
                         </div>
                     </div>
-                }
+                </div>
+
+                <p class="csm-section-label">Game types included</p>
+                <div class="csm-toggle-grid">
+                    @foreach (var gt in Model.GameTypes)
+                    {
+                        <div class="csm-toggle-cell">
+                            <div class="csm-toggle-cell-head">
+                                <label for="statFilter-gt-@gt">@gt</label>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input js-stat-gametype-toggle" type="checkbox" data-gametype="@gt" id="statFilter-gt-@gt" checked>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
 
             <div class="modal-footer">
@@ -818,6 +989,53 @@
 
 @section Scripts {
     <script>
+        const CURRENT_PROFILE_ID = '@(Model.ProfileId ?? "default")';
+        const MAP_IMAGES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Maps.ToDictionary(m => m.Name, m => m.ImagePath)));
+
+        function profileQuery(prefix) {
+            return CURRENT_PROFILE_ID !== 'default' ? prefix + 'profileId=' + encodeURIComponent(CURRENT_PROFILE_ID) : '';
+        }
+
+        $(document).on('click', '.js-edit-profile', function () {
+            $('#editProfileId').val($(this).data('profile-id'));
+            $('#editProfileName').val($(this).data('profile-name'));
+            $('#editProfileSteamId').val($(this).data('profile-steamid'));
+            $('#editProfileSteamId').closest('.js-steam-lookup').find('.js-steam-lookup-result').addClass('d-none').empty();
+        });
+
+        // Start-side toggle buttons drive the hidden StartSide <select> so form binding stays unchanged.
+        $(document).on('click', '.js-side-toggle', function () {
+            const $btn = $(this);
+            const $group = $btn.closest('.csm-side-toggle');
+            $('#' + $btn.data('side-target')).val($btn.data('side-value'));
+            $group.find('.js-side-toggle').removeClass('active');
+            $btn.addClass('active');
+        });
+
+        function setSideToggle($form, side) {
+            $form.find('.js-side-toggle').removeClass('active');
+            $form.find('.js-side-toggle[data-side-value="' + side + '"]').addClass('active');
+        }
+
+        // Match view: list (default) vs cards, persisted per browser.
+        const VIEW_STORAGE_KEY = 'csMatchesViewMode';
+
+        function applyMatchView(view) {
+            const isList = view !== 'cards';
+            $('#matchListView').toggleClass('d-none', !isList);
+            $('#matchCardView').toggleClass('d-none', isList);
+            $('.js-view-toggle').removeClass('active');
+            $('.js-view-toggle[data-view="' + view + '"]').addClass('active');
+        }
+
+        $(document).on('click', '.js-view-toggle', function () {
+            const view = $(this).data('view');
+            localStorage.setItem(VIEW_STORAGE_KEY, view);
+            applyMatchView(view);
+        });
+
+        applyMatchView(localStorage.getItem(VIEW_STORAGE_KEY) || 'list');
+
         const STAT_STORAGE_KEY = 'csMatchesStatVisibility';
 
         function loadStatVisibility() {
@@ -920,6 +1138,7 @@
 
         $('#addMatchModal').on('shown.bs.modal', function () {
             updateMapPreview($('#addMapName'));
+            setSideToggle($('#addMatchModal'), $('#addStartSide').val() || 'CT');
         });
 
         $(document).on('click', '.js-edit-match', function () {
@@ -938,6 +1157,7 @@
             $('#editOpponentScore').val(opponentScore);
             $('#editOvertimeCount').val(ot);
 
+            setSideToggle($('#editMatchModal'), side);
             updateMapPreview($('#editMapName'));
             updateOvertimeVisibility($('#editMatchModal').find('form'));
         });
@@ -1015,7 +1235,7 @@
             $('#leetifySelectedCount').text('0');
             $('#leetifySelectAll').prop('checked', false);
 
-            $.getJSON('/api/csmatches/leetify')
+            $.getJSON('/api/csmatches/leetify' + profileQuery('?'))
                 .done(function (matches) {
                     renderLeetifyMatches(matches);
                     $('#leetifyLoading').addClass('d-none');
@@ -1035,17 +1255,15 @@
             $('#leetifyFetchedCount').text(matches.length);
 
             gameTypes.forEach(gt => {
-                const id = 'leetifyGtFilter-' + gt.replace(/\s+/g, '');
                 $gameTypeFilters.append(
-                    $('<div class="form-check form-check-inline mb-0">').append(
-                        $('<input class="form-check-input leetify-gt-filter" type="checkbox" checked>').attr('id', id).data('gametype', gt),
-                        $('<label class="form-check-label">').attr('for', id).text(gt)
-                    )
+                    $('<button type="button" class="csm-gt-pill on leetify-gt-filter">').data('gametype', gt).text(gt)
                 );
             });
 
             matches.forEach(match => {
                 const isWin = match.teamScore > match.opponentScore;
+                const mapImage = MAP_IMAGES[match.mapName];
+                const sideImage = match.startSide === 'CT' ? '/images/cs/teams/ct.png' : '/images/cs/teams/t.png';
 
                 const $row = $('<tr>').attr('data-gametype', match.gameType);
 
@@ -1053,17 +1271,26 @@
                     .prop('disabled', match.alreadyImported)
                     .val(match.leetifyMatchId);
 
+                const $mapCell = $('<td class="csm-match-cell">');
+                if (mapImage) {
+                    $mapCell.append($('<img class="csm-thumb" alt="" style="width:44px;height:30px;">').attr('src', mapImage));
+                }
+                $mapCell.append($('<span>').text(match.mapName));
+                if (match.overtimeCount > 0) {
+                    $mapCell.append($('<span class="csm-ot-chip">').text('OT' + match.overtimeCount));
+                }
+
                 $row.append(
                     $('<td>').append($checkbox),
                     $('<td>').text(new Date(match.playedAtUtc).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })),
-                    $('<td>').text(match.mapName),
+                    $mapCell,
                     $('<td>').text(match.gameType),
-                    $('<td>').text(match.startSide),
+                    $('<td>').append($('<img class="csm-side-icon" alt="" style="width:22px;height:22px;">').attr('src', sideImage).attr('title', 'Started ' + match.startSide)),
                     $('<td>').text(`${match.teamScore} - ${match.opponentScore}`),
                     $('<td>').append(
                         match.alreadyImported
-                            ? $('<span class="badge text-bg-secondary">Already added</span>')
-                            : $('<span>').addClass(isWin ? 'text-success' : 'text-danger').text(isWin ? 'Win' : 'Loss')
+                            ? $('<span class="csm-already-badge">Already added</span>')
+                            : $('<span>').addClass(isWin ? 'win' : 'loss').text(isWin ? 'Win' : 'Loss')
                     )
                 );
 
@@ -1078,7 +1305,7 @@
         }
 
         function applyLeetifyFilters() {
-            const activeGameTypes = $('.leetify-gt-filter:checked').map(function () { return $(this).data('gametype'); }).get();
+            const activeGameTypes = $('.leetify-gt-filter.on').map(function () { return $(this).data('gametype'); }).get();
             let visible = 0;
 
             $('#leetifyMatchRows tr').each(function () {
@@ -1096,7 +1323,10 @@
             updateLeetifySelectedCount();
         }
 
-        $(document).on('change', '.leetify-gt-filter', applyLeetifyFilters);
+        $(document).on('click', '.leetify-gt-filter', function () {
+            $(this).toggleClass('on');
+            applyLeetifyFilters();
+        });
 
         $(document).on('change', '#leetifySelectAll', function () {
             const checked = $(this).is(':checked');
@@ -1122,7 +1352,7 @@
             const $btn = $(this).prop('disabled', true);
 
             $.ajax({
-                url: '/api/csmatches/leetify/import',
+                url: '/api/csmatches/leetify/import' + profileQuery('?'),
                 method: 'POST',
                 contentType: 'application/json',
                 headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() },
@@ -1135,8 +1365,8 @@
             });
         });
 
-        // Edit Stats: game type / Active Duty filters
-        const STAT_FILTER_KEY = 'csMatchesStatFilters';
+        // Edit Stats: game type / Active Duty filters (persisted per profile tab)
+        const STAT_FILTER_KEY = 'csMatchesStatFilters:' + CURRENT_PROFILE_ID;
 
         function loadStatFilters() {
             try {
@@ -1163,17 +1393,17 @@
 
         function renderStats(stats) {
             $('.js-stat[data-stat-key="totalMatches"] .js-stat-value').text(stats.totalMatches);
-            $('.js-stat[data-stat-key="winsLosses"] .js-stat-value').html(`<span class="text-success">${stats.wins}</span> / <span class="text-danger">${stats.losses}</span>`);
+            $('.js-stat[data-stat-key="winsLosses"] .js-stat-value').html(`<span class="win">${stats.wins}</span> / <span class="loss">${stats.losses}</span>`);
             $('.js-stat[data-stat-key="totalWinRate"] .js-stat-value').text(stats.winRate + '%');
             $('.js-stat[data-stat-key="winRateCT"] .js-stat-value').text(stats.winRateCTStart + '%');
             $('.js-stat[data-stat-key="winRateT"] .js-stat-value').text(stats.winRateTStart + '%');
             $('.js-stat[data-stat-key="overtimeGames"] .js-stat-value').text(`${stats.overtimeGames} (${stats.overtimeGamePercentage}%)`);
-            $('.js-stat[data-stat-key="otWinLoss"] .js-stat-value').html(`<span class="text-success">${stats.overtimeWins}</span> / <span class="text-danger">${stats.overtimeLosses}</span>`);
+            $('.js-stat[data-stat-key="otWinLoss"] .js-stat-value').html(`<span class="win">${stats.overtimeWins}</span> / <span class="loss">${stats.overtimeLosses}</span>`);
             $('.js-stat[data-stat-key="avgScoreMargin"] .js-stat-value').text(stats.averageScoreMargin);
 
             $('.js-stat[data-stat-key="currentStreak"] .js-stat-value')
-                .removeClass('text-success text-danger')
-                .addClass(stats.currentStreakType === 'Win' ? 'text-success' : 'text-danger')
+                .removeClass('win loss')
+                .addClass(stats.currentStreakType === 'Win' ? 'win' : 'loss')
                 .text(stats.currentStreak > 0 ? `${stats.currentStreak} ${stats.currentStreakType}${stats.currentStreak > 1 ? 's' : ''}` : '-');
 
             const mapStat = (key, name, rate) => $('.js-stat[data-stat-key="' + key + '"] .js-stat-value').text(name ? `${name} (${rate}%)` : '-');
@@ -1204,6 +1434,9 @@
 
             let query = '?activeDutyOnly=' + activeDutyOnly;
             includedGameTypes.forEach(gt => query += '&gameTypes=' + encodeURIComponent(gt));
+            if (CURRENT_PROFILE_ID !== 'default') {
+                query += '&profileId=' + encodeURIComponent(CURRENT_PROFILE_ID);
+            }
 
             $.getJSON('/api/csmatches/stats' + query).done(renderStats);
         }

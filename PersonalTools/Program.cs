@@ -68,8 +68,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // Dashboard
 builder.Services.AddScoped<IDashboardFuncs, DashboardFuncs>();
 
-// Storage
-builder.Services.AddScoped<ILocalJsonData, LocalJsonData>();
 
 // Skins
 builder.Services.AddHttpClient<ICs2SkinData, Cs2SkinData>();
@@ -110,8 +108,11 @@ builder.Services.AddHttpClient<IMediaExtractorFuncs, MediaExtractorFuncs>(client
 });
 
 // CS Match Tracker
+builder.Services.AddScoped<IMatchesData, MatchesData>();
 builder.Services.AddScoped<ICSMatchFuncs, CSMatchFuncs>();
 builder.Services.AddScoped<ICSMatchReferenceData, CSMatchReferenceData>();
+builder.Services.AddScoped<IMatchProfilesData, MatchProfilesData>();
+builder.Services.AddScoped<IMatchProfileFuncs, MatchProfileFuncs>();
 builder.Services.AddHttpClient<ILeetifyData, LeetifyData>(client =>
 {
     client.BaseAddress = new Uri("https://api-public.cs-prod.leetify.com/");

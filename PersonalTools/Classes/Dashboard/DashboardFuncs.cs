@@ -57,7 +57,7 @@ namespace PersonalTools.Classes.Dashboard
                 {
                     Title = "CS Match Tracker",
                     Description = "Track your CS2 match results and stats.",
-                    IconClass = "fa-solid fa-bomb",
+                    IconClass = "fa-solid fa-crosshairs",
                     PageUrl = "/CSMatches",
                     ButtonText = "Open"
                 },

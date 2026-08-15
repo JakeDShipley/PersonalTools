@@ -6,8 +6,8 @@ namespace PersonalTools.Classes.CSMatches
 {
     public interface ILeetifyFuncs
     {
-        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId);
-        Task<List<CSMatchObj>> BuildImportBatch(long userId, List<string> selectedLeetifyMatchIds);
+        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId, string? profileId);
+        Task<List<CSMatchObj>> BuildImportBatch(long userId, string? profileId, List<string> selectedLeetifyMatchIds);
     }
 
     public class LeetifyFuncs : ILeetifyFuncs
@@ -15,6 +15,7 @@ namespace PersonalTools.Classes.CSMatches
         private readonly ILeetifyData _leetifyData;
         private readonly IAuthFuncs _auth;
         private readonly ICSMatchFuncs _matchFuncs;
+        private readonly IMatchProfileFuncs _profileFuncs;
 
         private static readonly Dictionary<string, string> GameTypeMap = new()
         {
@@ -23,24 +24,20 @@ namespace PersonalTools.Classes.CSMatches
             ["matchmaking_wingman"] = "Wingman",
         };
 
-        public LeetifyFuncs(ILeetifyData leetifyData, IAuthFuncs auth, ICSMatchFuncs matchFuncs)
+        public LeetifyFuncs(ILeetifyData leetifyData, IAuthFuncs auth, ICSMatchFuncs matchFuncs, IMatchProfileFuncs profileFuncs)
         {
             _leetifyData = leetifyData;
             _auth = auth;
             _matchFuncs = matchFuncs;
+            _profileFuncs = profileFuncs;
         }
 
-        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId)
+        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(long userId, string? profileId)
         {
-            AppUser? user = await _auth.GetUser(userId);
+            string steamId = await ResolveSteamId(userId, profileId);
 
-            if (string.IsNullOrWhiteSpace(user?.SteamId))
-            {
-                throw new InvalidOperationException("Link your Steam account in Settings first.");
-            }
-
-            List<LeetifyMatchModel> rawMatches = await _leetifyData.GetMatches(user.SteamId);
-            List<CSMatchObj> existingMatches = await _matchFuncs.GetMatches();
+            List<LeetifyMatchModel> rawMatches = await _leetifyData.GetMatches(steamId);
+            List<CSMatchObj> existingMatches = await _matchFuncs.GetMatches(userId, profileId);
             HashSet<string> importedLeetifyIds = existingMatches
                 .Where(m => !string.IsNullOrWhiteSpace(m.LeetifyMatchId))
                 .Select(m => m.LeetifyMatchId!)
@@ -50,7 +47,7 @@ namespace PersonalTools.Classes.CSMatches
 
             foreach (LeetifyMatchModel raw in rawMatches)
             {
-                LeetifyPlayerStatModel? stat = raw.Stats.FirstOrDefault(s => s.Steam64Id == user.SteamId) ?? raw.Stats.FirstOrDefault();
+                LeetifyPlayerStatModel? stat = raw.Stats.FirstOrDefault(s => s.Steam64Id == steamId) ?? raw.Stats.FirstOrDefault();
 
                 if (stat is null)
                 {
@@ -78,9 +75,9 @@ namespace PersonalTools.Classes.CSMatches
             return previews.OrderByDescending(p => p.PlayedAtUtc).ToList();
         }
 
-        public async Task<List<CSMatchObj>> BuildImportBatch(long userId, List<string> selectedLeetifyMatchIds)
+        public async Task<List<CSMatchObj>> BuildImportBatch(long userId, string? profileId, List<string> selectedLeetifyMatchIds)
         {
-            List<CSMatchLeetifyPreviewObj> available = await GetAvailableMatches(userId);
+            List<CSMatchLeetifyPreviewObj> available = await GetAvailableMatches(userId, profileId);
             HashSet<string> selected = selectedLeetifyMatchIds.ToHashSet();
 
             return available
@@ -99,6 +96,25 @@ namespace PersonalTools.Classes.CSMatches
                     Updated = m.PlayedAtUtc.ToLocalTime(),
                 })
                 .ToList();
+        }
+
+        private async Task<string> ResolveSteamId(long userId, string? profileId)
+        {
+            if (!string.IsNullOrWhiteSpace(profileId))
+            {
+                MatchProfileObj? profile = await _profileFuncs.GetProfile(userId, profileId)
+                    ?? throw new InvalidOperationException("That profile tab was not found.");
+                return profile.SteamId;
+            }
+
+            AppUser? user = await _auth.GetUser(userId);
+
+            if (string.IsNullOrWhiteSpace(user?.SteamId))
+            {
+                throw new InvalidOperationException("Link your Steam account in Settings first.");
+            }
+
+            return user.SteamId;
         }
 
         private static string NormalizeMapName(string rawMapName)

@@ -1,0 +1,171 @@
+/* CS Matches - Personal Tools Native theme. Reuses the app's own --pt-* tokens (site.css) rather
+   than inventing a parallel palette, so this page reads as part of the app, not a bolt-on. */
+
+.csm-page {
+    --csm-win: #2f9e6e;
+    --csm-loss: var(--pt-coral);
+}
+
+[data-theme="dark"] .csm-page {
+    --csm-win: #4ade9b;
+}
+
+.csm-page .win { color: var(--csm-win); }
+.csm-page .loss { color: var(--csm-loss); }
+
+/* --pt-ink is the theme-aware foreground colour - it flips from dark navy to near-white in dark
+   mode, so anything using it as an "active" background needs its text to flip too (matching the
+   dark-mode override this app's own .btn-primary already uses), or it renders bright-on-bright. */
+[data-theme="dark"] .csm-tab.active,
+[data-theme="dark"] .csm-view-toggle button.active,
+[data-theme="dark"] .csm-gt-pill.on { color: #141a2a; }
+
+/* ---------- header ---------- */
+.csm-actions { display: flex; gap: 0.55rem; flex-wrap: wrap; }
+.csm-accent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pt-mint); display: inline-block; margin-right: 0.4rem; }
+
+/* ---------- profile tabs ---------- */
+.csm-tabs { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.csm-tab {
+    font-size: 0.85rem; font-weight: 650; padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid var(--pt-line);
+    background: var(--pt-surface); color: var(--pt-ink-soft); text-decoration: none; display: inline-flex; align-items: center;
+}
+.csm-tab:hover { color: var(--pt-ink); text-decoration: none; }
+.csm-tab.active { background: var(--pt-ink); color: #fff; border-color: var(--pt-ink); }
+.csm-tab-group { display: inline-flex; align-items: center; gap: 0.3rem; }
+.csm-tab-edit {
+    width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid var(--pt-line); background: var(--pt-surface);
+    color: var(--pt-ink-soft); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;
+}
+.csm-tab-edit:hover { color: var(--pt-ink); border-color: var(--pt-mint); }
+.csm-tab-add {
+    border: 1px dashed var(--pt-line); color: var(--pt-ink-soft); background: none; padding: 0.45rem 0.9rem;
+    border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+}
+.csm-tab-add:hover { color: var(--pt-ink); border-color: var(--pt-mint); }
+
+/* ---------- stats ---------- */
+.csm-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
+@media (max-width: 1100px) { .csm-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px) { .csm-stats { grid-template-columns: repeat(2, 1fr); } }
+.csm-stat {
+    background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: 0.85rem; padding: 0.9rem 1rem;
+    box-shadow: 0 1px 2px rgba(24,32,51,0.06); position: relative;
+}
+.csm-stat-label { font-size: 0.72rem; color: var(--pt-ink-soft); margin: 0 0 0.35rem; padding-right: 1rem; }
+.csm-stat-value { font-size: 1.3rem; font-weight: 700; margin: 0; font-variant-numeric: tabular-nums; color: var(--pt-ink); }
+.csm-stat-info { position: absolute; top: 0.6rem; right: 0.6rem; color: var(--pt-ink-soft); font-size: 0.72rem; cursor: help; }
+.csm-stat-info:hover { color: var(--pt-mint); }
+
+/* ---------- filters + view toggle ---------- */
+.csm-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.85rem; }
+.csm-filter-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 9rem; flex: 1 1 9rem; }
+.csm-filter-field label { font-size: 0.72rem; color: var(--pt-ink-soft); }
+.csm-view-toggle { display: inline-flex; border: 1px solid var(--pt-line); border-radius: 0.65rem; overflow: hidden; flex-shrink: 0; }
+.csm-view-toggle button {
+    border: none; background: var(--pt-surface); color: var(--pt-ink-soft); padding: 0.5rem 0.8rem; font-size: 0.85rem;
+    display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+}
+.csm-view-toggle button + button { border-left: 1px solid var(--pt-line); }
+.csm-view-toggle button.active { background: var(--pt-ink); color: #fff; }
+
+/* ---------- shared match furniture ---------- */
+.csm-thumb { object-fit: cover; flex-shrink: 0; border-radius: 0.4rem; }
+.csm-side-icon { flex-shrink: 0; border-radius: 50%; }
+.csm-chip { font-size: 0.7rem; color: var(--pt-ink-soft); background: var(--pt-canvas); border: 1px solid var(--pt-line); padding: 0.22rem 0.6rem; border-radius: 999px; white-space: nowrap; }
+.csm-ot-chip {
+    /* Matches the original badge text-bg-warning treatment - Bootstrap's warning yellow needs dark
+       text, not white, since it's too light for white-on-badge contrast in either theme. */
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: #212529;
+    background: var(--bs-warning, #ffc107); padding: 0.15rem 0.45rem; border-radius: 999px;
+}
+.csm-icon-btn {
+    background: var(--pt-surface); border: 1px solid var(--pt-line); color: var(--pt-ink-soft); border-radius: 0.55rem;
+    width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.82rem;
+}
+.csm-icon-btn:hover { color: var(--pt-ink); border-color: var(--pt-mint); }
+.csm-icon-btn.is-danger:hover { color: var(--csm-loss); border-color: var(--csm-loss); }
+.csm-empty {
+    background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: 0.85rem; padding: 1.75rem;
+    text-align: center; color: var(--pt-ink-soft); font-size: 0.9rem;
+}
+
+/* ---------- list view: rounded row with a left colour bar (win/loss) ---------- */
+.csm-matches-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.csm-match-row {
+    display: grid; grid-template-columns: 1.7fr 0.9fr 0.6fr 1fr 0.8fr auto; align-items: center; gap: 1rem;
+    background: var(--pt-surface); border: 1px solid var(--pt-line); border-left: 4px solid var(--pt-line);
+    border-radius: 0.85rem; padding: 0.8rem 1.1rem; box-shadow: 0 1px 2px rgba(24,32,51,0.06);
+}
+.csm-match-row.is-win { border-left-color: var(--csm-win); }
+.csm-match-row.is-loss { border-left-color: var(--csm-loss); }
+@media (max-width: 900px) {
+    .csm-match-row { grid-template-columns: 1fr 1fr; row-gap: 0.6rem; }
+    .csm-match-row .csm-match-actions { justify-self: end; }
+}
+.csm-match-cell { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.csm-match-row .csm-thumb { width: 44px; height: 30px; }
+.csm-match-row .csm-side-icon { width: 22px; height: 22px; }
+.csm-map-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.csm-score { font-size: 1.05rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.csm-match-actions { display: flex; gap: 0.4rem; }
+.csm-date { font-size: 0.78rem; color: var(--pt-ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---------- card view ---------- */
+.csm-matches-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.csm-match-card {
+    background: var(--pt-surface); border: 1px solid var(--pt-line); border-top: 4px solid var(--pt-line);
+    border-radius: 0.9rem; overflow: hidden; box-shadow: 0 1px 2px rgba(24,32,51,0.06); display: flex; flex-direction: column;
+}
+.csm-match-card.is-win { border-top-color: var(--csm-win); }
+.csm-match-card.is-loss { border-top-color: var(--csm-loss); }
+.csm-match-card .csm-card-img { width: 100%; height: 130px; object-fit: cover; }
+.csm-match-card .csm-card-body { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
+.csm-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
+.csm-card-title { display: flex; align-items: center; gap: 0.5rem; }
+.csm-card-title .csm-side-icon { width: 20px; height: 20px; }
+.csm-card-score { text-align: center; padding: 0.4rem 0; font-size: 1.9rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.csm-card-score .sep { color: var(--pt-ink-soft); font-weight: 400; font-size: 1.2rem; }
+.csm-card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+
+/* ---------- modal restyle (subtle, mostly Bootstrap defaults + form-grid layout) ---------- */
+.csm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.csm-form-field { display: flex; flex-direction: column; gap: 0.4rem; }
+.csm-form-field.full { grid-column: 1 / -1; }
+.csm-form-field label { font-size: 0.78rem; font-weight: 600; color: var(--pt-ink-soft); }
+
+.csm-side-toggle { display: flex; gap: 0.5rem; }
+.csm-side-toggle-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.55rem;
+    border: 1px solid var(--pt-line); border-radius: 0.65rem; background: var(--pt-canvas); color: var(--pt-ink-soft); font-weight: 650;
+}
+.csm-side-toggle-btn.active { border-color: var(--pt-mint); background: var(--pt-surface); color: var(--pt-ink); box-shadow: 0 0 0 2px rgba(143,208,194,0.35); }
+.csm-side-toggle-btn img { width: 20px; height: 20px; border-radius: 50%; }
+
+.csm-map-preview { display: flex; align-items: center; gap: 0.7rem; }
+.csm-map-preview img { width: 60px; height: 36px; object-fit: cover; border-radius: 0.4rem; flex-shrink: 0; }
+
+/* ---------- fetch-from-leetify modal ---------- */
+.csm-filter-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.csm-gt-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.csm-gt-pill {
+    font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.8rem; border-radius: 999px;
+    border: 1px solid var(--pt-line); color: var(--pt-ink-soft); background: var(--pt-canvas);
+}
+.csm-gt-pill.on { color: #fff; border-color: var(--pt-ink); background: var(--pt-ink); }
+.csm-fetch-count { font-size: 0.82rem; color: var(--pt-ink-soft); display: flex; align-items: center; gap: 0.4rem; }
+.csm-fetch-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.csm-fetch-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pt-ink-soft); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--pt-line); }
+.csm-fetch-table td { padding: 0.5rem; border-bottom: 1px solid var(--pt-line); vertical-align: middle; }
+.csm-fetch-table tr.leetify-row-imported td { color: var(--pt-ink-soft); }
+.csm-already-badge { font-size: 0.66rem; padding: 0.18rem 0.55rem; border-radius: 999px; background: var(--pt-canvas); border: 1px solid var(--pt-line); color: var(--pt-ink-soft); }
+
+/* ---------- edit-stats modal: XL, toggles in a 6-col grid ---------- */
+.csm-toggle-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.65rem; }
+@media (max-width: 992px) { .csm-toggle-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 576px) { .csm-toggle-grid { grid-template-columns: repeat(2, 1fr); } }
+.csm-toggle-cell { background: var(--pt-canvas); border: 1px solid var(--pt-line); border-radius: 0.65rem; padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.csm-toggle-cell-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; }
+.csm-toggle-cell-head label { font-size: 0.8rem; font-weight: 600; color: var(--pt-ink); line-height: 1.2; }
+.csm-toggle-cell-head i { color: var(--pt-ink-soft); font-size: 0.75rem; flex-shrink: 0; margin-top: 0.15rem; cursor: help; }
+.csm-section-label { font-size: 0.78rem; color: var(--pt-ink-soft); margin: 1rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }

@@ -169,6 +169,67 @@
             .always(() => window.location.href = '/Login');
     });
 
+    // Reusable Steam profile search - drop a `.js-steam-lookup` block (containing a single
+    // `.js-steam-lookup-input` field and a `.js-steam-lookup-btn` button) anywhere and it wires
+    // itself up. The same field doubles as the value that gets submitted: type a SteamID64 directly
+    // and save, or type a URL/custom URL/name, search, and the field is overwritten in place with
+    // the resolved SteamID64 (with a name/avatar strip underneath to confirm it's the right account).
+    // An optional `data-name-target="#someInput"` fills that field with the resolved Steam display
+    // name, but only if it's still empty - it never overwrites a name the user already typed.
+    function runSteamLookup($wrapper) {
+        const $input = $wrapper.find('.js-steam-lookup-input');
+        const $result = $wrapper.find('.js-steam-lookup-result');
+        const $btn = $wrapper.find('.js-steam-lookup-btn');
+        const nameTarget = $wrapper.data('name-target');
+        const query = ($input.val() || '').trim();
+        if (!query) return;
+
+        $btn.prop('disabled', true);
+        $result.removeClass('d-none text-danger').empty().text('Searching…');
+
+        $.get('/api/steam/lookup', { query })
+            .done(function (profile) {
+                $input.val(profile.steamId64).trigger('change');
+
+                if (nameTarget) {
+                    const $name = $(nameTarget);
+                    if (!($name.val() || '').trim()) {
+                        $name.val(profile.displayName).trigger('change');
+                    }
+                }
+
+                const $card = $('<div class="d-flex align-items-center gap-2">');
+                if (profile.avatarUrl) {
+                    $card.append($('<img alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">').attr('src', profile.avatarUrl));
+                }
+                $card.append(
+                    $('<i class="fa-solid fa-circle-check text-success"></i>'),
+                    $('<span class="text-truncate">').text('Matched ' + profile.displayName)
+                );
+                $result.empty().append($card);
+            })
+            .fail(function (xhr) {
+                $result.removeClass('d-none').addClass('text-danger').text(xhr.responseJSON?.message || 'Could not find that Steam profile.');
+            })
+            .always(function () {
+                $btn.prop('disabled', false);
+            });
+    }
+
+    $(document).on('click', '.js-steam-lookup-btn', function () {
+        runSteamLookup($(this).closest('.js-steam-lookup'));
+    });
+
+    $(document).on('keydown', '.js-steam-lookup-input', function (event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        runSteamLookup($(this).closest('.js-steam-lookup'));
+    });
+
+    $(document).on('input', '.js-steam-lookup-input', function () {
+        $(this).closest('.js-steam-lookup').find('.js-steam-lookup-result').addClass('d-none').empty();
+    });
+
     const themeKey = 'personal-tools-theme';
     const savedTheme = localStorage.getItem(themeKey);
 

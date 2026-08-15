@@ -21,4 +21,12 @@ namespace PersonalTools.Entities
         public string ProfileUrl { get; set; } = string.Empty;
         public List<SteamInventoryItem> Items { get; set; } = new();
     }
+
+    public class SteamProfileLookupResult
+    {
+        public string SteamId64 { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+        public string ProfileUrl { get; set; } = string.Empty;
+    }
 }

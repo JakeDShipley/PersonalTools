@@ -34,6 +34,9 @@ public sealed class IndexModel : PageModel
     [BindProperty]
     public List<string> SelectedActiveDutyMaps { get; set; } = [];
 
+    [BindProperty]
+    public string ManualSteamId { get; set; } = string.Empty;
+
     private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task OnGet()
@@ -48,6 +51,21 @@ public sealed class IndexModel : PageModel
     {
         await _auth.UnlinkSteam(UserId);
         TempData["SuccessMessage"] = "Steam account unlinked.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostLinkSteamManually()
+    {
+        string steamId = ManualSteamId.Trim();
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(steamId, "^7656\\d{13}$"))
+        {
+            TempData["ErrorMessage"] = "Enter a valid 17-digit SteamID64.";
+            return RedirectToPage();
+        }
+
+        await _auth.LinkSteam(UserId, steamId);
+        TempData["SuccessMessage"] = "SteamID added.";
         return RedirectToPage();
     }
 

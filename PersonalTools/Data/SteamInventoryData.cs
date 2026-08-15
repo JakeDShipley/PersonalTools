@@ -6,6 +6,7 @@ namespace PersonalTools.Data;
 public interface ISteamInventoryData
 {
     Task<string> ResolveSteamId(string profileReference, CancellationToken cancellationToken = default);
+    Task<SteamProfileLookupResult> ResolveProfile(string profileReference, CancellationToken cancellationToken = default);
     Task<SteamInventoryResult> LoadCs2Inventory(string steamId, CancellationToken cancellationToken = default);
 }
 
@@ -44,6 +45,31 @@ public sealed class SteamInventoryData : ISteamInventoryData
         System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(xml, "<steamID64>(\\d{17})</steamID64>");
         if (!match.Success) throw new InvalidOperationException("Steam could not resolve that public profile.");
         return match.Groups[1].Value;
+    }
+
+    public async Task<SteamProfileLookupResult> ResolveProfile(string profileReference, CancellationToken cancellationToken = default)
+    {
+        string steamId = await ResolveSteamId(profileReference, cancellationToken);
+        string xml = await GetStringWithPacing(new Uri(_httpClient.BaseAddress!, $"profiles/{steamId}/?xml=1"), cancellationToken);
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(xml, "<steamID64>\\d{17}</steamID64>"))
+            throw new InvalidOperationException("Steam could not resolve that profile. It may be private.");
+
+        return new SteamProfileLookupResult
+        {
+            SteamId64 = steamId,
+            DisplayName = ExtractXmlField(xml, "steamID") ?? steamId,
+            AvatarUrl = ExtractXmlField(xml, "avatarMedium") ?? ExtractXmlField(xml, "avatarIcon") ?? string.Empty,
+            ProfileUrl = $"{SteamCommunity}profiles/{steamId}"
+        };
+    }
+
+    private static string? ExtractXmlField(string xml, string tag)
+    {
+        System.Text.RegularExpressions.Match cdata = System.Text.RegularExpressions.Regex.Match(xml, $"<{tag}><!\\[CDATA\\[(.*?)\\]\\]></{tag}>", System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (cdata.Success) return cdata.Groups[1].Value;
+        System.Text.RegularExpressions.Match plain = System.Text.RegularExpressions.Regex.Match(xml, $"<{tag}>(.*?)</{tag}>", System.Text.RegularExpressions.RegexOptions.Singleline);
+        return plain.Success ? plain.Groups[1].Value : null;
     }
 
     public async Task<SteamInventoryResult> LoadCs2Inventory(string steamId, CancellationToken cancellationToken = default)

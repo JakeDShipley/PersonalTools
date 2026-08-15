@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Settings";
     string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
+    string errorMessage = TempData["ErrorMessage"]?.ToString() ?? string.Empty;
 }
 
 <div class="container px-3 px-lg-4">
@@ -17,6 +18,14 @@
         <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-2" role="status">
             <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
             <span>@successMessage</span>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center gap-2" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+            <span>@errorMessage</span>
         </div>
     }
 
@@ -62,6 +71,23 @@
                         </a>
                     }
                 </div>
+
+                @if (string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                {
+                    <div class="card-body border-top pt-3">
+                        <p class="small-muted mb-2">Alternatively, you can add a SteamID directly instead of connecting through Steam.</p>
+                        <form method="post" asp-page-handler="LinkSteamManually" class="d-flex flex-column flex-sm-row gap-2 align-items-sm-start">
+                            <div class="js-steam-lookup flex-grow-1">
+                                <div class="input-group">
+                                    <input asp-for="ManualSteamId" id="settingsManualSteamId" class="form-control js-steam-lookup-input" placeholder="SteamID64, profile URL, custom URL, or name" pattern="^7656\d{13}$" required />
+                                    <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Look up this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                </div>
+                                <div class="js-steam-lookup-result d-none mt-2 small"></div>
+                            </div>
+                            <button class="btn btn-outline-secondary flex-shrink-0" type="submit">Save SteamID</button>
+                        </form>
+                    </div>
+                }
             </section>
         </div>
 
@@ -121,7 +147,7 @@
                         <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-database"></i></span>
                         <div>
                             <h2 class="h5 fw-semibold mb-2">Data storage</h2>
-                            <p class="small-muted mb-0">Notes and tracked skins are stored privately per account in MariaDB. CS Match Tracker remains in its current local storage flow for now.</p>
+                            <p class="small-muted mb-0">Notes, tracked skins and CS Match Tracker data are all stored privately per account in MariaDB.</p>
                         </div>
                     </div>
                     <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis px-3 py-2">Account scoped</span>

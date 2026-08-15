@@ -25,11 +25,11 @@ public sealed class CSMatchesController : ControllerBase
     private long UserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet("leetify")]
-    public async Task<ActionResult<List<CSMatchLeetifyPreviewObj>>> GetLeetifyMatches()
+    public async Task<ActionResult<List<CSMatchLeetifyPreviewObj>>> GetLeetifyMatches([FromQuery] string? profileId)
     {
         try
         {
-            return Ok(await _leetify.GetAvailableMatches(UserId));
+            return Ok(await _leetify.GetAvailableMatches(UserId, profileId));
         }
         catch (InvalidOperationException ex)
         {
@@ -38,7 +38,7 @@ public sealed class CSMatchesController : ControllerBase
     }
 
     [HttpPost("leetify/import")]
-    public async Task<ActionResult<ApiResponse>> ImportLeetifyMatches([FromBody] List<string> leetifyMatchIds)
+    public async Task<ActionResult<ApiResponse>> ImportLeetifyMatches([FromQuery] string? profileId, [FromBody] List<string> leetifyMatchIds)
     {
         if (leetifyMatchIds is null || leetifyMatchIds.Count == 0)
         {
@@ -47,8 +47,8 @@ public sealed class CSMatchesController : ControllerBase
 
         try
         {
-            List<CSMatchObj> batch = await _leetify.BuildImportBatch(UserId, leetifyMatchIds);
-            await _matches.ImportMatches(batch);
+            List<CSMatchObj> batch = await _leetify.BuildImportBatch(UserId, profileId, leetifyMatchIds);
+            await _matches.ImportMatches(UserId, profileId, batch);
             return Ok(new ApiResponse(true, $"{batch.Count} match{(batch.Count == 1 ? "" : "es")} imported."));
         }
         catch (InvalidOperationException ex)
@@ -58,9 +58,9 @@ public sealed class CSMatchesController : ControllerBase
     }
 
     [HttpGet("stats")]
-    public async Task<ActionResult<CSMatchStatsObj>> GetStats([FromQuery] string[]? gameTypes, [FromQuery] bool activeDutyOnly = false)
+    public async Task<ActionResult<CSMatchStatsObj>> GetStats([FromQuery] string? profileId, [FromQuery] string[]? gameTypes, [FromQuery] bool activeDutyOnly = false)
     {
         List<string>? maps = activeDutyOnly ? await _referenceData.GetActiveDutyPool() : null;
-        return Ok(await _matches.GetStats(gameTypes, maps));
+        return Ok(await _matches.GetStats(UserId, profileId, gameTypes, maps));
     }
 }

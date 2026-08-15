@@ -6,6 +6,14 @@
         public string ImagePath { get; set; } = string.Empty;
     }
 
+    public class MatchProfileObj
+    {
+        public string ProfileId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string SteamId { get; set; } = string.Empty;
+        public DateTime Created { get; set; }
+    }
+
     public class CSMatchObj
     {
         public string MatchId { get; set; } = string.Empty;

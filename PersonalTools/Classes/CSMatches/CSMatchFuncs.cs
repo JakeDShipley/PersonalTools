@@ -1,116 +1,87 @@
-﻿using PersonalTools.Data.Local;
+using PersonalTools.Data.CSMatches;
 using PersonalTools.Entities.CSMatches;
 
 namespace PersonalTools.Classes.CSMatches
 {
     public interface ICSMatchFuncs
     {
-        Task<List<CSMatchObj>> GetMatches();
-        Task CreateMatch(CSMatchObj match);
-        Task UpdateMatch(string matchId, CSMatchObj match);
-        Task DeleteMatch(string matchId);
-        Task DeleteAllMatches();
-        Task ImportMatches(List<CSMatchObj> matches);
-        Task<CSMatchStatsObj> GetStats(IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null);
+        Task<List<CSMatchObj>> GetMatches(long userId, string? profileId);
+        Task CreateMatch(long userId, string? profileId, CSMatchObj match);
+        Task UpdateMatch(long userId, string matchId, CSMatchObj match);
+        Task DeleteMatch(long userId, string matchId);
+        Task DeleteAllMatches(long userId, string? profileId);
+        Task ImportMatches(long userId, string? profileId, List<CSMatchObj> matches);
+        Task<CSMatchStatsObj> GetStats(long userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null);
     }
 
     public class CSMatchFuncs : ICSMatchFuncs
     {
-        private const string FileName = "csmatches.json";
+        private readonly IMatchesData _matchesData;
 
-        private readonly ILocalJsonData _localJsonData;
-
-        public CSMatchFuncs(ILocalJsonData localJsonData)
+        public CSMatchFuncs(IMatchesData matchesData)
         {
-            _localJsonData = localJsonData;
+            _matchesData = matchesData;
         }
 
-        public async Task<List<CSMatchObj>> GetMatches()
+        public async Task<List<CSMatchObj>> GetMatches(long userId, string? profileId)
         {
-            List<CSMatchObj> matches = await _localJsonData.LoadList<CSMatchObj>(FileName);
+            List<CSMatchObj> matches = await _matchesData.GetMatches(userId, profileId);
 
             return matches
                 .OrderByDescending(x => x.Created)
                 .ToList();
         }
 
-        public async Task CreateMatch(CSMatchObj match)
+        public async Task CreateMatch(long userId, string? profileId, CSMatchObj match)
         {
-            List<CSMatchObj> matches = await _localJsonData.LoadList<CSMatchObj>(FileName);
-
             match.MatchId = Guid.NewGuid().ToString();
-            match.Created = DateTime.Now;
-            match.Updated = DateTime.Now;
 
-            matches.Add(match);
-
-            await _localJsonData.SaveList(FileName, matches);
+            await _matchesData.CreateMatch(userId, profileId, match);
         }
 
-        public async Task UpdateMatch(string matchId, CSMatchObj updated)
+        public async Task UpdateMatch(long userId, string matchId, CSMatchObj updated)
         {
-            List<CSMatchObj> matches = await _localJsonData.LoadList<CSMatchObj>(FileName);
-
-            CSMatchObj? match = matches.FirstOrDefault(x => x.MatchId == matchId);
-
-            if (match == null)
-            {
-                return;
-            }
-
-            match.StartSide = updated.StartSide;
-            match.MapName = updated.MapName;
-            match.GameType = updated.GameType;
-            match.TeamScore = updated.TeamScore;
-            match.OpponentScore = updated.OpponentScore;
-            match.OvertimeCount = updated.OvertimeCount;
-            match.Updated = DateTime.Now;
-
-            await _localJsonData.SaveList(FileName, matches);
+            await _matchesData.UpdateMatch(userId, matchId, updated);
         }
 
-        public async Task DeleteMatch(string matchId)
+        public async Task DeleteMatch(long userId, string matchId)
         {
-            List<CSMatchObj> matches = await _localJsonData.LoadList<CSMatchObj>(FileName);
-
-            CSMatchObj? match = matches.FirstOrDefault(x => x.MatchId == matchId);
-
-            if (match == null)
-            {
-                return;
-            }
-
-            matches.Remove(match);
-
-            await _localJsonData.SaveList(FileName, matches);
+            await _matchesData.DeleteMatch(userId, matchId);
         }
 
-        public async Task DeleteAllMatches()
+        public async Task DeleteAllMatches(long userId, string? profileId)
         {
-            await _localJsonData.SaveList(FileName, new List<CSMatchObj>());
+            await _matchesData.DeleteAllMatches(userId, profileId);
         }
 
-        public async Task ImportMatches(List<CSMatchObj> matches)
+        public async Task ImportMatches(long userId, string? profileId, List<CSMatchObj> matches)
         {
             if (matches.Count == 0)
             {
                 return;
             }
 
-            List<CSMatchObj> existing = await _localJsonData.LoadList<CSMatchObj>(FileName);
+            List<CSMatchObj> existing = await _matchesData.GetMatches(userId, profileId);
             HashSet<string> existingLeetifyIds = existing
                 .Where(x => !string.IsNullOrWhiteSpace(x.LeetifyMatchId))
                 .Select(x => x.LeetifyMatchId!)
                 .ToHashSet();
 
-            existing.AddRange(matches.Where(m => string.IsNullOrWhiteSpace(m.LeetifyMatchId) || !existingLeetifyIds.Contains(m.LeetifyMatchId!)));
+            foreach (CSMatchObj match in matches)
+            {
+                if (!string.IsNullOrWhiteSpace(match.LeetifyMatchId) && existingLeetifyIds.Contains(match.LeetifyMatchId))
+                {
+                    continue;
+                }
 
-            await _localJsonData.SaveList(FileName, existing);
+                match.MatchId = Guid.NewGuid().ToString();
+                await _matchesData.CreateMatch(userId, profileId, match);
+            }
         }
 
-        public async Task<CSMatchStatsObj> GetStats(IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null)
+        public async Task<CSMatchStatsObj> GetStats(long userId, string? profileId, IEnumerable<string>? includedGameTypes = null, IEnumerable<string>? includedMaps = null)
         {
-            List<CSMatchObj> matches = await GetMatches();
+            List<CSMatchObj> matches = await GetMatches(userId, profileId);
 
             HashSet<string>? gameTypeFilter = includedGameTypes?.ToHashSet();
             if (gameTypeFilter is { Count: > 0 })
