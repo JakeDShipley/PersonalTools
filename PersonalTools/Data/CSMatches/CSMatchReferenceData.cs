@@ -8,12 +8,15 @@ namespace PersonalTools.Classes.CSMatches
         Task<List<CSMapObj>> GetMaps();
         Task<List<string>> GetGameTypes();
         Task AddMap(CSMapObj map);
+        Task<List<string>> GetActiveDutyPool();
+        Task SetActiveDutyPool(List<string> mapNames);
     }
 
     public class CSMatchReferenceData : ICSMatchReferenceData
     {
         private const string MapsFileName = "Maps.json";
         private const string GameTypesFileName = "GameType.json";
+        private const string ActiveDutyPoolFileName = "ActiveDutyPool.json";
 
         private readonly IWebHostEnvironment _env;
 
@@ -69,6 +72,33 @@ namespace PersonalTools.Classes.CSMatches
 
             string filePath = Path.Combine(FolderPath, MapsFileName);
             string json = JsonSerializer.Serialize(maps, new JsonSerializerOptions { WriteIndented = true });
+
+            await File.WriteAllTextAsync(filePath, json);
+        }
+
+        public async Task<List<string>> GetActiveDutyPool()
+        {
+            string filePath = Path.Combine(FolderPath, ActiveDutyPoolFileName);
+
+            if (!File.Exists(filePath))
+            {
+                return new List<string>();
+            }
+
+            string json = await File.ReadAllTextAsync(filePath);
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<string>();
+            }
+
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+
+        public async Task SetActiveDutyPool(List<string> mapNames)
+        {
+            string filePath = Path.Combine(FolderPath, ActiveDutyPoolFileName);
+            string json = JsonSerializer.Serialize(mapNames, new JsonSerializerOptions { WriteIndented = true });
 
             await File.WriteAllTextAsync(filePath, json);
         }

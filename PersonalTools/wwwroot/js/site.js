@@ -8,6 +8,48 @@
         })
     };
 
+    document.querySelectorAll('.hold-delete-btn[data-hold-form]').forEach((btn) => {
+        const holdDurationMs = 5000;
+        const $btn = $(btn);
+        const $fill = $btn.find('.hold-delete-fill');
+        const $form = $('#' + btn.dataset.holdForm);
+        const $modal = btn.dataset.holdModal ? $('#' + btn.dataset.holdModal) : null;
+        let holdStart = null;
+        let holdFrame = null;
+
+        function tick() {
+            const percent = Math.min(((Date.now() - holdStart) / holdDurationMs) * 100, 100);
+            $fill.css('width', percent + '%');
+
+            if (percent >= 100) {
+                holdStart = null;
+                $form.trigger('submit');
+                return;
+            }
+
+            holdFrame = requestAnimationFrame(tick);
+        }
+
+        function cancelHold() {
+            if (holdFrame) cancelAnimationFrame(holdFrame);
+            holdFrame = null;
+            holdStart = null;
+            $btn.removeClass('is-holding');
+            $fill.css('width', '0%');
+        }
+
+        $btn.on('pointerdown', function (e) {
+            e.preventDefault();
+            if (holdStart) return;
+            this.setPointerCapture?.(e.originalEvent.pointerId);
+            holdStart = Date.now();
+            $btn.addClass('is-holding');
+            holdFrame = requestAnimationFrame(tick);
+        });
+        $btn.on('pointerup pointercancel pointerleave lostpointercapture', cancelHold);
+        $modal?.on('hidden.bs.modal', cancelHold);
+    });
+
     $(document).on('submit', '.js-signout-form', function (event) {
         event.preventDefault();
         const form = $(this);
