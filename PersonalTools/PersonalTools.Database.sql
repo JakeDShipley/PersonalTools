@@ -105,6 +105,19 @@ DROP PROCEDURE IF EXISTS sp_tracked_skins_update$$
 CREATE PROCEDURE sp_tracked_skins_update(IN p_user_id BIGINT,IN p_skin_id CHAR(36),IN p_name VARCHAR(200),IN p_weapon VARCHAR(100),IN p_exterior VARCHAR(100),IN p_market_hash_name VARCHAR(255),IN p_external_image_url VARCHAR(2048),IN p_purchase_price DECIMAL(12,2),IN p_current_price DECIMAL(12,2),IN p_purchase_date DATE,IN p_notes TEXT) UPDATE TrackedSkins SET Name=p_name,Weapon=p_weapon,Exterior=p_exterior,MarketHashName=p_market_hash_name,ExternalImageUrl=p_external_image_url,PurchasePrice=p_purchase_price,CurrentPrice=p_current_price,PurchaseDate=p_purchase_date,Notes=p_notes,UpdatedUtc=UTC_TIMESTAMP() WHERE SkinId=p_skin_id AND UserId=p_user_id$$
 DROP PROCEDURE IF EXISTS sp_tracked_skins_delete$$
 CREATE PROCEDURE sp_tracked_skins_delete(IN p_user_id BIGINT,IN p_skin_id CHAR(36)) DELETE FROM TrackedSkins WHERE SkinId=p_skin_id AND UserId=p_user_id$$
+DROP PROCEDURE IF EXISTS sp_monitor_database_snapshot$$
+CREATE PROCEDURE sp_monitor_database_snapshot()
+BEGIN
+    SELECT
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='UPTIME'),0) AS UNSIGNED) AS UptimeSeconds,
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='THREADS_CONNECTED'),0) AS UNSIGNED) AS ThreadsConnected,
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='THREADS_RUNNING'),0) AS UNSIGNED) AS ThreadsRunning,
+        CAST(@@max_connections AS UNSIGNED) AS MaxConnections,
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='QUESTIONS'),0) AS UNSIGNED) AS Questions,
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='SLOW_QUERIES'),0) AS UNSIGNED) AS SlowQueries,
+        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='ABORTED_CONNECTS'),0) AS UNSIGNED) AS AbortedConnects,
+        (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins')) AS RequiredStructuresAvailable;
+END$$
 DELIMITER ;
 
 /*

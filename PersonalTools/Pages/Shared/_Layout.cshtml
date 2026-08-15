@@ -22,6 +22,21 @@
     @await RenderSectionAsync("Head", required: false)
 </head>
 <body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")">
+    <div class="app-loader-overlay" id="appLoader" aria-hidden="true">
+        <div class="app-loader-card" role="status" aria-live="polite" aria-atomic="true">
+            <span class="app-loader-emblem" aria-hidden="true">
+                <span class="app-loader-orbit"></span>
+                <span class="app-loader-tiles">
+                    <span></span><span></span><span></span><span></span>
+                </span>
+            </span>
+            <span class="app-loader-copy">
+                <strong data-loader-title>Working on it</strong>
+                <span data-loader-message>Please wait a moment&hellip;</span>
+            </span>
+        </div>
+    </div>
+
     @if (showNavigation)
     {
         <header class="app-mobile-header d-lg-none">
@@ -89,12 +104,12 @@
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">System</span>
-                        <span class="app-sidebar-link is-disabled" title="Server Monitor — coming soon" aria-disabled="true">
-                            <span class="app-nav-icon"><i class="fa-solid fa-server"></i></span><span class="sidebar-label">Server Monitor <span class="app-nav-soon">Soon</span></span>
-                        </span>
-                        <span class="app-sidebar-link is-disabled" title="Database Monitor — coming soon" aria-disabled="true">
-                            <span class="app-nav-icon"><i class="fa-solid fa-database"></i></span><span class="sidebar-label">Database Monitor <span class="app-nav-soon">Soon</span></span>
-                        </span>
+                        <a class="app-sidebar-link @ActivePage("/Monitoring/Server")" asp-page="/Monitoring/Server/Index" title="Server Monitor">
+                            <span class="app-nav-icon"><i class="fa-solid fa-server"></i></span><span class="sidebar-label">Server Monitor</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/Monitoring/Database")" asp-page="/Monitoring/Database/Index" title="Database Monitor">
+                            <span class="app-nav-icon"><i class="fa-solid fa-database"></i></span><span class="sidebar-label">Database Monitor</span>
+                        </a>
                         <span class="app-sidebar-link is-disabled" title="Logs Viewer — coming soon" aria-disabled="true">
                             <span class="app-nav-icon"><i class="fa-solid fa-file-lines"></i></span><span class="sidebar-label">Logs Viewer <span class="app-nav-soon">Soon</span></span>
                         </span>

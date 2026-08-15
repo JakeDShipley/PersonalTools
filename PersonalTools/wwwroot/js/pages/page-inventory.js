@@ -204,6 +204,9 @@
             url: '/api/inventory/cs2',
             method: 'GET',
             dataType: 'json',
+            showLoader: true,
+            loaderTitle: 'Opening inventory',
+            loaderMessage: 'Steam is gathering the latest item details…',
             data: { profile: value }
         }).done(function (result) {
             renderInventory(result);

@@ -18,10 +18,14 @@ using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
 using PersonalTools.Data;
+using PersonalTools.Classes.Monitoring;
+using PersonalTools.Data.Monitoring;
+using PersonalTools.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IMariaDbDataAccess, MariaDbDataAccess>();
@@ -31,6 +35,11 @@ builder.Services.AddScoped<IQuickLinksData, QuickLinksData>();
 builder.Services.AddScoped<IQuickLinksFuncs, QuickLinksFuncs>();
 builder.Services.AddScoped<INotesData, NotesData>();
 builder.Services.AddScoped<ITrackedSkinsData, TrackedSkinsData>();
+builder.Services.AddSingleton<IServerMonitorData, ServerMonitorData>();
+builder.Services.AddScoped<IServerMonitorFuncs, ServerMonitorFuncs>();
+builder.Services.AddScoped<IDatabaseMonitorData, DatabaseMonitorData>();
+builder.Services.AddScoped<IDatabaseMonitorFuncs, DatabaseMonitorFuncs>();
+builder.Services.AddHostedService<MonitoringPulseService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -171,5 +180,6 @@ app.MapGet("/auth/steam/callback", async (HttpContext context, IHttpClientFactor
 
 app.MapRazorPages();
 app.MapControllers();
+app.MapHub<MonitoringHub>("/hubs/monitoring");
 
 app.Run();

@@ -1,4 +1,116 @@
 (() => {
+    const appLoader = (() => {
+        const overlay = document.getElementById('appLoader');
+        const title = overlay?.querySelector('[data-loader-title]');
+        const message = overlay?.querySelector('[data-loader-message]');
+        const lockTargets = '.app-mobile-header, .app-sidebar, .app-content-shell';
+        const showDelayMs = 140;
+        const minimumVisibleMs = 420;
+        let activeRequests = 0;
+        let shownAt = 0;
+        let showTimer = null;
+        let hideTimer = null;
+
+        function setCopy(options = {}) {
+            if (title) title.textContent = options.title || 'Working on it';
+            if (message) message.textContent = options.message || 'Please wait a moment…';
+        }
+
+        function lockPage(locked) {
+            document.body.classList.toggle('app-loader-active', locked);
+            document.body.setAttribute('aria-busy', locked ? 'true' : 'false');
+            document.querySelectorAll(lockTargets).forEach((element) => {
+                if (locked && !element.hasAttribute('inert')) {
+                    element.setAttribute('inert', '');
+                    element.dataset.loaderInert = 'true';
+                } else if (!locked && element.dataset.loaderInert === 'true') {
+                    element.removeAttribute('inert');
+                    delete element.dataset.loaderInert;
+                }
+            });
+        }
+
+        function reveal() {
+            showTimer = null;
+            if (!overlay || activeRequests < 1) return;
+            shownAt = Date.now();
+            overlay.classList.add('is-visible');
+            overlay.setAttribute('aria-hidden', 'false');
+            lockPage(true);
+        }
+
+        function conceal() {
+            hideTimer = null;
+            if (!overlay || activeRequests > 0) return;
+            overlay.classList.remove('is-visible');
+            overlay.setAttribute('aria-hidden', 'true');
+            lockPage(false);
+            shownAt = 0;
+        }
+
+        function show(options = {}) {
+            activeRequests += 1;
+            setCopy(typeof options === 'string' ? { message: options } : options);
+            if (!overlay) return;
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            if (!overlay.classList.contains('is-visible') && !showTimer) {
+                showTimer = setTimeout(reveal, showDelayMs);
+            }
+        }
+
+        function hide() {
+            activeRequests = Math.max(0, activeRequests - 1);
+            if (activeRequests > 0 || !overlay) return;
+            if (showTimer) {
+                clearTimeout(showTimer);
+                showTimer = null;
+                return;
+            }
+            const remaining = Math.max(0, minimumVisibleMs - (Date.now() - shownAt));
+            hideTimer = setTimeout(conceal, remaining);
+        }
+
+        function reset() {
+            activeRequests = 0;
+            if (showTimer) clearTimeout(showTimer);
+            if (hideTimer) clearTimeout(hideTimer);
+            showTimer = null;
+            hideTimer = null;
+            conceal();
+        }
+
+        function wrap(promise, options = {}) {
+            show(options);
+            return Promise.resolve(promise).finally(hide);
+        }
+
+        return { show, hide, reset, wrap };
+    })();
+
+    window.personalToolsLoader = appLoader;
+
+    $(document).on('ajaxSend.personalToolsLoader', function (_event, xhr, settings) {
+        const method = String(settings.type || settings.method || 'GET').toUpperCase();
+        const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+        if (settings.showLoader === false || (!isWrite && settings.showLoader !== true)) return;
+        xhr.personalToolsUsesLoader = true;
+        appLoader.show({
+            title: settings.loaderTitle,
+            message: settings.loaderMessage || (isWrite ? 'Saving your changes…' : 'Loading your results…')
+        });
+    });
+
+    $(document).on('ajaxComplete.personalToolsLoader', function (_event, xhr) {
+        if (!xhr.personalToolsUsesLoader) return;
+        xhr.personalToolsUsesLoader = false;
+        appLoader.hide();
+    });
+
+    window.addEventListener('pageshow', () => appLoader.reset());
+
     window.personalToolsApi = {
         request: (url, method, data) => $.ajax({
             url,
