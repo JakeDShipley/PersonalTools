@@ -2,6 +2,12 @@
 @model PersonalTools.Pages.CSMatches.IndexModel
 @{
     ViewData["Title"] = "CS2 Matches";
+
+    // Mirrors the initials() fallback the CS2 Player Stats page uses for its tab avatars.
+    string Initials(string name) => string.Join(string.Empty, (string.IsNullOrWhiteSpace(name) ? "CS" : name)
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2)
+        .Select(word => char.ToUpperInvariant(word[0])));
 }
 
 @section Head {
@@ -13,27 +19,20 @@
         @Html.AntiForgeryToken()
         <div class="row align-items-start gy-3 section-spacing">
             <div class="col-12 col-lg">
-                <h1 class="page-title"><span class="csm-accent-dot"></span>CS Matches</h1>
+                <p class="eyebrow">Counter-Strike 2</p>
+                <h1 class="page-title">CS Matches</h1>
                 <p class="page-subtitle">
                     Track your CS2 match results and stats.
                 </p>
             </div>
-
-            <div class="col-12 col-lg-auto csm-actions">
-                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
-                    <i class="fa-solid fa-sliders me-1"></i>Edit Stats
-                </button>
-                <button class="btn btn-outline-secondary" type="button" id="fetchLeetifyBtn" data-steam-linked="@Model.HasLinkedSteamId.ToString().ToLowerInvariant()">
-                    <i class="fa-solid fa-cloud-arrow-down me-1"></i>Fetch matches from Leetify
-                </button>
-                <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllMatchesModal">
-                    <i class="fa-solid fa-trash me-1"></i>Delete all matches
-                </button>
-                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
-                    <i class="fa-solid fa-plus me-1"></i>Add match
-                </button>
-            </div>
         </div>
+
+        @await Html.PartialAsync("_ToolGuide", new[]
+        {
+            "Add a match manually, or fetch your recent games straight from Leetify.",
+            "Track other players too: add a tab with a pasted SteamID64, each with its own matches and stats.",
+            "Use Edit Stats to choose which numbers show and which matches count toward them."
+        })
 
         @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
         {
@@ -57,121 +56,155 @@
             </div>
         }
 
-        @* Profile tabs *@
-        <nav class="csm-tabs section-spacing" id="profileTabs">
-            <a href="?ProfileId=" class="csm-tab @(Model.ActiveProfile == null ? "active" : "")">You</a>
+        @* Profile tabs - mimics the CS2 Player Stats page's nav-tabs treatment. Switching tabs is
+           handled entirely client-side (see csMatchesSwitchProfile in the script section below). *@
+        <ul class="nav nav-tabs csm-tabs" id="profileTabs" role="tablist">
+            <li class="nav-item csm-tab-item">
+                <a href="?ProfileId=" class="nav-link @(Model.ActiveProfile == null ? "active" : "")" data-profile-id="" data-profile-name="@Model.YouDisplayName">
+                    <span class="csm-tab-avatar">
+                        @if (!string.IsNullOrWhiteSpace(Model.YouAvatarUrl))
+                        {
+                            <img src="@Model.YouAvatarUrl" alt="" class="js-avatar-img" referrerpolicy="no-referrer" />
+                        }
+                        <span class="js-avatar-fallback @(string.IsNullOrWhiteSpace(Model.YouAvatarUrl) ? "" : "d-none")" aria-hidden="true">@Initials(Model.YouDisplayName)</span>
+                    </span>
+                    You
+                </a>
+            </li>
 
             @foreach (var profile in Model.Profiles)
             {
                 bool isActive = Model.ActiveProfile?.ProfileId == profile.ProfileId;
 
-                <span class="csm-tab-group">
-                    <a href="?ProfileId=@profile.ProfileId" class="csm-tab @(isActive ? "active" : "")">@profile.Name</a>
-                    @if (isActive)
-                    {
-                        <button class="csm-tab-edit js-edit-profile"
-                                type="button"
-                                data-bs-toggle="modal"
-                                data-bs-target="#editProfileModal"
-                                data-profile-id="@profile.ProfileId"
-                                data-profile-name="@profile.Name"
-                                data-profile-steamid="@profile.SteamId"
-                                title="Edit profile">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                    }
-                </span>
+                <li class="nav-item csm-tab-item">
+                    <a href="?ProfileId=@profile.ProfileId" class="nav-link @(isActive ? "active" : "")" data-profile-id="@profile.ProfileId" data-profile-name="@profile.Name" data-profile-steamid="@profile.SteamId">
+                        <span class="csm-tab-avatar">
+                            @if (!string.IsNullOrWhiteSpace(profile.AvatarUrl))
+                            {
+                                <img src="@profile.AvatarUrl" alt="" class="js-avatar-img" referrerpolicy="no-referrer" />
+                            }
+                            <span class="js-avatar-fallback @(string.IsNullOrWhiteSpace(profile.AvatarUrl) ? "" : "d-none")" aria-hidden="true">@Initials(profile.Name)</span>
+                        </span>
+                        @profile.Name
+                    </a>
+                    <button class="csm-tab-close js-edit-profile @(isActive ? "" : "d-none")"
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editProfileModal"
+                            data-profile-id="@profile.ProfileId"
+                            data-profile-name="@profile.Name"
+                            data-profile-steamid="@profile.SteamId"
+                            title="Edit profile"
+                            aria-label="Edit profile">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </li>
             }
 
-            <button class="csm-tab-add" type="button" data-bs-toggle="modal" data-bs-target="#addProfileModal">
-                + Add Profile
-            </button>
-        </nav>
+            <li class="nav-item csm-tab-item">
+                <button class="csm-tab-add" type="button" data-bs-toggle="modal" data-bs-target="#addProfileModal" title="Add profile" aria-label="Add profile">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </li>
+        </ul>
 
-        @* Stats *@
-        <div class="csm-stats section-spacing" id="statsRow">
-            <div class="csm-stat js-stat" data-stat-key="totalMatches">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
-                <p class="csm-stat-label mb-1">Total Matches</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.TotalMatches</p>
+        @* Everything below is profile-scoped: the stats panel refreshes via /api/csmatches/stats and
+           the match table/cards via page-cs-match-tracker.js on every tab switch. *@
+        <div id="csMatchesWorkspace">
+
+        @* Stats panel - the "folder" content the tabs sit on top of. Edit Stats lives in its header
+           so it reads as acting on this panel, not as a page-wide action. *@
+        <div class="csm-tabs-panel section-spacing">
+            <div class="csm-panel-head">
+                <p class="csm-panel-head-label">Your stats</p>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editStatsModal">
+                    <i class="fa-solid fa-sliders me-1"></i>Edit Stats
+                </button>
             </div>
+            <div class="csm-stats" id="statsRow">
+                <div class="csm-stat js-stat" data-stat-key="totalMatches">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The total number of matches you've logged."></i>
+                    <p class="csm-stat-label mb-1">Total Matches</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.TotalMatches</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="winsLosses">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
-                <p class="csm-stat-label mb-1">Wins / Losses</p>
-                <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.Wins</span> / <span class="loss">@Model.Stats.Losses</span></p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="winsLosses">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your total number of match wins versus losses."></i>
+                    <p class="csm-stat-label mb-1">Wins / Losses</p>
+                    <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.Wins</span> / <span class="loss">@Model.Stats.Losses</span></p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="totalWinRate">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
-                <p class="csm-stat-label mb-1">Total Win Rate</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRate%</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="totalWinRate">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The percentage of all logged matches you've won."></i>
+                    <p class="csm-stat-label mb-1">Total Win Rate</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.WinRate%</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="winRateCT">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
-                <p class="csm-stat-label mb-1">Win Rate (CT Start)</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateCTStart%</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="winRateCT">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the CT side."></i>
+                    <p class="csm-stat-label mb-1">Win Rate (CT Start)</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateCTStart%</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="winRateT">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
-                <p class="csm-stat-label mb-1">Win Rate (T Start)</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateTStart%</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="winRateT">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your win rate in matches where you started on the T side."></i>
+                    <p class="csm-stat-label mb-1">Win Rate (T Start)</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.WinRateTStart%</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="overtimeGames">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
-                <p class="csm-stat-label mb-1">Overtime Games</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="overtimeGames">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The number and percentage of your matches that went into overtime."></i>
+                    <p class="csm-stat-label mb-1">Overtime Games</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.OvertimeGames (@Model.Stats.OvertimeGamePercentage%)</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="otWinLoss">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
-                <p class="csm-stat-label mb-1">OT Wins / Losses</p>
-                <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.OvertimeWins</span> / <span class="loss">@Model.Stats.OvertimeLosses</span></p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="otWinLoss">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="How many of your overtime matches you won versus lost."></i>
+                    <p class="csm-stat-label mb-1">OT Wins / Losses</p>
+                    <p class="csm-stat-value js-stat-value"><span class="win">@Model.Stats.OvertimeWins</span> / <span class="loss">@Model.Stats.OvertimeLosses</span></p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="avgScoreMargin">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
-                <p class="csm-stat-label mb-1">Avg Score Margin</p>
-                <p class="csm-stat-value js-stat-value">@Model.Stats.AverageScoreMargin</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="avgScoreMargin">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The average difference between your score and your opponent's score across all matches."></i>
+                    <p class="csm-stat-label mb-1">Avg Score Margin</p>
+                    <p class="csm-stat-value js-stat-value">@Model.Stats.AverageScoreMargin</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="currentStreak">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
-                <p class="csm-stat-label mb-1">Current Streak</p>
-                <p class="csm-stat-value js-stat-value @(Model.Stats.CurrentStreakType == "Win" ? "win" : "loss")">
-                    @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
-                </p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="currentStreak">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="Your current consecutive run of wins or losses, based on your most recently added match."></i>
+                    <p class="csm-stat-label mb-1">Current Streak</p>
+                    <p class="csm-stat-value js-stat-value @(Model.Stats.CurrentStreakType == "Win" ? "win" : "loss")">
+                        @(Model.Stats.CurrentStreak > 0 ? $"{Model.Stats.CurrentStreak} {Model.Stats.CurrentStreakType}{(Model.Stats.CurrentStreak > 1 ? "s" : "")}" : "-")
+                    </p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="bestMap">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
-                <p class="csm-stat-label mb-1">Best Map</p>
-                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="bestMap">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on."></i>
+                    <p class="csm-stat-label mb-1">Best Map</p>
+                    <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMap ?? "-") @(Model.Stats.BestMap != null ? $"({Model.Stats.BestMapWinRate}%)" : "")</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="worstMap">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
-                <p class="csm-stat-label mb-1">Worst Map</p>
-                <p class="csm-stat-value js-stat-value">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="worstMap">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the lowest win rate on."></i>
+                    <p class="csm-stat-label mb-1">Worst Map</p>
+                    <p class="csm-stat-value js-stat-value">@(Model.Stats.WorstMap ?? "-") @(Model.Stats.WorstMap != null ? $"({Model.Stats.WorstMapWinRate}%)" : "")</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="bestMapCT">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
-                <p class="csm-stat-label mb-1">Best Map (CT Start)</p>
-                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
-            </div>
+                <div class="csm-stat js-stat" data-stat-key="bestMapCT">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting CT."></i>
+                    <p class="csm-stat-label mb-1">Best Map (CT Start)</p>
+                    <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapCTStart ?? "-") @(Model.Stats.BestMapCTStart != null ? $"({Model.Stats.BestMapCTStartWinRate}%)" : "")</p>
+                </div>
 
-            <div class="csm-stat js-stat" data-stat-key="bestMapT">
-                <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
-                <p class="csm-stat-label mb-1">Best Map (T Start)</p>
-                <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
+                <div class="csm-stat js-stat" data-stat-key="bestMapT">
+                    <i class="fa-solid fa-circle-info csm-stat-info" data-bs-toggle="tooltip" title="The map you have the highest win rate on when starting T."></i>
+                    <p class="csm-stat-label mb-1">Best Map (T Start)</p>
+                    <p class="csm-stat-value js-stat-value">@(Model.Stats.BestMapTStart ?? "-") @(Model.Stats.BestMapTStart != null ? $"({Model.Stats.BestMapTStartWinRate}%)" : "")</p>
+                </div>
             </div>
         </div>
 
-        @* Filters + view toggle *@
+        @* Filters, view toggle, and the primary match actions all live together above the list. *@
         <div class="card shadow-sm border-0 section-spacing">
             <div class="card-body p-3">
                 <div class="csm-filters">
@@ -214,153 +247,68 @@
                         <button type="button" class="js-view-toggle" data-view="list" title="List view"><i class="fa-solid fa-list"></i></button>
                         <button type="button" class="js-view-toggle" data-view="cards" title="Card view"><i class="fa-solid fa-table-cells-large"></i></button>
                     </div>
+
+                    <div class="csm-filters-actions">
+                        <button class="btn btn-outline-danger" type="button" id="deleteAllMatchesBtn" data-bs-toggle="modal" data-bs-target="#deleteAllMatchesModal" title="Delete all matches" aria-label="Delete all matches" @(Model.Stats.TotalMatches == 0 ? "disabled" : "")>
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" id="fetchLeetifyBtn" data-steam-linked="@Model.HasLinkedSteamId.ToString().ToLowerInvariant()">
+                            <i class="fa-solid fa-cloud-arrow-down me-1"></i>Fetch from Leetify
+                        </button>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                            <i class="fa-solid fa-plus me-1"></i>Add match
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        @* Match list / cards *@
-        @if (Model.Matches.Any())
-        {
-            <div class="csm-matches-list" id="matchListView">
-                @foreach (var match in Model.Matches)
-                {
-                    var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
-                    var isWin = match.TeamScore > match.OpponentScore;
-                    var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+        @* Match list (Bootstrap table) / cards - rows are rendered entirely by page-cs-match-tracker.js;
+           this markup only supplies the table structure/headers and the empty body/card targets. *@
+        <div class="table-responsive csm-table-wrap" id="csMatchTableWrap">
+            <table class="table csm-match-table" id="csMatchTable">
+                <thead>
+                    <tr>
+                        <th>Map</th>
+                        <th>Type</th>
+                        <th>Side</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="csMatchTableBody"></tbody>
+            </table>
+        </div>
 
-                    <div class="csm-match-row match-card-wrapper @(isWin ? "is-win" : "is-loss")"
-                         data-map="@match.MapName"
-                         data-result="@(isWin ? "win" : "loss")"
-                         data-side="@match.StartSide"
-                         data-overtime="@(isOvertime ? "yes" : "no")">
-                        <span class="csm-match-cell">
-                            @if (map != null && !string.IsNullOrWhiteSpace(map.ImagePath))
-                            {
-                                <img src="@map.ImagePath" class="csm-thumb" alt="" />
-                            }
-                            <span class="csm-map-name">@match.MapName</span>
-                        </span>
+        <div class="csm-matches-cards d-none" id="matchCardView"></div>
 
-                        <span class="csm-chip">@match.GameType</span>
-
-                        <img class="csm-side-icon" src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" />
-
-                        <span class="csm-match-cell">
-                            <span class="csm-score @(isWin ? "win" : "loss")">@match.TeamScore&ndash;@match.OpponentScore</span>
-                            @if (isOvertime)
-                            {
-                                <span class="csm-ot-chip">OT@(match.OvertimeCount)</span>
-                            }
-                        </span>
-
-                        <span class="csm-date" title="@match.Created.ToString("dd MMM yyyy HH:mm")">@match.Created.ToString("dd MMM")</span>
-
-                        <span class="csm-match-actions">
-                            <button class="csm-icon-btn js-edit-match"
-                                    type="button"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editMatchModal"
-                                    data-match-id="@match.MatchId"
-                                    data-match-side="@match.StartSide"
-                                    data-match-map="@match.MapName"
-                                    data-match-gametype="@match.GameType"
-                                    data-match-teamscore="@match.TeamScore"
-                                    data-match-opponentscore="@match.OpponentScore"
-                                    data-match-ot="@match.OvertimeCount"
-                                    title="Edit match">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            <button class="csm-icon-btn is-danger js-delete-match"
-                                    type="button"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteMatchModal"
-                                    data-match-id="@match.MatchId"
-                                    data-match-title="@match.MapName"
-                                    title="Delete match">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </span>
-                    </div>
-                }
+        <div class="csm-table-footer d-none" id="csMatchPaginationBar">
+            <div class="csm-page-size">
+                <label for="csMatchPageSize">Rows per page</label>
+                <select id="csMatchPageSize" class="form-select form-select-sm">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
             </div>
-
-            <div class="csm-matches-cards d-none" id="matchCardView">
-                @foreach (var match in Model.Matches)
-                {
-                    var map = Model.Maps.FirstOrDefault(x => x.Name == match.MapName);
-                    var isWin = match.TeamScore > match.OpponentScore;
-                    var isOvertime = (match.TeamScore + match.OpponentScore) > 24;
-
-                    <div class="csm-match-card match-card-wrapper @(isWin ? "is-win" : "is-loss")"
-                         data-map="@match.MapName"
-                         data-result="@(isWin ? "win" : "loss")"
-                         data-side="@match.StartSide"
-                         data-overtime="@(isOvertime ? "yes" : "no")">
-                        @if (map != null && !string.IsNullOrWhiteSpace(map.ImagePath))
-                        {
-                            <img src="@map.ImagePath" class="csm-card-img" alt="@match.MapName" />
-                        }
-                        <div class="csm-card-body">
-                            <div class="csm-card-top">
-                                <div class="csm-card-title">
-                                    <h2 class="h6 fw-bold mb-0">@match.MapName</h2>
-                                    <img class="csm-side-icon" src="/images/cs/teams/@(match.StartSide == "CT" ? "ct" : "t").png" alt="@match.StartSide" title="Started @match.StartSide" />
-                                </div>
-                                <span class="csm-match-actions">
-                                    <button class="csm-icon-btn js-edit-match"
-                                            type="button"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editMatchModal"
-                                            data-match-id="@match.MatchId"
-                                            data-match-side="@match.StartSide"
-                                            data-match-map="@match.MapName"
-                                            data-match-gametype="@match.GameType"
-                                            data-match-teamscore="@match.TeamScore"
-                                            data-match-opponentscore="@match.OpponentScore"
-                                            data-match-ot="@match.OvertimeCount"
-                                            title="Edit match">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="csm-icon-btn is-danger js-delete-match"
-                                            type="button"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteMatchModal"
-                                            data-match-id="@match.MatchId"
-                                            data-match-title="@match.MapName"
-                                            title="Delete match">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </span>
-                            </div>
-
-                            <span class="csm-chip align-self-start">@match.GameType</span>
-
-                            <div class="csm-card-score @(isWin ? "win" : "loss")">
-                                @match.TeamScore<span class="sep">&ndash;</span>@match.OpponentScore
-                                @if (isOvertime)
-                                {
-                                    <span class="csm-ot-chip align-middle ms-2">OT@(match.OvertimeCount)</span>
-                                }
-                            </div>
-
-                            <div class="csm-card-foot">
-                                <span class="csm-date" title="@match.Created.ToString("dd MMM yyyy HH:mm")">@match.Created.ToString("dd MMM yyyy")</span>
-                            </div>
-                        </div>
-                    </div>
-                }
+            <div class="csm-page-nav">
+                <span class="csm-page-summary" id="csMatchPageSummary"></span>
+                <nav aria-label="Match pagination">
+                    <ul class="pagination pagination-sm mb-0" id="csMatchPagination"></ul>
+                </nav>
             </div>
+        </div>
 
-            <div class="csm-empty d-none" id="noMatchesMessage">
-                No matches found for the selected filters.
-            </div>
-        }
-        else
-        {
-            <div class="csm-empty">
-                No matches yet. Click <strong>Add match</strong> to record your first one.
-            </div>
-        }
+        <div class="csm-empty d-none" id="csMatchEmptyAll">
+            No matches yet. Click <strong>Add match</strong> to record your first one.
+        </div>
+        <div class="csm-empty d-none" id="csMatchEmptyFiltered">
+            No matches found for the selected filters.
+        </div>
+
+        </div>
     </div>
 </div>
 
@@ -368,9 +316,7 @@
 <div class="modal fade" id="addMatchModal" tabindex="-1" aria-labelledby="addMatchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Create" class="js-match-form">
-                <input type="hidden" asp-for="ProfileId" id="addMatchProfileId" />
-
+            <form id="addMatchForm" class="js-match-form">
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="addMatchModalLabel">Add match</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -380,10 +326,6 @@
                     <div class="csm-form-grid">
                         <div class="csm-form-field">
                             <label>Start Side</label>
-                            <select asp-for="StartSide" id="addStartSide" class="d-none">
-                                <option value="CT">CT</option>
-                                <option value="T">T</option>
-                            </select>
                             <div class="csm-side-toggle">
                                 <button type="button" class="csm-side-toggle-btn active js-side-toggle" data-side-target="addStartSide" data-side-value="CT">
                                     <img src="/images/cs/teams/ct.png" alt="" />CT
@@ -396,7 +338,7 @@
 
                         <div class="csm-form-field">
                             <label>Game Type</label>
-                            <select asp-for="GameType" id="addGameType" class="form-select">
+                            <select id="addGameType" class="form-select js-game-type-select">
                                 @foreach (var gt in Model.GameTypes)
                                 {
                                     <option value="@gt">@gt</option>
@@ -408,7 +350,7 @@
                             <label>Map</label>
                             <div class="csm-map-preview">
                                 <img src="" id="addMapPreview" class="js-map-preview" style="display: none;" alt="Map preview" />
-                                <select asp-for="MapName" id="addMapName" class="form-select js-map-select" data-preview-target="addMapPreview" style="flex:1;">
+                                <select id="addMapName" class="form-select js-map-select" data-preview-target="addMapPreview" style="flex:1;">
                                     @foreach (var map in Model.Maps)
                                     {
                                         <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
@@ -422,17 +364,17 @@
 
                         <div class="csm-form-field">
                             <label>Your Team Score</label>
-                            <input type="number" min="0" name="TeamScore" id="addTeamScore" class="form-control js-team-score" placeholder="e.g. 13" />
+                            <input type="number" min="0" id="addTeamScore" class="form-control js-team-score" placeholder="e.g. 13" />
                         </div>
 
                         <div class="csm-form-field">
                             <label>Opponent Score</label>
-                            <input type="number" min="0" name="OpponentScore" id="addOpponentScore" class="form-control js-opponent-score" placeholder="e.g. 7" />
+                            <input type="number" min="0" id="addOpponentScore" class="form-control js-opponent-score" placeholder="e.g. 7" />
                         </div>
 
                         <div class="csm-form-field full js-ot-wrapper" id="addOtWrapper" style="display: none;">
                             <label>Overtime detected &mdash; how many overtimes were played?</label>
-                            <input asp-for="OvertimeCount" type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
+                            <input type="number" min="1" id="addOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
                         </div>
 
                         <div class="csm-form-field full js-score-warning d-none">
@@ -456,9 +398,8 @@
 <div class="modal fade" id="editMatchModal" tabindex="-1" aria-labelledby="editMatchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Edit" class="js-match-form">
-                <input type="hidden" asp-for="MatchId" id="editMatchId" />
-                <input type="hidden" asp-for="ProfileId" id="editMatchProfileId" />
+            <form id="editMatchForm" class="js-match-form">
+                <input type="hidden" id="editMatchId" />
 
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="editMatchModalLabel">Edit match</h2>
@@ -469,10 +410,6 @@
                     <div class="csm-form-grid">
                         <div class="csm-form-field">
                             <label>Start Side</label>
-                            <select asp-for="StartSide" id="editStartSide" class="d-none">
-                                <option value="CT">CT</option>
-                                <option value="T">T</option>
-                            </select>
                             <div class="csm-side-toggle">
                                 <button type="button" class="csm-side-toggle-btn active js-side-toggle" data-side-target="editStartSide" data-side-value="CT">
                                     <img src="/images/cs/teams/ct.png" alt="" />CT
@@ -481,11 +418,12 @@
                                     <img src="/images/cs/teams/t.png" alt="" />T
                                 </button>
                             </div>
+                            <input type="hidden" id="editStartSide" value="CT" />
                         </div>
 
                         <div class="csm-form-field">
                             <label>Game Type</label>
-                            <select asp-for="GameType" id="editGameType" class="form-select">
+                            <select id="editGameType" class="form-select js-game-type-select">
                                 @foreach (var gt in Model.GameTypes)
                                 {
                                     <option value="@gt">@gt</option>
@@ -497,7 +435,7 @@
                             <label>Map</label>
                             <div class="csm-map-preview">
                                 <img src="" id="editMapPreview" class="js-map-preview" style="display: none;" alt="Map preview" />
-                                <select asp-for="MapName" id="editMapName" class="form-select js-map-select" data-preview-target="editMapPreview" style="flex:1;">
+                                <select id="editMapName" class="form-select js-map-select" data-preview-target="editMapPreview" style="flex:1;">
                                     @foreach (var map in Model.Maps)
                                     {
                                         <option value="@map.Name" data-image="@map.ImagePath">@map.Name</option>
@@ -511,17 +449,17 @@
 
                         <div class="csm-form-field">
                             <label>Your Team Score</label>
-                            <input type="number" min="0" name="TeamScore" id="editTeamScore" class="form-control js-team-score" />
+                            <input type="number" min="0" id="editTeamScore" class="form-control js-team-score" />
                         </div>
 
                         <div class="csm-form-field">
                             <label>Opponent Score</label>
-                            <input type="number" min="0" name="OpponentScore" id="editOpponentScore" class="form-control js-opponent-score" />
+                            <input type="number" min="0" id="editOpponentScore" class="form-control js-opponent-score" />
                         </div>
 
                         <div class="csm-form-field full js-ot-wrapper" id="editOtWrapper" style="display: none;">
                             <label>Overtime detected &mdash; how many overtimes were played?</label>
-                            <input asp-for="OvertimeCount" type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
+                            <input type="number" min="1" id="editOvertimeCount" class="form-control js-ot-count" style="max-width: 10rem;" />
                         </div>
 
                         <div class="csm-form-field full js-score-warning d-none">
@@ -545,9 +483,8 @@
 <div class="modal fade" id="deleteMatchModal" tabindex="-1" aria-labelledby="deleteMatchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Delete">
-                <input type="hidden" name="matchId" id="deleteMatchId" />
-                <input type="hidden" asp-for="ProfileId" id="deleteMatchProfileId" />
+            <form>
+                <input type="hidden" id="deleteMatchId" />
 
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="deleteMatchModalLabel">Delete match</h2>
@@ -583,9 +520,8 @@
                     This will permanently delete every match you've logged. This action cannot be undone.
                 </p>
 
-                <form method="post" asp-page-handler="DeleteAllMatches" id="deleteAllMatchesForm">
-                    <input type="hidden" asp-for="ProfileId" id="deleteAllMatchesProfileId" />
-                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="deleteAllMatchesForm" data-hold-modal="deleteAllMatchesModal">
+                <form id="deleteAllMatchesForm">
+                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="deleteAllMatchesForm" data-hold-modal="deleteAllMatchesModal" data-hold-duration-ms="2000">
                         <span class="hold-delete-fill"></span>
                         <span class="hold-delete-label position-relative">Hold to delete all matches</span>
                     </button>
@@ -687,7 +623,7 @@
                 </div>
 
                 <div class="modal-body">
-                    <p class="mb-1">Are you sure you want to remove <strong>@(Model.ActiveProfile?.Name)</strong>?</p>
+                    <p class="mb-1">Are you sure you want to remove <strong id="deleteProfileName">@(Model.ActiveProfile?.Name)</strong>?</p>
                     <p class="small-muted mb-0">This will also permanently delete every match logged under this profile. This action cannot be undone.</p>
                 </div>
 
@@ -757,10 +693,6 @@
                             <span id="leetifyFetchedCount">0</span> matches fetched
                             <i class="fa-solid fa-circle-info" data-bs-toggle="tooltip" title="Leetify's public API only ever returns your 100 most recent matches — older matches can't be fetched here."></i>
                         </span>
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="checkbox" id="leetifySelectAll" />
-                            <label class="form-check-label small-muted" for="leetifySelectAll">Select all</label>
-                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -786,6 +718,7 @@
 
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-outline-secondary" type="button" id="leetifySelectAllBtn">Select all</button>
                 <button class="btn btn-primary" type="button" id="leetifyImportBtn" disabled>
                     Import selected (<span id="leetifySelectedCount">0</span>)
                 </button>
@@ -804,7 +737,7 @@
             </div>
 
             <div class="modal-body">
-                <p class="small-muted mb-3">Choose which stats to show at the top of the page.</p>
+                <p class="small-muted mb-3">Choose which stats to show at the top of the page. Click a card to toggle it.</p>
 
                 <div class="csm-toggle-grid">
                     <div class="csm-toggle-cell">
@@ -988,13 +921,60 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/pages/page-cs-match-tracker.js" asp-append-version="true"></script>
     <script>
-        const CURRENT_PROFILE_ID = '@(Model.ProfileId ?? "default")';
-        const MAP_IMAGES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Maps.ToDictionary(m => m.Name, m => m.ImagePath)));
+        let CURRENT_PROFILE_ID = '@(Model.ProfileId ?? "default")';
 
         function profileQuery(prefix) {
             return CURRENT_PROFILE_ID !== 'default' ? prefix + 'profileId=' + encodeURIComponent(CURRENT_PROFILE_ID) : '';
         }
+
+        // Tab switching is entirely client-side: the set of tabs never changes when switching
+        // between them, only which one is active, so there's nothing to fetch for the tab bar
+        // itself. Stats reload via the existing /api/csmatches/stats endpoint, and the match
+        // table/cards reload via csMatchTracker (page-cs-match-tracker.js).
+        function csMatchesSwitchProfile(profileId, profileName, pushHistory) {
+            $('#profileTabs .nav-link').removeClass('active');
+            $('#profileTabs .nav-link[data-profile-id="' + profileId + '"]').addClass('active');
+            $('#profileTabs .csm-tab-close').addClass('d-none');
+            $('#profileTabs .csm-tab-close[data-profile-id="' + profileId + '"]').removeClass('d-none');
+
+            $('#editProfileId, #deleteProfileId, #addMapProfileId').val(profileId);
+            $('#deleteProfileName').text(profileName || '');
+
+            const href = profileId ? ('?ProfileId=' + encodeURIComponent(profileId)) : '?ProfileId=';
+            if (pushHistory) {
+                window.history.pushState({ profileId: profileId }, '', href);
+            }
+
+            CURRENT_PROFILE_ID = profileId || 'default';
+            STAT_FILTER_KEY = 'csMatchesStatFilters:' + CURRENT_PROFILE_ID;
+
+            $.getJSON('/api/csmatches/stats' + profileQuery('?')).done(renderStats);
+            window.csMatchTracker.setProfile(profileId || null);
+
+            applyStatFilterInputs();
+            const filters = loadStatFilters();
+            if (filters.activeDutyOnly || (Array.isArray(filters.excludedGameTypes) && filters.excludedGameTypes.length)) {
+                refreshStats();
+            } else {
+                $('#mapPoolSuggestionBanner').addClass('d-none');
+            }
+        }
+
+        $(document).on('click', '#profileTabs .nav-link', function (event) {
+            event.preventDefault();
+            const $tab = $(this);
+            if ($tab.hasClass('active')) return;
+            csMatchesSwitchProfile($tab.data('profile-id') || '', $tab.data('profile-name') || '', true);
+        });
+
+        window.addEventListener('popstate', function () {
+            const params = new URLSearchParams(window.location.search);
+            const profileId = params.get('ProfileId') || '';
+            const $tab = $('#profileTabs .nav-link[data-profile-id="' + profileId + '"]');
+            csMatchesSwitchProfile(profileId, $tab.data('profile-name') || '', false);
+        });
 
         $(document).on('click', '.js-edit-profile', function () {
             $('#editProfileId').val($(this).data('profile-id'));
@@ -1003,38 +983,10 @@
             $('#editProfileSteamId').closest('.js-steam-lookup').find('.js-steam-lookup-result').addClass('d-none').empty();
         });
 
-        // Start-side toggle buttons drive the hidden StartSide <select> so form binding stays unchanged.
-        $(document).on('click', '.js-side-toggle', function () {
-            const $btn = $(this);
-            const $group = $btn.closest('.csm-side-toggle');
-            $('#' + $btn.data('side-target')).val($btn.data('side-value'));
-            $group.find('.js-side-toggle').removeClass('active');
-            $btn.addClass('active');
+        // Delete-all button reflects whether the active profile currently has any matches.
+        $(document).on('csMatches:loaded', function (_event, detail) {
+            $('#deleteAllMatchesBtn').prop('disabled', detail.count === 0);
         });
-
-        function setSideToggle($form, side) {
-            $form.find('.js-side-toggle').removeClass('active');
-            $form.find('.js-side-toggle[data-side-value="' + side + '"]').addClass('active');
-        }
-
-        // Match view: list (default) vs cards, persisted per browser.
-        const VIEW_STORAGE_KEY = 'csMatchesViewMode';
-
-        function applyMatchView(view) {
-            const isList = view !== 'cards';
-            $('#matchListView').toggleClass('d-none', !isList);
-            $('#matchCardView').toggleClass('d-none', isList);
-            $('.js-view-toggle').removeClass('active');
-            $('.js-view-toggle[data-view="' + view + '"]').addClass('active');
-        }
-
-        $(document).on('click', '.js-view-toggle', function () {
-            const view = $(this).data('view');
-            localStorage.setItem(VIEW_STORAGE_KEY, view);
-            applyMatchView(view);
-        });
-
-        applyMatchView(localStorage.getItem(VIEW_STORAGE_KEY) || 'list');
 
         const STAT_STORAGE_KEY = 'csMatchesStatVisibility';
 
@@ -1056,8 +1008,7 @@
 
             $('.js-stat').each(function () {
                 const key = $(this).data('stat-key');
-                const isVisible = visibility[key] !== false;
-                $(this).toggle(isVisible);
+                $(this).toggle(visibility[key] !== false);
             });
 
             $('.js-stat-toggle').each(function () {
@@ -1076,123 +1027,39 @@
 
         applyStatVisibility();
 
+        // Clicking anywhere on an Edit Stats card toggles its switch - except the label (which
+        // already natively toggles the checkbox it's "for", so handling it too would double-toggle)
+        // and the tooltip info icon (which needs its own hover/click for the tooltip to work).
+        $(document).on('click', '.csm-toggle-cell', function (event) {
+            if ($(event.target).closest('label, input, i.fa-solid').length) return;
+            const $checkbox = $(this).find('input[type="checkbox"]');
+            $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+        });
+
         $(function () {
             $('[data-bs-toggle="tooltip"]').each(function () {
                 new bootstrap.Tooltip(this);
             });
         });
 
-         function updateOvertimeVisibility($form) {
-            const teamRaw = $form.find('.js-team-score').val();
-            const opponentRaw = $form.find('.js-opponent-score').val();
-            const incomplete = teamRaw === '' || opponentRaw === '';
-            const team = parseInt(teamRaw) || 0;
-            const opponent = parseInt(opponentRaw) || 0;
-            const total = team + opponent;
-            const $wrapper = $form.find('.js-ot-wrapper');
-            const $otInput = $form.find('.js-ot-count');
-            const valid = !incomplete && isPlausibleScore(team, opponent);
+        // Match view: list (default) vs cards, persisted per browser.
+        const VIEW_STORAGE_KEY = 'csMatchesViewMode';
 
-            // While either field is still blank, don't warn — there's nothing implausible about an
-            // unfinished form — but the Save button stays disabled until both scores are entered.
-            $form.find('.js-score-warning').toggleClass('d-none', incomplete || valid);
-            $form.find('button[type="submit"]').prop('disabled', incomplete || !valid);
-
-            if (total > 24 && valid) {
-                $wrapper.show();
-                $otInput.prop('disabled', false);
-                if (!$otInput.val() || $otInput.val() == 0) {
-                    $otInput.val(Math.ceil((total - 24) / 6));
-                }
-            } else {
-                $wrapper.hide();
-                $otInput.prop('disabled', true);
-                $otInput.val(0);
-            }
+        function applyMatchView(view) {
+            const isList = view !== 'cards';
+            $('#csMatchTableWrap').toggleClass('d-none', !isList);
+            $('#matchCardView').toggleClass('d-none', isList);
+            $('.js-view-toggle').removeClass('active');
+            $('.js-view-toggle[data-view="' + view + '"]').addClass('active');
         }
 
-        function updateMapPreview($select) {
-            const $option = $select.find('option:selected');
-            const image = $option.data('image');
-            const targetId = $select.data('preview-target');
-            const $preview = $('#' + targetId);
-
-            if (image) {
-                $preview.attr('src', image).show();
-            } else {
-                $preview.hide();
-            }
-        }
-
-        $(document).on('input change', '.js-team-score, .js-opponent-score', function () {
-            updateOvertimeVisibility($(this).closest('form'));
+        $(document).on('click', '.js-view-toggle', function () {
+            const view = $(this).data('view');
+            localStorage.setItem(VIEW_STORAGE_KEY, view);
+            applyMatchView(view);
         });
 
-        $(document).on('change', '.js-map-select', function () {
-            updateMapPreview($(this));
-        });
-
-        $('.js-match-form').each(function () {
-            updateOvertimeVisibility($(this));
-        });
-
-        $('#addMatchModal').on('shown.bs.modal', function () {
-            updateMapPreview($('#addMapName'));
-            setSideToggle($('#addMatchModal'), $('#addStartSide').val() || 'CT');
-        });
-
-        $(document).on('click', '.js-edit-match', function () {
-            const side = $(this).data('match-side');
-            const map = $(this).data('match-map');
-            const gameType = $(this).data('match-gametype');
-            const teamScore = $(this).data('match-teamscore');
-            const opponentScore = $(this).data('match-opponentscore');
-            const ot = $(this).data('match-ot');
-
-            $('#editMatchId').val($(this).data('match-id'));
-            $('#editStartSide').val(side);
-            $('#editGameType').val(gameType);
-            $('#editMapName').val(map);
-            $('#editTeamScore').val(teamScore);
-            $('#editOpponentScore').val(opponentScore);
-            $('#editOvertimeCount').val(ot);
-
-            setSideToggle($('#editMatchModal'), side);
-            updateMapPreview($('#editMapName'));
-            updateOvertimeVisibility($('#editMatchModal').find('form'));
-        });
-
-        $(document).on('click', '.js-delete-match', function () {
-            $('#deleteMatchId').val($(this).data('match-id'));
-            $('#deleteMatchTitle').text($(this).data('match-title'));
-        });
-
-        function applyFilters() {
-            const map = $('#filterMap').val();
-            const result = $('#filterResult').val();
-            const side = $('#filterSide').val();
-            const overtime = $('#filterOvertime').val();
-            let visibleCount = 0;
-
-            $('.match-card-wrapper').each(function () {
-                const $card = $(this);
-                const matches =
-                    (!map || $card.data('map') === map) &&
-                    (!result || $card.data('result') === result) &&
-                    (!side || $card.data('side') === side) &&
-                    (!overtime || $card.data('overtime') === overtime);
-
-                $card.toggle(matches);
-
-                if (matches) {
-                    visibleCount++;
-                }
-            });
-
-            $('#noMatchesMessage').toggleClass('d-none', visibleCount !== 0);
-        }
-
-        $('#filterMap, #filterResult, #filterSide, #filterOvertime').on('change', applyFilters);
+        applyMatchView(localStorage.getItem(VIEW_STORAGE_KEY) || 'list');
 
         // #6 — Add New Map opened from within Add/Edit Match should return to that modal on close
         let csMatchOriginModalId = null;
@@ -1217,6 +1084,7 @@
 
         // Fetch matches from Leetify
         const leetifyModal = document.getElementById('fetchLeetifyModal');
+        const MAP_IMAGES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Maps.ToDictionary(m => m.Name, m => m.ImagePath)));
 
         $('#fetchLeetifyBtn').on('click', function () {
             if ($(this).data('steam-linked') !== true) {
@@ -1233,7 +1101,6 @@
             $('#leetifyContent').addClass('d-none');
             $('#leetifyImportBtn').prop('disabled', true);
             $('#leetifySelectedCount').text('0');
-            $('#leetifySelectAll').prop('checked', false);
 
             $.getJSON('/api/csmatches/leetify' + profileQuery('?'))
                 .done(function (matches) {
@@ -1328,9 +1195,20 @@
             applyLeetifyFilters();
         });
 
-        $(document).on('change', '#leetifySelectAll', function () {
-            const checked = $(this).is(':checked');
-            $('#leetifyMatchRows tr:visible .leetify-match-check:not(:disabled)').prop('checked', checked);
+        // Clicking a row toggles its checkbox, same as clicking the checkbox itself - except when
+        // the click IS on the checkbox (native toggle already handles that) or the row is an
+        // already-imported match (checkbox disabled, nothing to toggle).
+        $(document).on('click', '#leetifyMatchRows tr', function (event) {
+            if ($(event.target).is('input')) return;
+            const $checkbox = $(this).find('.leetify-match-check');
+            if ($checkbox.prop('disabled')) return;
+            $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+        });
+
+        $(document).on('click', '#leetifySelectAllBtn', function () {
+            const $rows = $('#leetifyMatchRows tr:visible .leetify-match-check:not(:disabled)');
+            const allSelected = $rows.length > 0 && $rows.length === $rows.filter(':checked').length;
+            $rows.prop('checked', !allSelected);
             updateLeetifySelectedCount();
         });
 
@@ -1340,6 +1218,10 @@
             const count = $('.leetify-match-check:checked').length;
             $('#leetifySelectedCount').text(count);
             $('#leetifyImportBtn').prop('disabled', count === 0);
+
+            const $selectable = $('#leetifyMatchRows tr:visible .leetify-match-check:not(:disabled)');
+            const allSelected = $selectable.length > 0 && $selectable.length === $selectable.filter(':checked').length;
+            $('#leetifySelectAllBtn').text(allSelected ? 'Deselect all' : 'Select all');
         }
 
         $('#leetifyImportBtn').on('click', function () {
@@ -1358,7 +1240,8 @@
                 headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() },
                 data: JSON.stringify(ids)
             }).done(function () {
-                window.location.reload();
+                bootstrap.Modal.getInstance(leetifyModal)?.hide();
+                window.csMatchTracker.reload();
             }).fail(function (xhr) {
                 $('#leetifyError').text(xhr.responseJSON?.message || 'Could not import the selected matches.').removeClass('d-none');
                 $btn.prop('disabled', false);
@@ -1366,7 +1249,7 @@
         });
 
         // Edit Stats: game type / Active Duty filters (persisted per profile tab)
-        const STAT_FILTER_KEY = 'csMatchesStatFilters:' + CURRENT_PROFILE_ID;
+        let STAT_FILTER_KEY = 'csMatchesStatFilters:' + CURRENT_PROFILE_ID;
 
         function loadStatFilters() {
             try {
@@ -1458,50 +1341,6 @@
             $('#mapPoolSuggestionBanner').addClass('d-none');
         }
 
-        // Match score plausibility check: a team can only pass a win threshold (13, then +3 per
-        // overtime) if the match actually reached the tied score that forces that overtime, so the
-        // loser must have at least reached the previous threshold. This still allows any legitimate
-        // early-ended (forfeit/disconnect) score, since those never exceed a threshold without
-        // reaching the required tie first — e.g. 18-6 is impossible outright (18 skips past the
-        // 16 threshold without the loser reaching the required 15), but 14-12 (a forfeit mid-overtime)
-        // is fine.
-        function isPlausibleScore(a, b) {
-            const winner = Math.max(a, b);
-            const loser = Math.min(a, b);
-
-            if (winner === loser) {
-                return false; // a completed match can never end tied, including 0-0
-            }
-
-            let threshold = 13;
-            let minLoserForThreshold = 12;
-
-            while (winner > threshold) {
-                if (loser < minLoserForThreshold) {
-                    return false;
-                }
-
-                threshold += 3;
-                minLoserForThreshold += 3;
-            }
-
-            return true;
-        }
-
-        $('.js-match-form').on('submit', function (e) {
-            const $form = $(this);
-            const teamRaw = $form.find('.js-team-score').val();
-            const opponentRaw = $form.find('.js-opponent-score').val();
-
-            // Safety net — the Save button is disabled while a score is missing or implausible, so
-            // this should never actually trigger, but block the submit anyway just in case.
-            if (teamRaw === '' || opponentRaw === '' || !isPlausibleScore(parseInt(teamRaw) || 0, parseInt(opponentRaw) || 0)) {
-                e.preventDefault();
-            }
-        });
-
-        $('#addMatchModal, #editMatchModal').on('hidden.bs.modal', function () {
-            updateOvertimeVisibility($(this).find('.js-match-form'));
-        });
+        window.csMatchTracker.init(CURRENT_PROFILE_ID !== 'default' ? CURRENT_PROFILE_ID : null);
     </script>
 }

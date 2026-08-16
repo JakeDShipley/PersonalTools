@@ -14,8 +14,9 @@ namespace PersonalTools.Pages.CSMatches
         private readonly IAuthFuncs _auth;
         private readonly IMapPoolSuggestionFuncs _mapPoolSuggestion;
         private readonly IMatchProfileFuncs _profileFuncs;
+        private readonly ISteamInventoryFuncs _steamLookup;
 
-        public IndexModel(ICSMatchFuncs matchFuncs, ICSMatchReferenceData referenceData, IWebHostEnvironment env, IAuthFuncs auth, IMapPoolSuggestionFuncs mapPoolSuggestion, IMatchProfileFuncs profileFuncs)
+        public IndexModel(ICSMatchFuncs matchFuncs, ICSMatchReferenceData referenceData, IWebHostEnvironment env, IAuthFuncs auth, IMapPoolSuggestionFuncs mapPoolSuggestion, IMatchProfileFuncs profileFuncs, ISteamInventoryFuncs steamLookup)
         {
             _matchFuncs = matchFuncs;
             _referenceData = referenceData;
@@ -23,11 +24,11 @@ namespace PersonalTools.Pages.CSMatches
             _auth = auth;
             _mapPoolSuggestion = mapPoolSuggestion;
             _profileFuncs = profileFuncs;
+            _steamLookup = steamLookup;
         }
 
         private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        public List<CSMatchObj> Matches { get; set; } = new();
         public List<CSMapObj> Maps { get; set; } = new();
         public List<string> GameTypes { get; set; } = new();
         public CSMatchStatsObj Stats { get; set; } = new();
@@ -35,6 +36,8 @@ namespace PersonalTools.Pages.CSMatches
         public bool MapPoolSuggestionPending { get; set; }
         public List<MatchProfileObj> Profiles { get; set; } = new();
         public MatchProfileObj? ActiveProfile { get; set; }
+        public string YouDisplayName { get; set; } = string.Empty;
+        public string? YouAvatarUrl { get; set; }
 
         private string? _profileId;
 
@@ -53,27 +56,6 @@ namespace PersonalTools.Pages.CSMatches
 
         [BindProperty]
         public string ProfileSteamId { get; set; } = string.Empty;
-
-        [BindProperty]
-        public string MatchId { get; set; } = string.Empty;
-
-        [BindProperty]
-        public string StartSide { get; set; } = string.Empty;
-
-        [BindProperty]
-        public string MapName { get; set; } = string.Empty;
-
-        [BindProperty]
-        public string GameType { get; set; } = "Premier";
-
-        [BindProperty]
-        public int TeamScore { get; set; }
-
-        [BindProperty]
-        public int OpponentScore { get; set; }
-
-        [BindProperty]
-        public int? OvertimeCount { get; set; }
 
         [BindProperty]
         public string NewMapName { get; set; } = string.Empty;
@@ -101,88 +83,27 @@ namespace PersonalTools.Pages.CSMatches
                 ProfileId = null;
             }
 
-            Matches = await _matchFuncs.GetMatches(UserId, ProfileId);
             Maps = await _referenceData.GetMaps();
             GameTypes = await _referenceData.GetGameTypes();
             Stats = await _matchFuncs.GetStats(UserId, ProfileId);
-            HasLinkedSteamId = !string.IsNullOrWhiteSpace((await _auth.GetUser(UserId))?.SteamId);
             MapPoolSuggestionPending = (await _mapPoolSuggestion.GetPendingSuggestion())?.Count > 0;
-        }
 
-        public async Task<IActionResult> OnPostCreate()
-        {
-            if (string.IsNullOrWhiteSpace(StartSide) || string.IsNullOrWhiteSpace(MapName) || string.IsNullOrWhiteSpace(GameType))
+            PersonalTools.Entities.AppUser? user = await _auth.GetUser(UserId);
+            YouDisplayName = user?.DisplayName ?? string.Empty;
+            HasLinkedSteamId = !string.IsNullOrWhiteSpace(user?.SteamId);
+
+            if (HasLinkedSteamId)
             {
-                ErrorMessage = "Please complete all fields.";
-                await LoadPageData();
-                return Page();
+                // Best-effort - a failed/private lookup just falls back to the initials avatar.
+                try
+                {
+                    YouAvatarUrl = (await _steamLookup.LookupProfile(user!.SteamId!)).AvatarUrl;
+                }
+                catch (InvalidOperationException)
+                {
+                    YouAvatarUrl = null;
+                }
             }
-
-            CSMatchObj match = new CSMatchObj
-            {
-                StartSide = StartSide,
-                MapName = MapName,
-                GameType = GameType,
-                TeamScore = TeamScore,
-                OpponentScore = OpponentScore,
-                OvertimeCount = (TeamScore + OpponentScore) > 24 ? (OvertimeCount ?? 0) : 0
-            };
-
-            await _matchFuncs.CreateMatch(UserId, ProfileId, match);
-
-            TempData["SuccessMessage"] = "Match added successfully.";
-            return RedirectToPage(new { ProfileId });
-        }
-
-        public async Task<IActionResult> OnPostEdit()
-        {
-            if (string.IsNullOrWhiteSpace(MatchId))
-            {
-                ErrorMessage = "Could not find the match to update.";
-                await LoadPageData();
-                return Page();
-            }
-
-            if (string.IsNullOrWhiteSpace(StartSide) || string.IsNullOrWhiteSpace(MapName) || string.IsNullOrWhiteSpace(GameType))
-            {
-                ErrorMessage = "Please complete all fields.";
-                await LoadPageData();
-                return Page();
-            }
-
-            CSMatchObj match = new CSMatchObj
-            {
-                StartSide = StartSide,
-                MapName = MapName,
-                GameType = GameType,
-                TeamScore = TeamScore,
-                OpponentScore = OpponentScore,
-                OvertimeCount = (TeamScore + OpponentScore) > 24 ? (OvertimeCount ?? 0) : 0
-            };
-
-            await _matchFuncs.UpdateMatch(UserId, MatchId, match);
-
-            TempData["SuccessMessage"] = "Match updated successfully.";
-            return RedirectToPage(new { ProfileId });
-        }
-
-        public async Task<IActionResult> OnPostDelete(string matchId)
-        {
-            if (!string.IsNullOrWhiteSpace(matchId))
-            {
-                await _matchFuncs.DeleteMatch(UserId, matchId);
-                TempData["SuccessMessage"] = "Match deleted successfully.";
-            }
-
-            return RedirectToPage(new { ProfileId });
-        }
-
-        public async Task<IActionResult> OnPostDeleteAllMatches()
-        {
-            await _matchFuncs.DeleteAllMatches(UserId, ProfileId);
-
-            TempData["SuccessMessage"] = "All matches deleted successfully.";
-            return RedirectToPage(new { ProfileId });
         }
 
         public async Task<IActionResult> OnPostCreateProfile()

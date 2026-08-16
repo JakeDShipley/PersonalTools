@@ -7,8 +7,8 @@ public interface IMatchProfilesData
 {
     Task<List<MatchProfileObj>> GetProfiles(Guid userId);
     Task<MatchProfileObj?> GetProfile(Guid userId, string profileId);
-    Task CreateProfile(Guid userId, string profileId, string name, string steamId);
-    Task UpdateProfile(Guid userId, string profileId, string name, string steamId);
+    Task CreateProfile(Guid userId, string profileId, string name, string steamId, string? avatarUrl);
+    Task UpdateProfile(Guid userId, string profileId, string name, string steamId, string? avatarUrl);
     Task DeleteProfile(Guid userId, string profileId);
 }
 
@@ -26,13 +26,13 @@ public sealed class MatchProfilesData : IMatchProfilesData
         return profiles.FirstOrDefault(x => x.ProfileId == profileId);
     }
 
-    public async Task CreateProfile(Guid userId, string profileId, string name, string steamId) =>
+    public async Task CreateProfile(Guid userId, string profileId, string name, string steamId, string? avatarUrl) =>
         await _database.ExecuteSP("sp_cs_match_profiles_create", Parameters(
-            ("p_user_id", userId.ToString("D")), ("p_profile_id", profileId), ("p_name", name), ("p_steam_id", steamId)));
+            ("p_user_id", userId.ToString("D")), ("p_profile_id", profileId), ("p_name", name), ("p_steam_id", steamId), ("p_avatar_url", avatarUrl ?? string.Empty)));
 
-    public async Task UpdateProfile(Guid userId, string profileId, string name, string steamId) =>
+    public async Task UpdateProfile(Guid userId, string profileId, string name, string steamId, string? avatarUrl) =>
         await _database.ExecuteSP("sp_cs_match_profiles_update", Parameters(
-            ("p_user_id", userId.ToString("D")), ("p_profile_id", profileId), ("p_name", name), ("p_steam_id", steamId)));
+            ("p_user_id", userId.ToString("D")), ("p_profile_id", profileId), ("p_name", name), ("p_steam_id", steamId), ("p_avatar_url", avatarUrl ?? string.Empty)));
 
     public async Task DeleteProfile(Guid userId, string profileId) =>
         await _database.ExecuteSP("sp_cs_match_profiles_delete", Parameters(("p_user_id", userId.ToString("D")), ("p_profile_id", profileId)));
@@ -46,6 +46,7 @@ public sealed class MatchProfilesData : IMatchProfilesData
         ProfileId = reader.GetGuid("ProfileId").ToString(),
         Name = reader.GetString("Name"),
         SteamId = reader.GetString("SteamId"),
+        AvatarUrl = reader.IsDBNull(reader.GetOrdinal("AvatarUrl")) ? null : reader.GetString("AvatarUrl"),
         Created = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc).ToLocalTime(),
     };
 }

@@ -34,6 +34,7 @@ namespace PersonalTools.Classes.CSMatches
 
         public async Task CreateMatch(Guid userId, string? profileId, CSMatchObj match)
         {
+            Validate(match);
             match.MatchId = Guid.NewGuid().ToString();
 
             await _matchesData.CreateMatch(userId, profileId, match);
@@ -41,7 +42,61 @@ namespace PersonalTools.Classes.CSMatches
 
         public async Task UpdateMatch(Guid userId, string matchId, CSMatchObj updated)
         {
+            Validate(updated);
             await _matchesData.UpdateMatch(userId, matchId, updated);
+        }
+
+        // Mirrors isPlausibleScore() in the page's client-side JS - the client already blocks
+        // submitting an impossible score, but this is the actual JSON API now, so it needs its own
+        // check rather than trusting whatever a direct API call sends.
+        private static void Validate(CSMatchObj match)
+        {
+            if (match.StartSide is not ("CT" or "T"))
+            {
+                throw new InvalidOperationException("Choose a valid start side.");
+            }
+
+            if (string.IsNullOrWhiteSpace(match.MapName) || string.IsNullOrWhiteSpace(match.GameType))
+            {
+                throw new InvalidOperationException("Please complete all fields.");
+            }
+
+            if (match.TeamScore < 0 || match.OpponentScore < 0)
+            {
+                throw new InvalidOperationException("Scores can't be negative.");
+            }
+
+            if (!IsPlausibleScore(match.TeamScore, match.OpponentScore))
+            {
+                throw new InvalidOperationException("This score isn't possible in CS2.");
+            }
+        }
+
+        private static bool IsPlausibleScore(int a, int b)
+        {
+            int winner = Math.Max(a, b);
+            int loser = Math.Min(a, b);
+
+            if (winner == loser)
+            {
+                return false;
+            }
+
+            int threshold = 13;
+            int minLoserForThreshold = 12;
+
+            while (winner > threshold)
+            {
+                if (loser < minLoserForThreshold)
+                {
+                    return false;
+                }
+
+                threshold += 3;
+                minLoserForThreshold += 3;
+            }
+
+            return true;
         }
 
         public async Task DeleteMatch(Guid userId, string matchId)

@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="~/css/mediaextractor.css" />
     @await RenderSectionAsync("Head", required: false)
 </head>
-<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")">
+<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)">
     <div id="appToastMessages" data-success-message="@successToastMessage" data-error-message="@errorToastMessage" hidden></div>
     <div class="toast-container position-fixed top-0 end-0 p-3 app-toast-container" id="appToastContainer" aria-label="Notifications"></div>
 

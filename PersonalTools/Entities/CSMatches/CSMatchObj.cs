@@ -11,6 +11,7 @@
         public string ProfileId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string SteamId { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
         public DateTime Created { get; set; }
     }
 

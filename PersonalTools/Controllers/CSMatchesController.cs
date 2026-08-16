@@ -26,6 +26,82 @@ public sealed class CSMatchesController : ControllerBase
 
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    [HttpGet]
+    public async Task<ActionResult<List<CSMatchListItemObj>>> GetMatches([FromQuery] string? profileId)
+    {
+        List<CSMatchObj> matches = await _matches.GetMatches(UserId, profileId);
+        List<CSMapObj> maps = await _referenceData.GetMaps();
+        Dictionary<string, string> mapImages = maps.ToDictionary(m => m.Name, m => m.ImagePath);
+
+        List<CSMatchListItemObj> items = matches.Select(match =>
+        {
+            bool isWin = match.TeamScore > match.OpponentScore;
+            bool isOvertime = (match.TeamScore + match.OpponentScore) > 24;
+
+            return new CSMatchListItemObj
+            {
+                MatchId = match.MatchId,
+                StartSide = match.StartSide,
+                MapName = match.MapName,
+                MapImagePath = mapImages.TryGetValue(match.MapName, out string? imagePath) ? imagePath : null,
+                GameType = match.GameType,
+                GameTypeLogoPath = GameTypeAssets.LogoPath(match.GameType),
+                TeamScore = match.TeamScore,
+                OpponentScore = match.OpponentScore,
+                OvertimeCount = match.OvertimeCount,
+                IsWin = isWin,
+                IsOvertime = isOvertime,
+                CreatedIso = match.Created.ToString("o"),
+                CreatedDisplay = match.Created.ToString("dd MMM"),
+                CreatedDisplayFull = match.Created.ToString("dd MMM yyyy HH:mm")
+            };
+        }).ToList();
+
+        return Ok(items);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ApiResponse>> CreateMatch([FromQuery] string? profileId, [FromBody] CSMatchRequest request)
+    {
+        try
+        {
+            await _matches.CreateMatch(UserId, profileId, request.ToMatchObj());
+            return Ok(new ApiResponse(true, "Match added."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ApiResponse(false, ex.Message));
+        }
+    }
+
+    [HttpPut("{matchId}")]
+    public async Task<ActionResult<ApiResponse>> UpdateMatch(string matchId, [FromBody] CSMatchRequest request)
+    {
+        try
+        {
+            await _matches.UpdateMatch(UserId, matchId, request.ToMatchObj());
+            return Ok(new ApiResponse(true, "Match updated."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ApiResponse(false, ex.Message));
+        }
+    }
+
+    [HttpDelete("{matchId}")]
+    public async Task<ActionResult<ApiResponse>> DeleteMatch(string matchId)
+    {
+        await _matches.DeleteMatch(UserId, matchId);
+        return Ok(new ApiResponse(true, "Match deleted."));
+    }
+
+    [HttpDelete]
+    public async Task<ActionResult<ApiResponse>> DeleteAllMatches([FromQuery] string? profileId)
+    {
+        await _matches.DeleteAllMatches(UserId, profileId);
+        return Ok(new ApiResponse(true, "All matches deleted."));
+    }
+
     [HttpGet("leetify")]
     public async Task<ActionResult<List<CSMatchLeetifyPreviewObj>>> GetLeetifyMatches([FromQuery] string? profileId)
     {
@@ -75,4 +151,17 @@ public sealed class CSMatchesController : ControllerBase
         List<string>? maps = activeDutyOnly ? await _referenceData.GetActiveDutyPool() : null;
         return Ok(await _matches.GetStats(UserId, profileId, gameTypes, maps));
     }
+}
+
+public sealed record CSMatchRequest(string StartSide, string MapName, string GameType, int TeamScore, int OpponentScore, int? OvertimeCount)
+{
+    public CSMatchObj ToMatchObj() => new()
+    {
+        StartSide = StartSide,
+        MapName = MapName,
+        GameType = GameType,
+        TeamScore = TeamScore,
+        OpponentScore = OpponentScore,
+        OvertimeCount = (TeamScore + OpponentScore) > 24 ? (OvertimeCount ?? 0) : 0
+    };
 }

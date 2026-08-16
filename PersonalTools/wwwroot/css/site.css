@@ -866,6 +866,67 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
     }
 }
 
+/* CS2-style killfeed easter egg - fired from the theme toggle in site.js when switching to light
+   mode. Styled like the game's own HUD (dark translucent bar, always-white text) rather than the
+   app's own theme, since that's the joke - it should look like it belongs in the game, not the app. */
+.pt-killfeed {
+    /* Offset below the app toast container (also top/end, z-index 2200) rather than stacking on
+       top of it - the killfeed sits just under where a toast would land. */
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    pointer-events: none;
+    position: fixed;
+    right: 1rem;
+    top: 5.5rem;
+    z-index: 2100;
+}
+
+.pt-killfeed-row {
+    align-items: center;
+    animation: pt-killfeed-in .25s ease;
+    background: rgba(10, 14, 24, .82);
+    border-radius: .3rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+    display: flex;
+    gap: .5rem;
+    opacity: 1;
+    padding: .4rem .75rem;
+    transform: translateX(0);
+    transition: transform .4s ease, opacity .4s ease;
+}
+
+.pt-killfeed-row.is-leaving { opacity: 0; transform: translateX(1.5rem); }
+
+.pt-killfeed-name {
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+    white-space: nowrap;
+}
+
+.pt-killfeed-icon {
+    color: #fff;
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 1.15rem;
+    opacity: .92;
+    width: 1.15rem;
+}
+
+.pt-killfeed-icon svg { height: 100%; width: 100%; }
+
+@keyframes pt-killfeed-in {
+    from { opacity: 0; transform: translateX(1.5rem); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pt-killfeed-row { animation: none; transform: none; transition: opacity .2s ease; }
+    .pt-killfeed-row.is-leaving { transform: none; }
+}
+
 /* Concise per-tool guidance */
 .tool-guide {
     background: color-mix(in srgb, var(--pt-surface) 96%, var(--pt-mint));
