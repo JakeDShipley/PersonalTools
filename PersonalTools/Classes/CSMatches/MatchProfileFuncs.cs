@@ -2,16 +2,17 @@ using System.Text.RegularExpressions;
 using PersonalTools.Classes;
 using PersonalTools.Data.CSMatches;
 using PersonalTools.Entities.CSMatches;
+using Mapster;
 
 namespace PersonalTools.Classes.CSMatches
 {
     public interface IMatchProfileFuncs
     {
         Task<List<MatchProfileObj>> GetProfiles(Guid userId);
-        Task<MatchProfileObj?> GetProfile(Guid userId, string? profileId);
-        Task<string> CreateProfile(Guid userId, string name, string steamId);
-        Task UpdateProfile(Guid userId, string profileId, string name, string steamId);
-        Task DeleteProfile(Guid userId, string profileId);
+        Task<MatchProfileObj?> GetProfile(Guid userId, Guid? profileId);
+        Task<Guid> CreateProfile(Guid userId, string name, string steamId);
+        Task UpdateProfile(Guid userId, Guid profileId, string name, string steamId);
+        Task DeleteProfile(Guid userId, Guid profileId);
     }
 
     public class MatchProfileFuncs : IMatchProfileFuncs
@@ -26,21 +27,26 @@ namespace PersonalTools.Classes.CSMatches
             _steamLookup = steamLookup;
         }
 
-        public Task<List<MatchProfileObj>> GetProfiles(Guid userId) => _data.GetProfiles(userId);
+        /// <summary>
+        /// Converts persisted profiles after data access so the public model is independent from
+        /// stored-procedure result columns.
+        /// </summary>
+        public async Task<List<MatchProfileObj>> GetProfiles(Guid userId) =>
+            (await _data.GetProfiles(userId)).Adapt<List<MatchProfileObj>>();
 
-        public Task<MatchProfileObj?> GetProfile(Guid userId, string? profileId) =>
-            string.IsNullOrWhiteSpace(profileId) ? Task.FromResult<MatchProfileObj?>(null) : _data.GetProfile(userId, profileId);
+        public async Task<MatchProfileObj?> GetProfile(Guid userId, Guid? profileId) =>
+            profileId is null ? null : (await _data.GetProfile(userId, profileId.Value))?.Adapt<MatchProfileObj>();
 
-        public async Task<string> CreateProfile(Guid userId, string name, string steamId)
+        public async Task<Guid> CreateProfile(Guid userId, string name, string steamId)
         {
             (string trimmedName, string trimmedSteamId) = Validate(name, steamId);
-            string profileId = Guid.NewGuid().ToString();
+            Guid profileId = Guid.NewGuid();
             string? avatarUrl = await TryResolveAvatar(trimmedSteamId);
             await _data.CreateProfile(userId, profileId, trimmedName, trimmedSteamId, avatarUrl);
             return profileId;
         }
 
-        public async Task UpdateProfile(Guid userId, string profileId, string name, string steamId)
+        public async Task UpdateProfile(Guid userId, Guid profileId, string name, string steamId)
         {
             (string trimmedName, string trimmedSteamId) = Validate(name, steamId);
             string? avatarUrl = await TryResolveAvatar(trimmedSteamId);
@@ -62,7 +68,7 @@ namespace PersonalTools.Classes.CSMatches
             }
         }
 
-        public Task DeleteProfile(Guid userId, string profileId) => _data.DeleteProfile(userId, profileId);
+        public Task DeleteProfile(Guid userId, Guid profileId) => _data.DeleteProfile(userId, profileId);
 
         private static (string Name, string SteamId) Validate(string name, string steamId)
         {

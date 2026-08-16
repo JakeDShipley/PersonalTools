@@ -8,7 +8,7 @@
 
     public class MatchProfileObj
     {
-        public string ProfileId { get; set; } = string.Empty;
+        public Guid ProfileId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string SteamId { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
@@ -17,7 +17,7 @@
 
     public class CSMatchObj
     {
-        public string MatchId { get; set; } = string.Empty;
+        public Guid MatchId { get; set; }
         public string StartSide { get; set; } = string.Empty; // "CT" or "T"
         public string MapName { get; set; } = string.Empty;
         public string GameType { get; set; } = string.Empty;

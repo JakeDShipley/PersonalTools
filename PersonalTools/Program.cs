@@ -12,12 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.DataProtection;
 using System.Net;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json.Serialization;
 using PersonalTools.Data.CSMatches;
 using PersonalTools.Data.GrandExchange;
-using PersonalTools.Data.Local;
 using PersonalTools.Data.Skins;
 using PersonalTools.Data;
 using PersonalTools.Classes.Monitoring;
@@ -58,6 +55,13 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IMariaDbDataAccess, MariaDbDataAccess>();
 builder.Services.AddScoped<IAuthData, AuthData>();
 builder.Services.AddScoped<IAuthFuncs, AuthFuncs>();
+builder.Services.AddHttpClient<ISteamOpenIdData, SteamOpenIdData>(client =>
+{
+    client.BaseAddress = new Uri("https://steamcommunity.com/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+});
+builder.Services.AddScoped<ISteamOpenIdFuncs, SteamOpenIdFuncs>();
 builder.Services.AddScoped<IAppSettingsData, AppSettingsData>();
 builder.Services.AddScoped<IAppSettingsFuncs, AppSettingsFuncs>();
 builder.Services.AddScoped<IQuickLinksData, QuickLinksData>();
@@ -100,9 +104,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 // Dashboard
 builder.Services.AddScoped<IDashboardFuncs, DashboardFuncs>();
-
-// Storage
-builder.Services.AddScoped<ILocalJsonData, LocalJsonData>();
 
 // Skins
 builder.Services.AddHttpClient<ICs2SkinData, Cs2SkinData>();
@@ -199,40 +200,6 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapGet("/auth/steam/link", (HttpContext context) =>
-{
-    string state = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-    context.Response.Cookies.Append("PersonalTools.SteamLinkState", state, new CookieOptions { HttpOnly = true, Secure = context.Request.IsHttps, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromMinutes(10), IsEssential = true });
-    string callback = $"{context.Request.Scheme}://{context.Request.Host}/auth/steam/callback";
-    Dictionary<string, string> values = new()
-    {
-        ["openid.ns"] = "http://specs.openid.net/auth/2.0", ["openid.mode"] = "checkid_setup",
-        ["openid.return_to"] = callback + "?state=" + Uri.EscapeDataString(state), ["openid.realm"] = $"{context.Request.Scheme}://{context.Request.Host}/",
-        ["openid.identity"] = "http://specs.openid.net/auth/2.0/identifier_select", ["openid.claimed_id"] = "http://specs.openid.net/auth/2.0/identifier_select"
-    };
-    return Results.Redirect("https://steamcommunity.com/openid/login?" + string.Join("&", values.Select(x => Uri.EscapeDataString(x.Key) + "=" + Uri.EscapeDataString(x.Value))));
-});
-
-app.MapGet("/auth/steam/callback", async (HttpContext context, IHttpClientFactory clientFactory, IAuthFuncs auth) =>
-{
-    string state = context.Request.Query["state"].FirstOrDefault() ?? string.Empty;
-    string savedState = context.Request.Cookies["PersonalTools.SteamLinkState"] ?? string.Empty;
-    context.Response.Cookies.Delete("PersonalTools.SteamLinkState", new CookieOptions { Secure = context.Request.IsHttps, SameSite = SameSiteMode.Lax });
-    if (string.IsNullOrEmpty(state) || string.IsNullOrEmpty(savedState) || !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(state), Encoding.UTF8.GetBytes(savedState))) return Results.BadRequest("Steam linking could not be verified. Please try again.");
-    if (!Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out Guid userId)) return Results.Challenge();
-    Dictionary<string, string> parameters = context.Request.Query.Where(x => x.Key.StartsWith("openid.", StringComparison.Ordinal)).ToDictionary(x => x.Key, x => x.Value.ToString());
-    parameters["openid.mode"] = "check_authentication";
-    using HttpClient client = clientFactory.CreateClient();
-    using HttpResponseMessage response = await client.PostAsync("https://steamcommunity.com/openid/login", new FormUrlEncodedContent(parameters));
-    string verification = await response.Content.ReadAsStringAsync();
-    string identity = context.Request.Query["openid.identity"].FirstOrDefault() ?? string.Empty;
-    var steamIdMatch = System.Text.RegularExpressions.Regex.Match(identity, @"^https://steamcommunity\.com/openid/id/(\d{17})$");
-    if (!response.IsSuccessStatusCode || !verification.Contains("is_valid:true", StringComparison.Ordinal) || !steamIdMatch.Success) return Results.BadRequest("Steam linking could not be verified. Please try again.");
-    await auth.LinkSteam(userId, steamIdMatch.Groups[1].Value);
-    return Results.LocalRedirect("/Settings");
-});
-
 
 app.MapRazorPages();
 app.MapControllers();

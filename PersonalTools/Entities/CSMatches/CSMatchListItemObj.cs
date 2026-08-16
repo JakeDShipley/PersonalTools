@@ -4,7 +4,7 @@ namespace PersonalTools.Entities.CSMatches
     // script (page-cs-match-tracker.js) only renders - it never re-derives win/OT/asset-path logic.
     public class CSMatchListItemObj
     {
-        public string MatchId { get; set; } = string.Empty;
+        public Guid MatchId { get; set; }
         public string StartSide { get; set; } = string.Empty;
         public string MapName { get; set; } = string.Empty;
         public string? MapImagePath { get; set; }

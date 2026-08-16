@@ -6,8 +6,8 @@ namespace PersonalTools.Classes.CSMatches
 {
     public interface ILeetifyFuncs
     {
-        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, string? profileId);
-        Task<List<CSMatchObj>> BuildImportBatch(Guid userId, string? profileId, List<string> selectedLeetifyMatchIds);
+        Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, Guid? profileId);
+        Task<List<CSMatchObj>> BuildImportBatch(Guid userId, Guid? profileId, List<string> selectedLeetifyMatchIds);
     }
 
     public class LeetifyFuncs : ILeetifyFuncs
@@ -32,7 +32,7 @@ namespace PersonalTools.Classes.CSMatches
             _profileFuncs = profileFuncs;
         }
 
-        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, string? profileId)
+        public async Task<List<CSMatchLeetifyPreviewObj>> GetAvailableMatches(Guid userId, Guid? profileId)
         {
             string steamId = await ResolveSteamId(userId, profileId);
 
@@ -75,7 +75,7 @@ namespace PersonalTools.Classes.CSMatches
             return previews.OrderByDescending(p => p.PlayedAtUtc).ToList();
         }
 
-        public async Task<List<CSMatchObj>> BuildImportBatch(Guid userId, string? profileId, List<string> selectedLeetifyMatchIds)
+        public async Task<List<CSMatchObj>> BuildImportBatch(Guid userId, Guid? profileId, List<string> selectedLeetifyMatchIds)
         {
             List<CSMatchLeetifyPreviewObj> available = await GetAvailableMatches(userId, profileId);
             HashSet<string> selected = selectedLeetifyMatchIds.ToHashSet();
@@ -84,7 +84,7 @@ namespace PersonalTools.Classes.CSMatches
                 .Where(m => selected.Contains(m.LeetifyMatchId) && !m.AlreadyImported)
                 .Select(m => new CSMatchObj
                 {
-                    MatchId = Guid.NewGuid().ToString(),
+                    MatchId = Guid.NewGuid(),
                     StartSide = m.StartSide,
                     MapName = m.MapName,
                     GameType = m.GameType,
@@ -98,9 +98,9 @@ namespace PersonalTools.Classes.CSMatches
                 .ToList();
         }
 
-        private async Task<string> ResolveSteamId(Guid userId, string? profileId)
+        private async Task<string> ResolveSteamId(Guid userId, Guid? profileId)
         {
-            if (!string.IsNullOrWhiteSpace(profileId))
+            if (profileId is not null)
             {
                 MatchProfileObj? profile = await _profileFuncs.GetProfile(userId, profileId)
                     ?? throw new InvalidOperationException("That profile tab was not found.");

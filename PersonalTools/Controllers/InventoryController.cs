@@ -11,12 +11,29 @@ namespace PersonalTools.Controllers;
 public sealed class InventoryController : ControllerBase
 {
     private readonly ISteamInventoryFuncs _inventory;
-    public InventoryController(ISteamInventoryFuncs inventory) => _inventory = inventory;
+
+    public InventoryController(ISteamInventoryFuncs inventory)
+    {
+        _inventory = inventory;
+    }
+
     [HttpGet("cs2")]
     public async Task<ActionResult<SteamInventoryResult>> GetCs2([FromQuery] string profile, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(profile)) return BadRequest(new ApiResponse(false, "Enter a Steam profile."));
-        try { return Ok(await _inventory.GetCs2Inventory(profile, cancellationToken)); }
-        catch (InvalidOperationException exception) { return BadRequest(new ApiResponse(false, exception.Message)); }
+        if (string.IsNullOrWhiteSpace(profile))
+        {
+            return BadRequest(new ApiResponse(false, "Enter a Steam profile."));
+        }
+
+        try
+        {
+            // Steam is queried from the dedicated Data layer so this controller stays focused
+            // on a stable, friendly HTTP response for the inventory page's AJAX request.
+            return Ok(await _inventory.GetCs2Inventory(profile, cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
     }
 }

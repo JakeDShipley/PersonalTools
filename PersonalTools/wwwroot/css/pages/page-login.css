@@ -41,20 +41,8 @@
 .login-launch-wordmark > span { display: inline-flex; white-space: pre; }
 .login-launch-wordmark .launch-letter { display: inline-block; transform-origin: center bottom; }
 
-.login-launch-accent {
-    background: #050505;
-    height: clamp(.28rem, .55vw, .65rem);
-    position: absolute;
-    right: clamp(2rem, 10.5vw, 14rem);
-    top: clamp(2rem, 24vh, 12rem);
-    transform: skewX(-24deg);
-    transform-origin: right center;
-    width: clamp(4rem, 6.8vw, 8.4rem);
-}
-
 @media (max-width: 575.98px) {
     .login-launch-wordmark { font-size: clamp(2.25rem, 11vw, 4.5rem); letter-spacing: -.11em; }
-    .login-launch-accent { right: 13vw; top: 28vh; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,14 +2,14 @@ namespace PersonalTools.Entities.CSMatches;
 
 public sealed class CSMatchDbModel
 {
-    public string MatchId { get; init; } = string.Empty;
-    public string StartSide { get; init; } = string.Empty;
-    public string MapName { get; init; } = string.Empty;
-    public string GameType { get; init; } = string.Empty;
-    public int TeamScore { get; init; }
-    public int OpponentScore { get; init; }
-    public int OvertimeCount { get; init; }
-    public string? LeetifyMatchId { get; init; }
-    public DateTime Created { get; init; }
-    public DateTime Updated { get; init; }
+    public Guid MatchId { get; set; }
+    public string StartSide { get; set; } = string.Empty;
+    public string MapName { get; set; } = string.Empty;
+    public string GameType { get; set; } = string.Empty;
+    public int TeamScore { get; set; }
+    public int OpponentScore { get; set; }
+    public int OvertimeCount { get; set; }
+    public string? LeetifyMatchId { get; set; }
+    public DateTime Created { get; set; }
+    public DateTime Updated { get; set; }
 }

@@ -8,6 +8,21 @@
     --pt-sidebar-width: 17.5rem;
     --pt-sidebar-compact-width: 5.25rem;
     --pt-focus-ring: color-mix(in srgb, var(--pt-mint) 55%, transparent);
+    /* Layout tokens deliberately sit beside colour tokens.  Components consume
+       these rather than carrying a second set of theme-specific dimensions. */
+    --pt-page-space: 3.5rem;
+    --pt-section-space: 2rem;
+    --pt-panel-space: 1.1rem;
+    --pt-card-space: 1rem;
+    --pt-control-radius: .65rem;
+    --pt-card-radius: 1rem;
+    --pt-panel-radius: .9rem;
+    --pt-small-radius: .55rem;
+    --pt-pill-radius: 999px;
+    --pt-card-shadow: none;
+    --pt-card-hover-shadow: 0 .5rem 1.25rem rgba(20, 29, 48, .06);
+    --pt-card-hover-border: var(--pt-mint);
+    --pt-display-font: inherit;
 }
 
 :root[data-app-theme="personal"][data-theme="light"] {
@@ -58,6 +73,19 @@
     --bs-body-color: var(--pt-ink);
     --bs-border-color: var(--pt-line);
     --app-muted: var(--pt-ink-soft);
+    --pt-page-space: 2.25rem;
+    --pt-section-space: 1.35rem;
+    --pt-panel-space: .9rem;
+    --pt-card-space: .8rem;
+    --pt-control-radius: 0;
+    --pt-card-radius: .2rem;
+    --pt-panel-radius: .3rem;
+    --pt-small-radius: 0;
+    --pt-pill-radius: .12rem;
+    --pt-card-shadow: none;
+    --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+    --pt-card-hover-border: var(--pt-coral);
+    --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
     color-scheme: light;
 }
 
@@ -75,6 +103,19 @@
     --bs-body-color: var(--pt-ink);
     --bs-border-color: var(--pt-line);
     --app-muted: var(--pt-ink-soft);
+    --pt-page-space: 2.25rem;
+    --pt-section-space: 1.35rem;
+    --pt-panel-space: .9rem;
+    --pt-card-space: .8rem;
+    --pt-control-radius: 0;
+    --pt-card-radius: .2rem;
+    --pt-panel-radius: .3rem;
+    --pt-small-radius: 0;
+    --pt-pill-radius: .12rem;
+    --pt-card-shadow: none;
+    --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+    --pt-card-hover-border: var(--pt-coral);
+    --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
     color-scheme: dark;
 }
 
@@ -94,6 +135,21 @@
     font-weight: 800;
 }
 
+/* Tactical is intentionally compact and squared-off. It does not change the
+   Personal theme because every override is scoped to the selected theme. */
+:root[data-app-theme="tactical"] .app-main {
+    padding-block: var(--pt-page-space);
+}
+
+:root[data-app-theme="tactical"] .page-title,
+:root[data-app-theme="tactical"] .section-title,
+:root[data-app-theme="tactical"] .csm-stat-value,
+:root[data-app-theme="tactical"] .csm-score,
+:root[data-app-theme="tactical"] .csm-card-score {
+    font-family: var(--pt-display-font);
+    letter-spacing: .025em;
+}
+
 :root[data-app-theme="tactical"] .tool-card,
 :root[data-app-theme="tactical"] .settings-group,
 :root[data-app-theme="tactical"] .settings-hero,
@@ -101,7 +157,8 @@
 :root[data-app-theme="tactical"] .monitor-status,
 :root[data-app-theme="tactical"] .monitor-panel,
 :root[data-app-theme="tactical"] .monitor-metric-card {
-    border-radius: .32rem !important;
+    border-radius: var(--pt-card-radius) !important;
+    box-shadow: none !important;
 }
 
 :root[data-app-theme="tactical"] .btn-primary {
@@ -111,7 +168,7 @@
     --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
     --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
     --bs-btn-hover-color: #101114;
-    border-radius: .14rem;
+    border-radius: var(--pt-control-radius);
     font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
     letter-spacing: .045em;
     text-transform: uppercase;
@@ -123,7 +180,7 @@
     --bs-btn-hover-bg: var(--pt-coral);
     --bs-btn-hover-border-color: var(--pt-coral);
     --bs-btn-hover-color: #101114;
-    border-radius: .14rem;
+    border-radius: var(--pt-control-radius);
 }
 
 :root[data-app-theme="tactical"] .app-sidebar,
@@ -142,7 +199,7 @@
 }
 
 :root[data-app-theme="tactical"] .brand-mark {
-    border-radius: .3rem;
+    border-radius: var(--pt-card-radius);
 }
 
 :root[data-app-theme="tactical"] .settings-hero {
@@ -158,4 +215,141 @@
 :root[data-app-theme="tactical"] .tooltip {
     --bs-tooltip-bg: var(--pt-ink);
     --bs-tooltip-color: var(--pt-surface);
+}
+
+:root[data-app-theme="tactical"] .app-sidebar-link,
+:root[data-app-theme="tactical"] .app-utility-link,
+:root[data-app-theme="tactical"] .app-nav-soon,
+:root[data-app-theme="tactical"] .tool-card-icon,
+:root[data-app-theme="tactical"] .view-switcher,
+:root[data-app-theme="tactical"] .view-switcher-button,
+:root[data-app-theme="tactical"] .form-control,
+:root[data-app-theme="tactical"] .form-select,
+:root[data-app-theme="tactical"] .input-group > .btn,
+:root[data-app-theme="tactical"] .pagination .page-link {
+    border-radius: var(--pt-control-radius) !important;
+}
+
+:root[data-app-theme="tactical"] .app-sidebar-link.active {
+    box-shadow: inset 3px 0 0 var(--pt-coral);
+}
+
+:root[data-app-theme="tactical"] .tool-card {
+    background: var(--pt-surface);
+}
+
+:root[data-app-theme="tactical"] .tool-card:hover {
+    border-color: var(--pt-card-hover-border);
+    box-shadow: var(--pt-card-hover-shadow) !important;
+}
+
+/* CS Match Tracker adopts the dense workshop layout shown by this theme. */
+:root[data-app-theme="tactical"] .csm-tabs {
+    border-bottom: 0;
+    gap: .2rem;
+    padding: 0;
+}
+
+:root[data-app-theme="tactical"] .csm-tabs .nav-link {
+    border-radius: 0;
+    font-family: var(--pt-display-font);
+    font-size: .82rem;
+    letter-spacing: .035em;
+    min-height: 2.35rem;
+    padding: .45rem 1.65rem .45rem .7rem;
+    text-transform: uppercase;
+}
+
+:root[data-app-theme="tactical"] .csm-tabs .nav-link.active {
+    border-top: 2px solid var(--pt-coral);
+}
+
+:root[data-app-theme="tactical"] .csm-tab-add,
+:root[data-app-theme="tactical"] .csm-tab-close,
+:root[data-app-theme="tactical"] .csm-tab-avatar,
+:root[data-app-theme="tactical"] .csm-chip,
+:root[data-app-theme="tactical"] .csm-ot-chip,
+:root[data-app-theme="tactical"] .csm-already-badge,
+:root[data-app-theme="tactical"] .csm-gt-pill,
+:root[data-app-theme="tactical"] .csm-icon-btn,
+:root[data-app-theme="tactical"] .csm-side-toggle-btn,
+:root[data-app-theme="tactical"] .csm-map-preview img {
+    border-radius: var(--pt-small-radius);
+}
+
+:root[data-app-theme="tactical"] .csm-tabs-panel {
+    background: transparent;
+    border-radius: 0;
+    border-top: 1px solid var(--pt-line);
+    padding: var(--pt-panel-space) 0 0;
+}
+
+:root[data-app-theme="tactical"] .csm-stats {
+    gap: .55rem;
+}
+
+:root[data-app-theme="tactical"] .csm-stat {
+    background: var(--pt-surface);
+    border-radius: 0;
+    border-top: 2px solid var(--pt-coral);
+    padding: .75rem .85rem;
+}
+
+:root[data-app-theme="tactical"] .csm-stat-label,
+:root[data-app-theme="tactical"] .csm-panel-head-label {
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+:root[data-app-theme="tactical"] .csm-view-toggle,
+:root[data-app-theme="tactical"] .csm-table-wrap,
+:root[data-app-theme="tactical"] .csm-empty,
+:root[data-app-theme="tactical"] .csm-match-card,
+:root[data-app-theme="tactical"] .csm-toggle-cell {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+:root[data-app-theme="tactical"] .csm-view-toggle button {
+    border-radius: 0;
+    padding: .45rem .7rem;
+}
+
+:root[data-app-theme="tactical"] .csm-match-table thead th {
+    padding: .55rem .75rem;
+}
+
+:root[data-app-theme="tactical"] .csm-match-table td {
+    background: var(--pt-surface);
+    border-bottom: .5rem solid var(--pt-canvas);
+    padding: .65rem .75rem;
+}
+
+:root[data-app-theme="tactical"] .csm-match-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+:root[data-app-theme="tactical"] .csm-matches-cards {
+    gap: .65rem;
+}
+
+:root[data-app-theme="tactical"] .csm-match-card {
+    border-top-width: 3px;
+}
+
+:root[data-app-theme="tactical"] .csm-match-card .csm-card-body {
+    gap: .45rem;
+    padding: .75rem .85rem .85rem;
+}
+
+:root[data-app-theme="tactical"] .csm-gt-pill {
+    font-family: var(--pt-display-font);
+    letter-spacing: .03em;
+    padding: .3rem .65rem;
+    text-transform: uppercase;
+}
+
+:root[data-app-theme="tactical"] .modal-header,
+:root[data-app-theme="tactical"] .modal-footer {
+    border-color: var(--pt-line);
 }

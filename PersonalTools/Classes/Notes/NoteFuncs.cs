@@ -1,5 +1,6 @@
 using PersonalTools.Data;
 using PersonalTools.Entities.Notes;
+using Mapster;
 
 namespace PersonalTools.Classes.Notes;
 
@@ -17,20 +18,24 @@ public sealed class NoteFuncs : INoteFuncs
     private readonly INotesData _data;
     public NoteFuncs(INotesData data) => _data = data;
 
-    public Task<List<NoteObj>> GetNotes(Guid userId, CancellationToken cancellationToken = default) =>
-        _data.GetNotes(userId, cancellationToken);
+    /// <summary>
+    /// Converts the database transport shape at the application boundary. This prevents
+    /// column-level persistence concerns from leaking into the controller response contract.
+    /// </summary>
+    public async Task<List<NoteObj>> GetNotes(Guid userId, CancellationToken cancellationToken = default) =>
+        (await _data.GetNotes(userId, cancellationToken)).Adapt<List<NoteObj>>();
 
     public Task CreateNote(Guid userId, string title, string body, CancellationToken cancellationToken = default)
     {
         Validate(title, body);
-        return _data.CreateNote(userId, new NoteObj { NoteId = Guid.NewGuid(), Title = title.Trim(), Body = body.Trim() }, cancellationToken);
+        return _data.CreateNote(userId, new NoteObj { NoteId = Guid.NewGuid(), Title = title.Trim(), Body = body.Trim() }.Adapt<NoteDbModel>(), cancellationToken);
     }
 
     public Task UpdateNote(Guid userId, Guid noteId, string title, string body, CancellationToken cancellationToken = default)
     {
         ValidateId(noteId);
         Validate(title, body);
-        return _data.UpdateNote(userId, new NoteObj { NoteId = noteId, Title = title.Trim(), Body = body.Trim() }, cancellationToken);
+        return _data.UpdateNote(userId, new NoteObj { NoteId = noteId, Title = title.Trim(), Body = body.Trim() }.Adapt<NoteDbModel>(), cancellationToken);
     }
 
     public Task DeleteNote(Guid userId, Guid noteId, CancellationToken cancellationToken = default)

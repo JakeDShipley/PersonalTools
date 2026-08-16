@@ -1,5 +1,6 @@
 using PersonalTools.Data;
 using PersonalTools.Entities.Dashboard;
+using Mapster;
 
 namespace PersonalTools.Classes.Dashboard;
 
@@ -16,12 +17,18 @@ public sealed class DashboardWeatherFuncs : IDashboardWeatherFuncs
     private readonly IDashboardWeatherData _data;
     public DashboardWeatherFuncs(IDashboardWeatherData data) => _data = data;
 
-    public Task<List<DashboardWeatherLocation>> GetLocations(Guid userId, CancellationToken cancellationToken = default) => _data.GetLocations(userId, cancellationToken);
+    /// <summary>
+    /// Keeps the API contract independent from the MariaDB row shape.
+    /// </summary>
+    public async Task<List<DashboardWeatherLocation>> GetLocations(Guid userId, CancellationToken cancellationToken = default) =>
+        (await _data.GetLocations(userId, cancellationToken)).Adapt<List<DashboardWeatherLocation>>();
 
     public async Task CreateLocation(Guid userId, string displayName, decimal latitude, decimal longitude, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length > 100 || latitude is < -90 or > 90 || longitude is < -180 or > 180)
             throw new InvalidOperationException("Choose a valid weather location.");
+        // Query the Data layer directly here because only the count is needed for the limit;
+        // this avoids allocating response models during a write validation path.
         if ((await _data.GetLocations(userId, cancellationToken)).Count >= MaximumLocations)
             throw new InvalidOperationException($"You can save up to {MaximumLocations} weather locations.");
 

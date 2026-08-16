@@ -27,7 +27,7 @@ public sealed class CSMatchesController : ControllerBase
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
-    public async Task<ActionResult<List<CSMatchListItemObj>>> GetMatches([FromQuery] string? profileId)
+    public async Task<ActionResult<List<CSMatchListItemObj>>> GetMatches([FromQuery] Guid? profileId)
     {
         List<CSMatchObj> matches = await _matches.GetMatches(UserId, profileId);
         List<CSMapObj> maps = await _referenceData.GetMaps();
@@ -61,7 +61,7 @@ public sealed class CSMatchesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse>> CreateMatch([FromQuery] string? profileId, [FromBody] CSMatchRequest request)
+    public async Task<ActionResult<ApiResponse>> CreateMatch([FromQuery] Guid? profileId, [FromBody] CSMatchRequest request)
     {
         try
         {
@@ -74,8 +74,8 @@ public sealed class CSMatchesController : ControllerBase
         }
     }
 
-    [HttpPut("{matchId}")]
-    public async Task<ActionResult<ApiResponse>> UpdateMatch(string matchId, [FromBody] CSMatchRequest request)
+    [HttpPut("{matchId:guid}")]
+    public async Task<ActionResult<ApiResponse>> UpdateMatch(Guid matchId, [FromBody] CSMatchRequest request)
     {
         try
         {
@@ -88,22 +88,22 @@ public sealed class CSMatchesController : ControllerBase
         }
     }
 
-    [HttpDelete("{matchId}")]
-    public async Task<ActionResult<ApiResponse>> DeleteMatch(string matchId)
+    [HttpDelete("{matchId:guid}")]
+    public async Task<ActionResult<ApiResponse>> DeleteMatch(Guid matchId)
     {
         await _matches.DeleteMatch(UserId, matchId);
         return Ok(new ApiResponse(true, "Match deleted."));
     }
 
     [HttpDelete]
-    public async Task<ActionResult<ApiResponse>> DeleteAllMatches([FromQuery] string? profileId)
+    public async Task<ActionResult<ApiResponse>> DeleteAllMatches([FromQuery] Guid? profileId)
     {
         await _matches.DeleteAllMatches(UserId, profileId);
         return Ok(new ApiResponse(true, "All matches deleted."));
     }
 
     [HttpGet("leetify")]
-    public async Task<ActionResult<List<CSMatchLeetifyPreviewObj>>> GetLeetifyMatches([FromQuery] string? profileId)
+    public async Task<ActionResult<List<CSMatchLeetifyPreviewObj>>> GetLeetifyMatches([FromQuery] Guid? profileId)
     {
         try
         {
@@ -121,7 +121,7 @@ public sealed class CSMatchesController : ControllerBase
     }
 
     [HttpPost("leetify/import")]
-    public async Task<ActionResult<ApiResponse>> ImportLeetifyMatches([FromQuery] string? profileId, [FromBody] List<string> leetifyMatchIds)
+    public async Task<ActionResult<ApiResponse>> ImportLeetifyMatches([FromQuery] Guid? profileId, [FromBody] List<string> leetifyMatchIds)
     {
         if (leetifyMatchIds is null || leetifyMatchIds.Count == 0)
         {
@@ -146,7 +146,7 @@ public sealed class CSMatchesController : ControllerBase
     }
 
     [HttpGet("stats")]
-    public async Task<ActionResult<CSMatchStatsObj>> GetStats([FromQuery] string? profileId, [FromQuery] string[]? gameTypes, [FromQuery] bool activeDutyOnly = false)
+    public async Task<ActionResult<CSMatchStatsObj>> GetStats([FromQuery] Guid? profileId, [FromQuery] string[]? gameTypes, [FromQuery] bool activeDutyOnly = false)
     {
         List<string>? maps = activeDutyOnly ? await _referenceData.GetActiveDutyPool() : null;
         return Ok(await _matches.GetStats(UserId, profileId, gameTypes, maps));

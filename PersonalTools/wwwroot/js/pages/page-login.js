@@ -37,7 +37,6 @@
         const { animate, stagger } = window.anime;
         const letters = launch.querySelectorAll('.launch-letter');
         const wordmark = launch.querySelector('.login-launch-wordmark');
-        const accent = launch.querySelector('.login-launch-accent');
 
         animate(letters, {
             opacity: { from: 0, to: 1 },
@@ -50,13 +49,6 @@
         animate(wordmark, {
             opacity: { from: 0, to: 1 },
             scale: { from: .96, to: 1 },
-            duration: 300,
-            ease: 'out(4)'
-        });
-        animate(accent, {
-            scaleX: { from: 0, to: 1 },
-            opacity: { from: 0, to: 1 },
-            delay: 230,
             duration: 300,
             ease: 'out(4)'
         });

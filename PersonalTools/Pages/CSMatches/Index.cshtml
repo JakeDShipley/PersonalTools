@@ -923,7 +923,7 @@
 @section Scripts {
     <script src="~/js/pages/page-cs-match-tracker.js" asp-append-version="true"></script>
     <script>
-        let CURRENT_PROFILE_ID = '@(Model.ProfileId ?? "default")';
+        let CURRENT_PROFILE_ID = '@(Model.ProfileId?.ToString("D") ?? "default")';
 
         function profileQuery(prefix) {
             return CURRENT_PROFILE_ID !== 'default' ? prefix + 'profileId=' + encodeURIComponent(CURRENT_PROFILE_ID) : '';

@@ -39,17 +39,10 @@ namespace PersonalTools.Pages.CSMatches
         public string YouDisplayName { get; set; } = string.Empty;
         public string? YouAvatarUrl { get; set; }
 
-        private string? _profileId;
-
-        // An empty-string ProfileId (from "?ProfileId=" on the default tab, or an empty hidden form
-        // field) must normalize to null here, not stay "" - the DB layer treats null as "the default
-        // profile" and passes it through the null-safe <=> operator, which "" would silently fail to match.
+        // Null represents the user's own default tab. Explicit profiles remain strongly typed GUIDs
+        // from query binding all the way through the Funcs and stored-procedure call.
         [BindProperty(SupportsGet = true)]
-        public string? ProfileId
-        {
-            get => _profileId;
-            set => _profileId = string.IsNullOrWhiteSpace(value) ? null : value;
-        }
+        public Guid? ProfileId { get; set; }
 
         [BindProperty]
         public string ProfileName { get; set; } = string.Empty;
@@ -77,7 +70,7 @@ namespace PersonalTools.Pages.CSMatches
             Profiles = await _profileFuncs.GetProfiles(UserId);
 
             ActiveProfile = await _profileFuncs.GetProfile(UserId, ProfileId);
-            if (!string.IsNullOrWhiteSpace(ProfileId) && ActiveProfile is null)
+            if (ProfileId is not null && ActiveProfile is null)
             {
                 // Profile was deleted or doesn't belong to this user - fall back to the default "You" tab.
                 ProfileId = null;
@@ -110,7 +103,7 @@ namespace PersonalTools.Pages.CSMatches
         {
             try
             {
-                string newProfileId = await _profileFuncs.CreateProfile(UserId, ProfileName, ProfileSteamId);
+                Guid newProfileId = await _profileFuncs.CreateProfile(UserId, ProfileName, ProfileSteamId);
                 TempData["SuccessMessage"] = "Profile added successfully.";
                 return RedirectToPage(new { ProfileId = newProfileId });
             }
@@ -124,7 +117,7 @@ namespace PersonalTools.Pages.CSMatches
 
         public async Task<IActionResult> OnPostUpdateProfile()
         {
-            if (string.IsNullOrWhiteSpace(ProfileId))
+            if (ProfileId is null)
             {
                 ErrorMessage = "Could not find the profile to update.";
                 await LoadPageData();
@@ -133,7 +126,7 @@ namespace PersonalTools.Pages.CSMatches
 
             try
             {
-                await _profileFuncs.UpdateProfile(UserId, ProfileId, ProfileName, ProfileSteamId);
+                await _profileFuncs.UpdateProfile(UserId, ProfileId.Value, ProfileName, ProfileSteamId);
                 TempData["SuccessMessage"] = "Profile updated successfully.";
                 return RedirectToPage(new { ProfileId });
             }
@@ -147,9 +140,9 @@ namespace PersonalTools.Pages.CSMatches
 
         public async Task<IActionResult> OnPostDeleteProfile()
         {
-            if (!string.IsNullOrWhiteSpace(ProfileId))
+            if (ProfileId is not null)
             {
-                await _profileFuncs.DeleteProfile(UserId, ProfileId);
+                await _profileFuncs.DeleteProfile(UserId, ProfileId.Value);
                 TempData["SuccessMessage"] = "Profile removed successfully.";
             }
 

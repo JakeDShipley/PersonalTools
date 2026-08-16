@@ -1,5 +1,6 @@
 using PersonalTools.Data;
 using PersonalTools.Entities;
+using Mapster;
 
 namespace PersonalTools.Classes;
 
@@ -16,7 +17,12 @@ public sealed class QuickLinksFuncs : IQuickLinksFuncs
 {
     private readonly IQuickLinksData _data;
     public QuickLinksFuncs(IQuickLinksData data) => _data = data;
-    public Task<List<QuickLink>> GetQuickLinks(Guid userId) => _data.GetQuickLinks(userId);
+    /// <summary>
+    /// Converts persistence rows at the service boundary so controller responses are not tied
+    /// to stored-procedure column shapes.
+    /// </summary>
+    public async Task<List<QuickLink>> GetQuickLinks(Guid userId) =>
+        (await _data.GetQuickLinks(userId)).Adapt<List<QuickLink>>();
     public Task<Guid> CreateQuickLink(Guid userId, string title, string url, string? iconClass) { Validate(title, url); return _data.CreateQuickLink(userId, Guid.NewGuid(), title.Trim(), NormaliseUrl(url), iconClass?.Trim()); }
     public Task UpdateQuickLink(Guid userId, Guid quickLinkId, string title, string url, string? iconClass) { Validate(title, url); return _data.UpdateQuickLink(userId, quickLinkId, title.Trim(), NormaliseUrl(url), iconClass?.Trim()); }
     public Task DeleteQuickLink(Guid userId, Guid quickLinkId) => _data.DeleteQuickLink(userId, quickLinkId);

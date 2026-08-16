@@ -1,6 +1,7 @@
 using PersonalTools.Data;
 using PersonalTools.Data.Skins;
 using PersonalTools.Entities.Skins;
+using Mapster;
 
 namespace PersonalTools.Classes.Skins;
 
@@ -24,20 +25,24 @@ public sealed class SkinFuncs : ISkinFuncs
         _catalogue = catalogue;
     }
 
-    public Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default) =>
-        _data.GetSkins(userId, cancellationToken);
+    /// <summary>
+    /// Maps persisted rows after they leave the Data layer. This keeps controller/API payloads
+    /// stable if stored-procedure columns are changed later.
+    /// </summary>
+    public async Task<List<SkinObj>> GetSkins(Guid userId, CancellationToken cancellationToken = default) =>
+        (await _data.GetSkins(userId, cancellationToken)).Adapt<List<SkinObj>>();
 
     public Task CreateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default)
     {
         NormaliseAndValidate(skin, requireId: false);
         skin.SkinId = Guid.NewGuid();
-        return _data.CreateSkin(userId, skin, cancellationToken);
+        return _data.CreateSkin(userId, skin.Adapt<TrackedSkinDbModel>(), cancellationToken);
     }
 
     public Task UpdateSkin(Guid userId, SkinObj skin, CancellationToken cancellationToken = default)
     {
         NormaliseAndValidate(skin, requireId: true);
-        return _data.UpdateSkin(userId, skin, cancellationToken);
+        return _data.UpdateSkin(userId, skin.Adapt<TrackedSkinDbModel>(), cancellationToken);
     }
 
     public Task DeleteSkin(Guid userId, Guid skinId, CancellationToken cancellationToken = default)

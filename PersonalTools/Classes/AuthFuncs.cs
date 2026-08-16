@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Mapster;
 using PersonalTools.Data;
 using PersonalTools.Entities;
 
@@ -23,21 +24,29 @@ public sealed class AuthFuncs : IAuthFuncs
     private readonly IAuthData _data;
     public AuthFuncs(IAuthData data) => _data = data;
     public async Task<bool> HasUsers() => await _data.GetUserCount() > 0;
-    public async Task<AppUser?> Authenticate(string email, string password) { AppUser? user = await _data.GetUserByEmail(email.Trim().ToLowerInvariant()); return user is not null && user.IsActive && Verify(password, user.PasswordHash) ? user : null; }
+    public async Task<AppUser?> Authenticate(string email, string password)
+    {
+        AppUser? user = (await _data.GetUserByEmail(email.Trim().ToLowerInvariant()))?.Adapt<AppUser>();
+
+        // Return the same generic result for an unknown email, inactive account, or bad password.
+        // That avoids leaking which email addresses are registered to a caller.
+        return user is not null && user.IsActive && Verify(password, user.PasswordHash) ? user : null;
+    }
     public async Task<Guid> CreateOwner(string email, string displayName, string password) { if (await HasUsers()) throw new InvalidOperationException("An owner account already exists."); Validate(email, displayName, password); return await _data.CreateOwner(email.Trim().ToLowerInvariant(), displayName.Trim(), Hash(password)); }
     public async Task<AuthSession> CreateSession(Guid userId, bool rememberMe, string? userAgent) { Guid id = Guid.NewGuid(); string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)); DateTime expiry = DateTime.UtcNow.AddDays(rememberMe ? 14 : 1); await _data.CreateSession(id, userId, Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token))), expiry, userAgent); return new AuthSession { SessionId = id, UserId = userId, ExpiresUtc = expiry }; }
     public Task<bool> IsSessionValid(Guid sessionId, Guid userId) => _data.IsSessionValid(sessionId, userId);
     public Task DeleteSession(Guid sessionId) => _data.DeleteSession(sessionId);
     public Task LinkSteam(Guid userId, string steamId) => _data.SetSteamId(userId, steamId);
     public Task UnlinkSteam(Guid userId) => _data.ClearSteamId(userId);
-    public Task<AppUser?> GetUser(Guid userId) => _data.GetUserById(userId);
+    public async Task<AppUser?> GetUser(Guid userId) =>
+        (await _data.GetUserById(userId))?.Adapt<AppUser>();
     public async Task ChangePassword(Guid userId, Guid sessionId, string currentPassword, string newPassword, string confirmPassword)
     {
         if (sessionId == Guid.Empty) throw new InvalidOperationException("Your session could not be verified. Please sign in again.");
         if (string.IsNullOrEmpty(currentPassword) || currentPassword.Length > 256) throw new InvalidOperationException("Enter your current password.");
         ValidateNewPassword(newPassword, confirmPassword);
 
-        AppUser? user = await _data.GetUserById(userId);
+        AppUser? user = (await _data.GetUserById(userId))?.Adapt<AppUser>();
         if (user is null || !user.IsActive || !Verify(currentPassword, user.PasswordHash))
             throw new InvalidOperationException("Your current password is incorrect.");
         if (string.Equals(newPassword, currentPassword, StringComparison.Ordinal))
