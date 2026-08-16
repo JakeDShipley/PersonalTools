@@ -25,6 +25,8 @@ using PersonalTools.Data.Monitoring;
 using PersonalTools.Hubs;
 using PersonalTools.Classes.CSStats;
 using PersonalTools.Data.CSStats;
+using PersonalTools.Classes.Tracker;
+using PersonalTools.Data.Tracker;
 using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -179,6 +181,11 @@ builder.Services.AddHttpClient<IMapPoolSuggestionData, MapPoolSuggestionData>(cl
     client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me; contact via GitHub)");
 });
 builder.Services.AddScoped<IMapPoolSuggestionFuncs, MapPoolSuggestionFuncs>();
+
+// Bug/Feature Tracker
+builder.Services.AddScoped<ITrackerItemsData, TrackerItemsData>();
+builder.Services.AddScoped<ITrackerFuncs, TrackerFuncs>();
+builder.Services.AddHostedService<TrackerAutoCloseService>();
 
 var app = builder.Build();
 

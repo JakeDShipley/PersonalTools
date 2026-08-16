@@ -161,6 +161,24 @@
             <section class="card tool-card border-0 shadow-sm">
                 <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-bug"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Bug/Feature Tracker</h2>
+                            <p class="small-muted mb-0">Resolved items are automatically closed and removed from the board once they've been resolved for this many days.</p>
+                        </div>
+                    </div>
+                    <div class="input-group flex-shrink-0" style="max-width: 12rem;">
+                        <input type="number" class="form-control" id="trackerAutoCloseDays" min="1" max="365" value="@Model.TrackerAutoCloseAfterDays" aria-label="Auto-close after days" />
+                        <span class="input-group-text">days</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
                         <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-database"></i></span>
                         <div>
                             <h2 class="h5 fw-semibold mb-2">Data storage</h2>

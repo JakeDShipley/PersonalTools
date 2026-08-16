@@ -1,0 +1,105 @@
+@page
+@model PersonalTools.Pages.Tracker.IndexModel
+@using PersonalTools.Classes.Tracker
+@{
+    ViewData["Title"] = "Bug/Feature Tracker";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/tracker.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4">
+    <div class="trk-page">
+        @Html.AntiForgeryToken()
+        <div class="row align-items-start gy-3 section-spacing">
+            <div class="col-12 col-lg">
+                <p class="eyebrow">System</p>
+                <h1 class="page-title">Bug/Feature Tracker</h1>
+                <p class="page-subtitle">
+                    Track bugs and feature ideas for Personal Tools itself.
+                </p>
+            </div>
+            <div class="col-12 col-lg-auto">
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#trackerItemModal">
+                    <i class="fa-solid fa-plus me-1"></i>Add item
+                </button>
+            </div>
+        </div>
+
+        @await Html.PartialAsync("_ToolGuide", new[]
+        {
+            "Add a bug or feature idea, and pick the area of the app it's relevant to.",
+            "Drag a card between columns to update its status, or drag within a column to reorder it.",
+            "Use the filters or search to narrow the board down to what you're looking for."
+        })
+
+        <div class="trk-filters">
+            <div class="trk-filter-area">
+                <select id="trackerFilter" class="form-select" multiple>
+                    <optgroup label="Type">
+                        <option value="Bug" selected>Bug</option>
+                        <option value="Feature" selected>Feature</option>
+                    </optgroup>
+                    <optgroup label="Area">
+                        @foreach (string area in TrackerFuncs.Areas)
+                        {
+                            <option value="@area">@area</option>
+                        }
+                    </optgroup>
+                </select>
+            </div>
+            <input class="trk-search-input" id="trackerSearchInput" placeholder="Search items…" />
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="trackerShowClosedBtn" aria-expanded="false">
+                <i class="fa-solid fa-box-archive me-1"></i>Show closed items
+            </button>
+        </div>
+
+        <div class="trk-board trk-board-full" id="trackerBoardFull"></div>
+
+        <section class="trk-closed-section d-none" id="trackerClosedSection" aria-labelledby="trackerClosedTitle">
+            <h2 class="h6 mb-3" id="trackerClosedTitle">Closed items</h2>
+
+            <div class="table-responsive trk-table-wrap" id="trackerClosedTableWrap">
+                <table class="table trk-table" id="trackerClosedTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Area</th>
+                            <th>Assigned to</th>
+                            <th>Closed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackerClosedTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="trk-table-footer d-none" id="trackerClosedPaginationBar">
+                <div class="trk-table-page-size">
+                    <label for="trackerClosedPageSize">Rows per page</label>
+                    <select id="trackerClosedPageSize" class="form-select form-select-sm">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="trk-table-page-nav">
+                    <span class="trk-table-page-summary" id="trackerClosedPageSummary"></span>
+                    <nav aria-label="Closed items pagination">
+                        <ul class="pagination pagination-sm mb-0" id="trackerClosedPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+
+            <div class="trk-empty d-none" id="trackerClosedEmpty">No closed items yet.</div>
+        </section>
+    </div>
+</div>
+
+@await Html.PartialAsync("_TrackerModals")
+
+@section Scripts {
+    <script src="~/js/tracker.js" asp-append-version="true"></script>
+}

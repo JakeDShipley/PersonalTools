@@ -22,6 +22,27 @@
     $('.settings-item input[type="checkbox"]').on('change', function () { save($(this).closest('.settings-item'), this.checked ? 'true' : 'false'); });
     $('.settings-item[data-secret="true"] button').on('click', function () { const $item = $(this).closest('.settings-item'); const $input = $item.find('input'); const value = String($input.val() || ''); if (!value) { window.personalToolsToast.info('Enter a new key only when you want to replace the saved one.'); return; } save($item, value); $input.val(''); $item.find('small').removeClass('d-none'); });
 
+    $('#trackerAutoCloseDays').on('change', function () {
+        const $input = $(this);
+        const days = parseInt($input.val(), 10);
+        if (!days || days < 1 || days > 365) {
+            window.personalToolsToast.error('Enter a number of days between 1 and 365.');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/tracker/settings',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ autoCloseAfterDays: days }),
+            headers: { RequestVerificationToken: antiForgeryToken() },
+            showLoader: true,
+            loaderTitle: 'Saving setting'
+        }).fail(function (xhr) {
+            window.personalToolsToast.error(xhr.responseJSON?.message || 'This setting could not be saved.');
+        });
+    });
+
     $('#settingsSteamLinkForm').on('submit', function (event) {
         event.preventDefault();
         const $form = $(this);

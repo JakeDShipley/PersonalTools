@@ -50,6 +50,44 @@ CREATE TABLE IF NOT EXISTS CSActiveDutyMaps (
     UNIQUE KEY UX_CSActiveDutyMaps_MapName (MapName)
 );
 
+-- Bug/Feature Tracker: shared across every account (it tracks Personal Tools itself, not
+-- personal data), so CreatedByUserId is attribution only - not used to scope any query - and
+-- is nulled rather than cascade-deleted if that account is later removed.
+CREATE TABLE IF NOT EXISTS TrackerItems (
+    ItemId CHAR(36) NOT NULL,
+    Type VARCHAR(10) NOT NULL,
+    Title VARCHAR(200) NOT NULL,
+    Description TEXT NOT NULL,
+    Area VARCHAR(50) NOT NULL,
+    Status VARCHAR(20) NOT NULL DEFAULT 'Open',
+    SortOrder INT NOT NULL DEFAULT 0,
+    CreatedByUserId CHAR(36) NULL,
+    AssignedToUserId CHAR(36) NULL,
+    ResolvedUtc DATETIME NULL,
+    ShowOnDashboard TINYINT(1) NOT NULL DEFAULT 0,
+    CreatedUtc DATETIME NOT NULL,
+    UpdatedUtc DATETIME NOT NULL,
+    PRIMARY KEY (ItemId),
+    KEY IX_TrackerItems_Status_SortOrder (Status, SortOrder),
+    CONSTRAINT FK_TrackerItems_Users FOREIGN KEY (CreatedByUserId) REFERENCES Users(UserId) ON DELETE SET NULL,
+    CONSTRAINT FK_TrackerItems_AssignedTo FOREIGN KEY (AssignedToUserId) REFERENCES Users(UserId) ON DELETE SET NULL
+);
+
+-- Adds columns for items/installs created before these features existed - safe to re-run.
+ALTER TABLE TrackerItems ADD COLUMN IF NOT EXISTS AssignedToUserId CHAR(36) NULL AFTER CreatedByUserId;
+ALTER TABLE TrackerItems ADD COLUMN IF NOT EXISTS ResolvedUtc DATETIME NULL AFTER AssignedToUserId;
+ALTER TABLE TrackerItems ADD COLUMN IF NOT EXISTS ShowOnDashboard TINYINT(1) NOT NULL DEFAULT 0 AFTER ResolvedUtc;
+
+-- Singleton config row (Id is always 1) for Tracker-wide settings - shared across every account,
+-- same as TrackerItems itself.
+CREATE TABLE IF NOT EXISTS TrackerSettings (
+    Id TINYINT NOT NULL,
+    AutoCloseAfterDays INT NOT NULL DEFAULT 5,
+    UpdatedUtc DATETIME NOT NULL,
+    PRIMARY KEY (Id)
+);
+INSERT IGNORE INTO TrackerSettings (Id, AutoCloseAfterDays, UpdatedUtc) VALUES (1, 5, UTC_TIMESTAMP());
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_cs_match_profiles_get$$
@@ -63,6 +101,17 @@ DROP PROCEDURE IF EXISTS sp_cs_matches_delete$$
 DROP PROCEDURE IF EXISTS sp_cs_matches_delete_all$$
 DROP PROCEDURE IF EXISTS sp_cs_active_duty_maps_get$$
 DROP PROCEDURE IF EXISTS sp_cs_active_duty_maps_set$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_get$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_create$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_update$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_move$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_set_status$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_delete$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_auto_close$$
+DROP PROCEDURE IF EXISTS sp_tracker_items_get_closed$$
+DROP PROCEDURE IF EXISTS sp_tracker_assignees_get$$
+DROP PROCEDURE IF EXISTS sp_tracker_settings_get$$
+DROP PROCEDURE IF EXISTS sp_tracker_settings_set$$
 DROP PROCEDURE IF EXISTS sp_monitor_database_snapshot$$
 
 CREATE PROCEDURE sp_cs_match_profiles_get(IN p_user_id CHAR(36))
@@ -96,6 +145,81 @@ BEGIN
     WHERE selected.MapName IS NOT NULL AND CHAR_LENGTH(TRIM(selected.MapName)) > 0;
 END$$
 
+CREATE PROCEDURE sp_tracker_items_get()
+SELECT t.ItemId, t.Type, t.Title, t.Description, t.Area, t.Status, t.SortOrder,
+       creator.DisplayName AS CreatedByDisplayName,
+       t.AssignedToUserId, assignee.DisplayName AS AssignedToDisplayName,
+       t.ShowOnDashboard, t.CreatedUtc, t.UpdatedUtc
+FROM TrackerItems t
+LEFT JOIN Users creator ON creator.UserId = t.CreatedByUserId
+LEFT JOIN Users assignee ON assignee.UserId = t.AssignedToUserId
+WHERE t.Status <> 'Closed'
+ORDER BY t.Status, t.SortOrder, t.CreatedUtc$$
+CREATE PROCEDURE sp_tracker_items_create(IN p_item_id CHAR(36), IN p_type VARCHAR(10), IN p_title VARCHAR(200), IN p_description TEXT, IN p_area VARCHAR(50), IN p_created_by_user_id CHAR(36), IN p_assigned_to_user_id CHAR(36), IN p_show_on_dashboard TINYINT(1))
+INSERT INTO TrackerItems(ItemId, Type, Title, Description, Area, Status, SortOrder, CreatedByUserId, AssignedToUserId, ShowOnDashboard, CreatedUtc, UpdatedUtc)
+SELECT p_item_id, p_type, p_title, p_description, p_area, 'Open', COALESCE(MAX(SortOrder) + 1, 0), p_created_by_user_id, NULLIF(p_assigned_to_user_id, ''), p_show_on_dashboard, UTC_TIMESTAMP(), UTC_TIMESTAMP()
+FROM TrackerItems WHERE Status = 'Open'$$
+CREATE PROCEDURE sp_tracker_items_update(IN p_item_id CHAR(36), IN p_type VARCHAR(10), IN p_title VARCHAR(200), IN p_description TEXT, IN p_area VARCHAR(50), IN p_status VARCHAR(20), IN p_assigned_to_user_id CHAR(36), IN p_show_on_dashboard TINYINT(1))
+BEGIN
+    -- ResolvedUtc marks when an item most recently became Resolved, so the auto-close job can
+    -- measure "days since resolved" rather than "days since last touched" (which a drag reorder
+    -- or an unrelated field edit would otherwise incorrectly reset).
+    UPDATE TrackerItems t
+    SET t.ResolvedUtc = CASE WHEN p_status = 'Resolved' AND t.Status <> 'Resolved' THEN UTC_TIMESTAMP()
+                              WHEN p_status <> 'Resolved' THEN NULL
+                              ELSE t.ResolvedUtc END,
+        t.Type = p_type, t.Title = p_title, t.Description = p_description, t.Area = p_area,
+        t.SortOrder = IF(t.Status = p_status, t.SortOrder, COALESCE((SELECT MAX(o.SortOrder) + 1 FROM (SELECT SortOrder FROM TrackerItems WHERE Status = p_status) AS o), 0)),
+        t.Status = p_status, t.AssignedToUserId = NULLIF(p_assigned_to_user_id, ''), t.ShowOnDashboard = p_show_on_dashboard, t.UpdatedUtc = UTC_TIMESTAMP()
+    WHERE t.ItemId = p_item_id;
+END$$
+CREATE PROCEDURE sp_tracker_items_move(IN p_item_id CHAR(36), IN p_status VARCHAR(20), IN p_item_ids JSON)
+BEGIN
+    UPDATE TrackerItems
+    SET ResolvedUtc = CASE WHEN p_status = 'Resolved' AND Status <> 'Resolved' THEN UTC_TIMESTAMP()
+                            WHEN p_status <> 'Resolved' THEN NULL
+                            ELSE ResolvedUtc END,
+        Status = p_status, UpdatedUtc = UTC_TIMESTAMP()
+    WHERE ItemId = p_item_id;
+    UPDATE TrackerItems t
+    INNER JOIN JSON_TABLE(p_item_ids, '$[*]' COLUMNS(SortOrder FOR ORDINALITY, ItemId CHAR(36) PATH '$')) p ON p.ItemId = t.ItemId
+    SET t.SortOrder = p.SortOrder;
+END$$
+CREATE PROCEDURE sp_tracker_items_set_status(IN p_item_id CHAR(36), IN p_status VARCHAR(20))
+BEGIN
+    -- Lightweight status-only move for the dashboard's compact board, which only ever has a
+    -- partial (most-recent-first) view of a column - it can't safely submit a full ordered id
+    -- list the way the full board's drag-and-drop does, so this just appends to the end instead.
+    UPDATE TrackerItems t
+    SET t.ResolvedUtc = CASE WHEN p_status = 'Resolved' AND t.Status <> 'Resolved' THEN UTC_TIMESTAMP()
+                              WHEN p_status <> 'Resolved' THEN NULL
+                              ELSE t.ResolvedUtc END,
+        t.SortOrder = IF(t.Status = p_status, t.SortOrder, COALESCE((SELECT MAX(o.SortOrder) + 1 FROM (SELECT SortOrder FROM TrackerItems WHERE Status = p_status) AS o), 0)),
+        t.Status = p_status, t.UpdatedUtc = UTC_TIMESTAMP()
+    WHERE t.ItemId = p_item_id;
+END$$
+CREATE PROCEDURE sp_tracker_items_delete(IN p_item_id CHAR(36))
+DELETE FROM TrackerItems WHERE ItemId = p_item_id$$
+CREATE PROCEDURE sp_tracker_items_auto_close(IN p_days INT)
+UPDATE TrackerItems SET Status = 'Closed', UpdatedUtc = UTC_TIMESTAMP()
+WHERE Status = 'Resolved' AND ResolvedUtc IS NOT NULL AND ResolvedUtc <= UTC_TIMESTAMP() - INTERVAL p_days DAY$$
+CREATE PROCEDURE sp_tracker_items_get_closed()
+SELECT t.ItemId, t.Type, t.Title, t.Description, t.Area, t.Status, t.SortOrder,
+       creator.DisplayName AS CreatedByDisplayName,
+       t.AssignedToUserId, assignee.DisplayName AS AssignedToDisplayName,
+       t.ShowOnDashboard, t.CreatedUtc, t.UpdatedUtc
+FROM TrackerItems t
+LEFT JOIN Users creator ON creator.UserId = t.CreatedByUserId
+LEFT JOIN Users assignee ON assignee.UserId = t.AssignedToUserId
+WHERE t.Status = 'Closed'
+ORDER BY t.UpdatedUtc DESC$$
+CREATE PROCEDURE sp_tracker_assignees_get()
+SELECT UserId, DisplayName FROM Users WHERE IsActive = 1 ORDER BY DisplayName$$
+CREATE PROCEDURE sp_tracker_settings_get()
+SELECT AutoCloseAfterDays FROM TrackerSettings WHERE Id = 1$$
+CREATE PROCEDURE sp_tracker_settings_set(IN p_auto_close_after_days INT)
+UPDATE TrackerSettings SET AutoCloseAfterDays = p_auto_close_after_days, UpdatedUtc = UTC_TIMESTAMP() WHERE Id = 1$$
+
 CREATE PROCEDURE sp_monitor_database_snapshot()
 BEGIN
     SELECT CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='UPTIME'), 0) AS UNSIGNED) AS UptimeSeconds,
@@ -105,7 +229,7 @@ BEGIN
            CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='QUESTIONS'), 0) AS UNSIGNED) AS Questions,
            CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='SLOW_QUERIES'), 0) AS UNSIGNED) AS SlowQueries,
            CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='ABORTED_CONNECTS'), 0) AS UNSIGNED) AS AbortedConnects,
-           (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins','DashboardWidgetOrders','DashboardWeatherLocations','CSMatches','CSMatchProfiles','CSPlayerReports','AppSettings','CSActiveDutyMaps')) AS RequiredStructuresAvailable;
+           (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins','DashboardWidgetOrders','DashboardWeatherLocations','CSMatches','CSMatchProfiles','CSPlayerReports','AppSettings','CSActiveDutyMaps','TrackerItems','TrackerSettings')) AS RequiredStructuresAvailable;
 END$$
 
 DELIMITER ;
