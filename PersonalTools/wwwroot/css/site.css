@@ -316,9 +316,14 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
 
 .cs-stats-sidebar-link::before {
     background:
-        linear-gradient(90deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 21%, transparent) 50%, transparent 51%),
-        linear-gradient(0deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 16%, transparent) 50%, transparent 51%);
-    background-size: 10px 10px;
+        radial-gradient(circle at 18% 50%, transparent 0 11px, color-mix(in srgb, var(--cs-stats-signal-bright) 45%, transparent) 12px 13px, transparent 14px),
+        linear-gradient(90deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 19%, transparent) 50%, transparent 51%),
+        linear-gradient(0deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 14%, transparent) 50%, transparent 51%),
+        linear-gradient(90deg, transparent, color-mix(in srgb, var(--cs-stats-signal) 20%, transparent), transparent);
+    background-position: -32px 50%, 0 0, 0 0, -110% 0;
+    background-repeat: no-repeat, repeat, repeat, no-repeat;
+    background-size: auto, 10px 10px, 10px 10px, 42% 100%;
+    animation: cs-stats-telemetry-scan 1.25s linear infinite paused;
     content: "";
     inset: 1px;
     opacity: 0;
@@ -328,7 +333,27 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
     z-index: 1;
 }
 
+/* A moving conic edge mirrors the Match Tracker's energy, while the blue telemetry
+   sweep inside reads as a crosshair/radar scan rather than another generic glow. */
+.cs-stats-sidebar-link::after {
+    animation: cs-stats-edge-trace 2.1s linear infinite paused;
+    background: conic-gradient(from var(--cs-stats-edge-angle), transparent 0 53%, var(--cs-stats-signal) 66%, var(--cs-stats-signal-bright) 76%, transparent 88%);
+    border-radius: inherit;
+    content: "";
+    inset: 0;
+    opacity: 0;
+    padding: 1.5px;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity .18s ease;
+    z-index: 3;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
 .cs-stats-nav-pulse {
+    animation: cs-stats-target-lock 1.05s ease-out infinite paused;
     border: 1px solid color-mix(in srgb, var(--cs-stats-signal-bright) 72%, transparent);
     border-radius: 50%;
     height: 1.2rem;
@@ -352,9 +377,25 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
 }
 
 .cs-stats-sidebar-link:hover::before,
+.cs-stats-sidebar-link:hover::after,
 .cs-stats-sidebar-link:focus-visible::before,
-.cs-stats-sidebar-link.active::before {
+.cs-stats-sidebar-link:focus-visible::after {
+    animation-play-state: running;
     opacity: 1;
+}
+
+.cs-stats-sidebar-link:hover .cs-stats-nav-pulse,
+.cs-stats-sidebar-link:focus-visible .cs-stats-nav-pulse {
+    animation-play-state: running;
+    opacity: 1;
+}
+
+.cs-stats-sidebar-link.active::after {
+    opacity: .52;
+}
+
+.cs-stats-sidebar-link.active::before {
+    opacity: .72;
 }
 
 .cs-stats-sidebar-link:hover .app-nav-icon,
@@ -376,6 +417,34 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
 
 @keyframes blits-digital-rain {
     to { background-position: 0 27px, 0 44px, 0 0; }
+}
+
+@property --cs-stats-edge-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes cs-stats-edge-trace {
+    to { --cs-stats-edge-angle: 360deg; }
+}
+
+@keyframes cs-stats-telemetry-scan {
+    to { background-position: calc(100% + 32px) 50%, 10px 0, 0 10px, 160% 0; }
+}
+
+@keyframes cs-stats-target-lock {
+    0% { opacity: .15; transform: translateY(-50%) scale(.68); }
+    55% { opacity: .95; transform: translateY(-50%) scale(1); }
+    100% { opacity: 0; transform: translateY(-50%) scale(1.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-stats-sidebar-link::before,
+    .cs-stats-sidebar-link::after,
+    .cs-stats-nav-pulse {
+        animation: none;
+    }
 }
 
 .app-sidebar-utilities {

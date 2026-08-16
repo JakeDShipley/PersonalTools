@@ -152,6 +152,46 @@
     letter-spacing: .025em;
 }
 
+/* The tactical display face is useful for a small amount of hierarchy, but it becomes
+   tiring when it is used for every number on this page. Keep the CS look in the framing
+   and let the match data use the normal, easier-to-scan application typeface. */
+:root[data-app-theme="tactical"] .csm-page .page-title {
+    font-family: var(--bs-body-font-family);
+    font-size: clamp(2.05rem, 3.4vw, 3.1rem);
+    font-weight: 700;
+    letter-spacing: -.045em;
+    line-height: 1;
+}
+
+:root[data-app-theme="tactical"] .csm-tabs .nav-link,
+:root[data-app-theme="tactical"] .csm-panel-head-label,
+:root[data-app-theme="tactical"] .csm-stat-label,
+:root[data-app-theme="tactical"] .csm-stat-value {
+    font-family: var(--bs-body-font-family);
+}
+
+:root[data-app-theme="tactical"] .csm-tabs .nav-link,
+:root[data-app-theme="tactical"] .csm-panel-head-label {
+    font-weight: 650;
+}
+
+:root[data-app-theme="tactical"] .csm-page > .row .eyebrow,
+:root[data-app-theme="tactical"] .csm-page .tool-guide .eyebrow {
+    font-weight: 700;
+}
+
+:root[data-app-theme="tactical"] .csm-page .tool-guide h2 {
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+
+:root[data-app-theme="tactical"] .csm-stat-value {
+    font-size: 1.2rem;
+    font-weight: 500;
+    letter-spacing: -.025em;
+    line-height: 1.15;
+}
+
 @media (min-width: 768px) and (max-width: 1200px) {
     :root[data-app-theme="tactical"] .csm-match-table td {
         padding-inline: .9rem;
