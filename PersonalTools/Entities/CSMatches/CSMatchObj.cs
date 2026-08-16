@@ -29,6 +29,26 @@
         public DateTime Updated { get; set; }
     }
 
+    /// <summary>
+    /// Compact calendar transport shape. The browser only receives the fields needed to draw an
+    /// event and its selected-day summary, rather than the complete match tracker row model.
+    /// </summary>
+    public sealed class CSMatchCalendarEventObj
+    {
+        public Guid MatchId { get; init; }
+        public string Title { get; init; } = string.Empty;
+        public DateTime Start { get; init; }
+        public bool AllDay { get; init; } = true;
+        public List<string> ClassNames { get; init; } = [];
+        public string MapName { get; init; } = string.Empty;
+        public string GameType { get; init; } = string.Empty;
+        public int TeamScore { get; init; }
+        public int OpponentScore { get; init; }
+        public string StartSide { get; init; } = string.Empty;
+        public int OvertimeCount { get; init; }
+        public bool IsWin { get; init; }
+    }
+
     public class CSMatchStatsObj
     {
         public int TotalMatches { get; set; }

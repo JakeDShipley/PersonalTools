@@ -57,6 +57,7 @@ DROP PROCEDURE IF EXISTS sp_cs_match_profiles_create$$
 DROP PROCEDURE IF EXISTS sp_cs_match_profiles_update$$
 DROP PROCEDURE IF EXISTS sp_cs_match_profiles_delete$$
 DROP PROCEDURE IF EXISTS sp_cs_matches_get$$
+DROP PROCEDURE IF EXISTS sp_cs_matches_get_range$$
 DROP PROCEDURE IF EXISTS sp_cs_matches_create$$
 DROP PROCEDURE IF EXISTS sp_cs_matches_update$$
 DROP PROCEDURE IF EXISTS sp_cs_matches_delete$$
@@ -76,6 +77,8 @@ DELETE FROM CSMatchProfiles WHERE ProfileId = p_profile_id AND UserId = p_user_i
 
 CREATE PROCEDURE sp_cs_matches_get(IN p_user_id CHAR(36), IN p_profile_id CHAR(36))
 SELECT MatchId, StartSide, MapName, GameType, TeamScore, OpponentScore, OvertimeCount, LeetifyMatchId, CreatedUtc, UpdatedUtc FROM CSMatches WHERE UserId = p_user_id AND ProfileId <=> p_profile_id ORDER BY CreatedUtc DESC$$
+CREATE PROCEDURE sp_cs_matches_get_range(IN p_user_id CHAR(36), IN p_start_utc DATETIME, IN p_end_utc DATETIME)
+SELECT MatchId, StartSide, MapName, GameType, TeamScore, OpponentScore, OvertimeCount, LeetifyMatchId, CreatedUtc, UpdatedUtc FROM CSMatches WHERE UserId = p_user_id AND CreatedUtc >= p_start_utc AND CreatedUtc < p_end_utc ORDER BY CreatedUtc DESC$$
 CREATE PROCEDURE sp_cs_matches_create(IN p_user_id CHAR(36), IN p_match_id CHAR(36), IN p_profile_id CHAR(36), IN p_start_side VARCHAR(2), IN p_map_name VARCHAR(100), IN p_game_type VARCHAR(100), IN p_team_score INT, IN p_opponent_score INT, IN p_overtime_count INT, IN p_leetify_match_id VARCHAR(100), IN p_created_utc DATETIME)
 INSERT IGNORE INTO CSMatches(MatchId, UserId, ProfileId, StartSide, MapName, GameType, TeamScore, OpponentScore, OvertimeCount, LeetifyMatchId, PlayedUtc, CreatedUtc, UpdatedUtc) VALUES(p_match_id, p_user_id, p_profile_id, p_start_side, p_map_name, p_game_type, p_team_score, p_opponent_score, p_overtime_count, NULLIF(p_leetify_match_id, ''), COALESCE(p_created_utc, UTC_TIMESTAMP()), COALESCE(p_created_utc, UTC_TIMESTAMP()), UTC_TIMESTAMP())$$
 CREATE PROCEDURE sp_cs_matches_update(IN p_user_id CHAR(36), IN p_match_id CHAR(36), IN p_start_side VARCHAR(2), IN p_map_name VARCHAR(100), IN p_game_type VARCHAR(100), IN p_team_score INT, IN p_opponent_score INT, IN p_overtime_count INT)

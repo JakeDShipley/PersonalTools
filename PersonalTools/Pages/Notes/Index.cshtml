@@ -49,9 +49,7 @@
         </div>
     }
 
-    @if (Model.Notes.Any())
-    {
-        <div class="row g-3 g-lg-4 notes-collection" data-sortable data-sortable-api="/api/notes/order" data-sortable-payload="noteIds">
+    <div class="row g-3 g-lg-4 notes-collection @(Model.Notes.Any() ? string.Empty : "d-none")" data-sortable data-sortable-api="/api/notes/order" data-sortable-payload="noteIds">
             @foreach (var note in Model.Notes)
             {
                 <div class="col-12 col-md-6 col-xl-4 note-sortable-item" data-sortable-id="@note.NoteId" data-note-title="@note.Title" data-note-updated="@note.Updated.Ticks">
@@ -93,18 +91,16 @@
                     </div>
                 </div>
             }
+    </div>
+
+    @* The empty state stays in the DOM so the AJAX refresh can switch views without a full page reload. *@
+    <div class="card shadow-sm border-0 @(Model.Notes.Any() ? "d-none" : string.Empty)" id="notesEmptyState">
+        <div class="card-body p-4">
+            <p class="mb-0 small-muted">
+                No notes yet. Click <strong>Add note</strong> to create your first one.
+            </p>
         </div>
-    }
-    else
-    {
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <p class="mb-0 small-muted">
-                    No notes yet. Click <strong>Add note</strong> to create your first one.
-                </p>
-            </div>
-        </div>
-    }
+    </div>
 </div>
 
 @* Add Modal *@

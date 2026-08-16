@@ -4,7 +4,12 @@
     const itemsByAssetId = new Map();
     const viewStorageKey = 'personal-tools-inventory-view';
     let inventoryTable = null;
-    let inventoryView = localStorage.getItem(viewStorageKey) === 'cards' ? 'cards' : 'list';
+    const savedInventoryView = localStorage.getItem(viewStorageKey);
+    // A deliberate preference always wins. On a first visit, cards are the readable default for
+    // narrow screens while desktop keeps the quicker scan-friendly list.
+    let inventoryView = savedInventoryView === 'cards' || savedInventoryView === 'list'
+        ? savedInventoryView
+        : window.matchMedia('(max-width: 767.98px)').matches ? 'cards' : 'list';
 
     function setLoading(isLoading) {
         const $button = $('#loadInventoryButton');
@@ -56,7 +61,7 @@
         return $('<tr>', { 'data-asset-id': item.assetId })
             .append($('<td>').append($summary))
             .append($('<td>', { text: item.type || '—' }))
-            .append($('<td>', { text: item.quality || '—' }))
+            .append($('<td>', { text: item.rarity || '—' }))
             .append($('<td>', { text: item.amount || 1 }))
             .append($('<td>').append($statuses))
             .append($('<td>', { class: 'text-end' }).append(detailsButton(item, false)));
@@ -76,8 +81,8 @@
             .append($('<p>', { class: 'small-muted text-truncate mb-0', text: item.type || 'CS2 item' }));
 
         const $metadata = $('<dl>', { class: 'inventory-card-meta row g-1 small mb-3' })
-            .append($('<dt>', { class: 'col-5', text: 'Quality' }))
-            .append($('<dd>', { class: 'col-7 text-end', text: item.quality || '—' }))
+            .append($('<dt>', { class: 'col-5', text: 'Rarity' }))
+            .append($('<dd>', { class: 'col-7 text-end', text: item.rarity || '—' }))
             .append($('<dt>', { class: 'col-5', text: 'Quantity' }))
             .append($('<dd>', { class: 'col-7 text-end', text: item.amount || 1 }));
 
@@ -241,16 +246,18 @@
         $('#inventoryItemModalLabel').text(item.name || 'Inventory item');
         $('#inventoryModalImage').attr({ src: item.iconUrl, alt: item.name || '' });
         $('#inventoryModalType').text(item.type || '—');
-        $('#inventoryModalQuality').text(item.quality || '—');
+        $('#inventoryModalRarity').text(item.rarity || '—');
         $('#inventoryModalAmount').text(item.amount || 1);
         $('#inventoryModalTradable').text(item.tradable ? 'Yes' : 'No');
         $('#inventoryModalMarketable').text(item.marketable ? 'Yes' : 'No');
 
         const $details = $('#inventoryModalDetails').empty();
-        if (Array.isArray(item.details) && item.details.length) {
+        if (Array.isArray(item.detailsHtml) && item.detailsHtml.length) {
             $('<hr>').appendTo($details);
             const $content = $('<div>', { class: 'small-muted' }).appendTo($details);
-            item.details.forEach(detail => $('<p>', { class: 'mb-2', text: detail }).appendTo($content));
+            // DetailsHtml was reduced to text, line breaks and simple emphasis server-side.
+            // Never place raw Steam API description content into the DOM here.
+            item.detailsHtml.forEach(detail => $('<p>', { class: 'mb-2 steam-item-detail' }).html(detail).appendTo($content));
         }
 
         const hasInspectLink = typeof item.inspectLink === 'string' && item.inspectLink.length > 0;

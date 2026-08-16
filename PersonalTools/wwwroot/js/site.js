@@ -2,6 +2,7 @@
     const appToast = (() => {
         const container = document.getElementById('appToastContainer');
         const queuedToastKey = 'personal-tools-pending-toast';
+        const queuedToastCookie = 'personal_tools_pending_toast';
         const types = {
             success: { title: 'Completed', icon: 'fa-circle-check' },
             error: { title: 'Something went wrong', icon: 'fa-circle-xmark' },
@@ -74,17 +75,42 @@
 
         function queue(input, fallbackType) {
             const options = normalise(input, fallbackType);
-            try { sessionStorage.setItem(queuedToastKey, JSON.stringify(options)); } catch { }
+            const serialised = JSON.stringify(options);
+
+            // Session storage is the normal hand-off when a successful action deliberately
+            // reloads a page. The short-lived cookie is a fallback for browsers that restrict
+            // storage in private or embedded sessions; it only contains generic toast copy.
+            try { sessionStorage.setItem(queuedToastKey, serialised); } catch { }
+            try {
+                document.cookie = `${queuedToastCookie}=${encodeURIComponent(serialised)}; path=/; max-age=30; SameSite=Lax`;
+            } catch { }
+        }
+
+        function readQueuedCookie() {
+            const prefix = `${queuedToastCookie}=`;
+            const match = document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith(prefix));
+            return match ? decodeURIComponent(match.slice(prefix.length)) : null;
+        }
+
+        function clearQueuedToast() {
+            try { sessionStorage.removeItem(queuedToastKey); } catch { }
+            try { document.cookie = `${queuedToastCookie}=; path=/; max-age=0; SameSite=Lax`; } catch { }
         }
 
         function showQueued() {
             try {
-                const value = sessionStorage.getItem(queuedToastKey);
+                let sessionValue = null;
+                try { sessionValue = sessionStorage.getItem(queuedToastKey); } catch { }
+                const value = sessionValue || readQueuedCookie();
                 if (!value) return;
-                sessionStorage.removeItem(queuedToastKey);
-                show(JSON.parse(value));
+                clearQueuedToast();
+
+                // Let the layout finish applying its selected theme before Bootstrap measures
+                // the toast. This keeps the notification reliable after a navigation and avoids
+                // a flash of the wrong theme.
+                window.setTimeout(() => show(JSON.parse(value)), 0);
             } catch {
-                try { sessionStorage.removeItem(queuedToastKey); } catch { }
+                clearQueuedToast();
             }
         }
 
@@ -503,6 +529,56 @@
         });
     }
 
+    // Sidebar feature links receive a short, interaction-triggered Anime.js response instead of
+    // a permanently running decoration. It gives both CS areas their own identity while keeping
+    // the navigation calm and fully respecting the shared reduced-motion guard.
+    function playSidebarFeatureMotion(link, kind) {
+        if (!link || !window.personalToolsMotion?.available()) return;
+
+        const { animate } = window.anime;
+        const icon = link.querySelector('.app-nav-icon i');
+
+        if (icon) {
+            animate(icon, {
+                opacity: { from: .45 },
+                rotate: { from: kind === 'blits' ? -18 : 10 },
+                scale: { from: .78 },
+                duration: 360,
+                ease: 'out(5)'
+            });
+        }
+
+        const signal = link.querySelector(kind === 'blits' ? '.blits-nav-scan' : '.cs-stats-nav-pulse');
+
+        if (!signal) return;
+
+        if (kind === 'blits') {
+            animate(signal, {
+                opacity: [0, .9, 0],
+                left: ['.65rem', '78%'],
+                right: ['.65rem', '0'],
+                duration: 520,
+                ease: 'out(3)'
+            });
+            return;
+        }
+
+        animate(signal, {
+            opacity: [0, .75, 0],
+            width: ['.65rem', '2.2rem'],
+            height: ['.65rem', '2.2rem'],
+            duration: 520,
+            ease: 'out(3)'
+        });
+    }
+
+    document.querySelectorAll('.blits-sidebar-link, .cs-stats-sidebar-link').forEach((link) => {
+        const kind = link.classList.contains('blits-sidebar-link') ? 'blits' : 'stats';
+        link.addEventListener('mouseenter', () => playSidebarFeatureMotion(link, kind));
+        link.addEventListener('focusin', () => playSidebarFeatureMotion(link, kind));
+        link.addEventListener('click', () => playSidebarFeatureMotion(link, kind));
+    });
+
     document.addEventListener('shown.bs.modal', (event) => {
         const modal = event.target;
         if (!(modal instanceof HTMLElement) || modal.id === 'comparePlayersModal') return;
@@ -553,7 +629,7 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ [payloadKey]: itemIds }),
                     headers: { RequestVerificationToken: sortableAntiForgeryToken() }
-                }).fail(() => window.personalToolsToast?.queue('Your new order could not be saved. Please try again.', 'error'));
+                }).fail(() => window.personalToolsToast?.error('Your new order could not be saved. Please try again.'));
             }
         });
 

@@ -7,6 +7,7 @@ namespace PersonalTools.Classes.CSMatches
     public interface ICSMatchFuncs
     {
         Task<List<CSMatchObj>> GetMatches(Guid userId, Guid? profileId);
+        Task<List<CSMatchCalendarEventObj>> GetCalendarEvents(Guid userId, DateTime startUtc, DateTime endUtc);
         Task CreateMatch(Guid userId, Guid? profileId, CSMatchObj match);
         Task UpdateMatch(Guid userId, Guid matchId, CSMatchObj match);
         Task DeleteMatch(Guid userId, Guid matchId);
@@ -35,6 +36,46 @@ namespace PersonalTools.Classes.CSMatches
             return matches
                 .OrderByDescending(x => x.Created)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Produces lean, all-day calendar events from every match-tracker profile owned by this
+        /// user. A capped range protects the dashboard endpoint from accidental large requests.
+        /// </summary>
+        public async Task<List<CSMatchCalendarEventObj>> GetCalendarEvents(Guid userId, DateTime startUtc, DateTime endUtc)
+        {
+            DateTime start = startUtc.ToUniversalTime();
+            DateTime end = endUtc.ToUniversalTime();
+
+            if (start == default || end <= start || end - start > TimeSpan.FromDays(400))
+            {
+                throw new InvalidOperationException("The calendar date range was invalid.");
+            }
+
+            List<CSMatchObj> matches = (await _matchesData.GetMatchesForCalendar(userId, start, end)).Adapt<List<CSMatchObj>>();
+
+            return matches.Select(match =>
+            {
+                bool isWin = match.TeamScore > match.OpponentScore;
+
+                return new CSMatchCalendarEventObj
+                {
+                    MatchId = match.MatchId,
+                    Title = $"{match.MapName} · {match.TeamScore}-{match.OpponentScore}",
+                    // FullCalendar receives this as an all-day date, not a moment in the
+                    // visitor's timezone. Removing the offset avoids a match shifting a day
+                    // when the browser and server use different timezones.
+                    Start = DateTime.SpecifyKind(match.Created.Date, DateTimeKind.Unspecified),
+                    ClassNames = [isWin ? "cs-match-event-win" : "cs-match-event-loss"],
+                    MapName = match.MapName,
+                    GameType = match.GameType,
+                    TeamScore = match.TeamScore,
+                    OpponentScore = match.OpponentScore,
+                    StartSide = match.StartSide,
+                    OvertimeCount = match.OvertimeCount,
+                    IsWin = isWin
+                };
+            }).ToList();
         }
 
         public async Task CreateMatch(Guid userId, Guid? profileId, CSMatchObj match)

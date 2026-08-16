@@ -127,6 +127,37 @@
 .csm-match-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
 .csm-date { font-size: 0.78rem; color: var(--pt-ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+/* Tactical uses compressed display type for hierarchy, but match details stay in the regular UI
+   face. This keeps names, scores and dates comfortable to scan on smaller desktop displays. */
+:root[data-app-theme="tactical"] .csm-match-table,
+:root[data-app-theme="tactical"] .csm-fetch-table,
+:root[data-app-theme="tactical"] .csm-card-body,
+:root[data-app-theme="tactical"] .csm-filters,
+:root[data-app-theme="tactical"] .csm-tab-add {
+    font-family: var(--bs-body-font-family);
+}
+
+:root[data-app-theme="tactical"] .csm-match-table td,
+:root[data-app-theme="tactical"] .csm-fetch-table td {
+    line-height: 1.4;
+}
+
+:root[data-app-theme="tactical"] .csm-map-name {
+    font-weight: 650;
+    letter-spacing: .01em;
+}
+
+:root[data-app-theme="tactical"] .csm-score {
+    font-weight: 700;
+    letter-spacing: .025em;
+}
+
+@media (min-width: 768px) and (max-width: 1200px) {
+    :root[data-app-theme="tactical"] .csm-match-table td {
+        padding-inline: .9rem;
+    }
+}
+
 /* Smoothly-animated pagination/view swaps + a dimmed state while the initial fetch is in flight. */
 .csm-table-wrap, .csm-matches-cards { transition: opacity 0.15s ease; opacity: 1; }
 .csm-table-wrap.csm-fade-out, .csm-matches-cards.csm-fade-out { opacity: 0; }

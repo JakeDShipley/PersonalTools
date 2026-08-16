@@ -271,11 +271,97 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
     opacity: .55;
 }
 
+/* Blits reads as a compact match-console control rather than a normal navigation item. The
+   scan layer is only made visible by a deliberate hover/focus/active state; it never idles. */
+.blits-sidebar-link .blits-nav-scan {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--blits-green-bright) 54%, transparent), transparent);
+    height: 1px;
+    left: .65rem;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: .65rem;
+    top: 50%;
+    z-index: 4;
+}
+
 .blits-sidebar-link:hover .app-nav-icon,
 .blits-sidebar-link:focus-visible .app-nav-icon,
 .blits-sidebar-link.active .app-nav-icon {
     color: var(--blits-green);
     text-shadow: 0 0 12px color-mix(in srgb, var(--blits-green-bright) 52%, transparent);
+}
+
+/* Player Stats uses a blue telemetry identity. It is intentionally separate from Blits' green
+   match-console styling so the two CS tools remain recognisable at a glance. */
+.cs-stats-sidebar-link {
+    --cs-stats-signal: #4c76ff;
+    --cs-stats-signal-bright: #82a2ff;
+    background: color-mix(in srgb, var(--cs-stats-signal) 5%, transparent);
+    border-color: color-mix(in srgb, var(--cs-stats-signal) 16%, transparent);
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+}
+
+[data-theme="dark"] .cs-stats-sidebar-link {
+    --cs-stats-signal: #6c8cff;
+    --cs-stats-signal-bright: #b6c6ff;
+}
+
+.cs-stats-sidebar-link > :not(.cs-stats-nav-pulse) {
+    position: relative;
+    z-index: 2;
+}
+
+.cs-stats-sidebar-link::before {
+    background:
+        linear-gradient(90deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 21%, transparent) 50%, transparent 51%),
+        linear-gradient(0deg, transparent 49%, color-mix(in srgb, var(--cs-stats-signal) 16%, transparent) 50%, transparent 51%);
+    background-size: 10px 10px;
+    content: "";
+    inset: 1px;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity .18s ease;
+    z-index: 1;
+}
+
+.cs-stats-nav-pulse {
+    border: 1px solid color-mix(in srgb, var(--cs-stats-signal-bright) 72%, transparent);
+    border-radius: 50%;
+    height: 1.2rem;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: .8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.2rem;
+    z-index: 3;
+}
+
+.cs-stats-sidebar-link:hover,
+.cs-stats-sidebar-link:focus-visible,
+.cs-stats-sidebar-link.active {
+    background: color-mix(in srgb, var(--cs-stats-signal) 10%, var(--pt-surface));
+    border-color: color-mix(in srgb, var(--cs-stats-signal) 50%, transparent);
+    box-shadow: inset 3px 0 0 var(--cs-stats-signal);
+    color: var(--pt-ink);
+}
+
+.cs-stats-sidebar-link:hover::before,
+.cs-stats-sidebar-link:focus-visible::before,
+.cs-stats-sidebar-link.active::before {
+    opacity: 1;
+}
+
+.cs-stats-sidebar-link:hover .app-nav-icon,
+.cs-stats-sidebar-link:focus-visible .app-nav-icon,
+.cs-stats-sidebar-link.active .app-nav-icon {
+    color: var(--cs-stats-signal);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--cs-stats-signal-bright) 56%, transparent);
 }
 
 @property --blits-edge-angle {
@@ -935,7 +1021,7 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
 .tool-guide-icon {
     align-items: center;
     background: color-mix(in srgb, var(--pt-mint) 22%, transparent);
-    border-radius: .55rem;
+    border-radius: var(--pt-small-radius, .55rem);
     color: var(--pt-ink);
     display: inline-flex;
     height: 2rem;
@@ -952,9 +1038,10 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
 
 .tool-guide-number {
     align-items: center;
-    background: var(--pt-ink);
-    border-radius: 50%;
-    color: var(--pt-surface);
+    background: color-mix(in srgb, var(--pt-mint) 58%, var(--pt-surface));
+    border: 1px solid color-mix(in srgb, var(--pt-mint) 72%, var(--pt-line));
+    border-radius: var(--pt-pill-radius, 50%);
+    color: var(--pt-ink);
     display: inline-flex;
     flex: 0 0 1.45rem;
     font-size: .65rem;
@@ -969,8 +1056,12 @@ html,body{min-height:100%}body{transition:background-color .2s ease,color .2s ea
     line-height: 1.45;
 }
 
-[data-theme="dark"] .tool-guide-number {
-    color: #141a2a;
+/* Tactical uses its own gold confirmation marker. This is deliberately explicit rather than
+   relying on a dark-mode inversion, which was the cause of the white badge/black number clash. */
+:root[data-app-theme="tactical"] .tool-guide-number {
+    background: var(--pt-coral);
+    border-color: color-mix(in srgb, var(--pt-coral) 70%, var(--pt-line));
+    color: #101114;
 }
 
 .motion-flash {

@@ -27,8 +27,121 @@ $(function () {
     $('#weatherLocationForm').on('submit',function(event){event.preventDefault();const input=$('#weatherLocation'),query=input.val().trim(),feedback=$('#weatherLocationFeedback');if(!query)return;feedback.text('Finding that location&hellip;');$.getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`).done(geo=>{const place=geo.results?.[0];if(!place){feedback.text('No matching town or city was found.');return;}$.ajax({url:'/api/dashboard/weather-locations',method:'POST',contentType:'application/json',data:JSON.stringify({displayName:[place.name,place.admin1,place.country].filter(Boolean).join(', '),latitude:place.latitude,longitude:place.longitude}),headers:{RequestVerificationToken:token()}}).done(()=>{input.val('');feedback.text('Location saved.');loadWeatherLocations();}).fail(xhr=>feedback.text(xhr.responseJSON?.message||'That location could not be saved.'));}).fail(()=>feedback.text('Location search is unavailable right now.'));});
     weatherWidget.on('click','.weather-location-remove',function(){const button=$(this).prop('disabled',true);$.ajax({url:`/api/dashboard/weather-locations/${encodeURIComponent(button.data('location-id'))}`,method:'DELETE',headers:{RequestVerificationToken:token()}}).done(loadWeatherLocations).always(()=>button.prop('disabled',false));});
     loadWeatherLocations();
-    function buildCalendar(element,expanded){if(!element||!window.FullCalendar)return null;return new FullCalendar.Calendar(element,{initialView:'dayGridMonth',headerToolbar:{left:'prev,next',center:'title',right:expanded?'dayGridMonth,timeGridWeek,listWeek':''},height:expanded?'auto':260,fixedWeekCount:false,dayMaxEvents:2,eventDisplay:'block',events:'/api/csmatches/calendar',dateClick(info){$('#calendarSelectedDay').text(info.date.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}));$('#calendarDayDetails').text('No matches were logged on this day.');},eventClick(info){const match=info.event.extendedProps;$('#calendarSelectedDay').text(info.event.start.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}));$('#calendarDayDetails').empty().append($('<strong>').text(`${match.mapName} · ${match.gameType}`),$('<span class="d-block mt-1">').text(`${match.teamScore} - ${match.opponentScore} · Started ${match.startSide}${match.overtimeCount?` · OT ${match.overtimeCount}`:''}`));}});}
-    const calendarElement=document.getElementById('dashboardCalendar'),dashboardCalendar=buildCalendar(calendarElement,false);dashboardCalendar?.render();$('#dashboardCalendarView').on('change',function(){dashboardCalendar?.changeView(this.value);});$('#expandCalendar').on('click',()=>bootstrap.Modal.getOrCreateInstance(document.getElementById('dashboardCalendarModal')).show());document.getElementById('dashboardCalendarModal')?.addEventListener('shown.bs.modal',function(){const target=document.getElementById('expandedDashboardCalendar');if(target.dataset.initialised)return;target.dataset.initialised='true';const calendar=buildCalendar(target,true);calendar?.render();window.personalToolsMotion?.reveal(target.querySelectorAll('.fc-header-toolbar,.fc-view-harness'),{fromY:10,duration:300});});
+    const calendarViewSelect = $('#dashboardCalendarView');
+    let calendarView = calendarViewSelect.val() || 'dayGridMonth';
+    let dashboardCalendar = null;
+    let expandedCalendar = null;
+
+    function calendarDateLabel(date) {
+        return date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function matchesForDay(calendar, date) {
+        const day = date.toISOString().slice(0, 10);
+        return calendar.getEvents().filter(event => event.startStr.slice(0, 10) === day);
+    }
+
+    function showDayDetails(date, events) {
+        $('#calendarSelectedDay').text(calendarDateLabel(date));
+        const $details = $('#calendarDayDetails').empty();
+
+        if (!events.length) {
+            $details.text('No matches were logged on this day.');
+            return;
+        }
+
+        events.forEach(event => {
+            const match = event.extendedProps;
+            const result = match.isWin ? 'Win' : 'Loss';
+            const $result = $('<span>', {
+                class: `calendar-match-result ${match.isWin ? 'is-win' : 'is-loss'}`,
+                text: result
+            });
+
+            $details.append($('<article>', { class: 'calendar-match-summary' }).append(
+                $('<div>', { class: 'd-flex align-items-start justify-content-between gap-2' }).append(
+                    $('<strong>', { text: `${match.mapName} · ${match.gameType}` }),
+                    $result
+                ),
+                $('<span>', { text: `${match.teamScore}–${match.opponentScore} · Started ${match.startSide}${match.overtimeCount ? ` · OT ${match.overtimeCount}` : ''}` })
+            ));
+        });
+    }
+
+    function buildCalendar(element, expanded) {
+        if (!element || !window.FullCalendar) return null;
+
+        return new FullCalendar.Calendar(element, {
+            initialView: calendarView,
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: expanded ? 'dayGridMonth,dayGridWeek,dayGridDay' : ''
+            },
+            buttonText: { month: 'Month', week: 'Week', day: 'Day' },
+            height: 'auto',
+            contentHeight: 'auto',
+            expandRows: false,
+            fixedWeekCount: false,
+            dayMaxEvents: expanded ? 3 : 2,
+            eventDisplay: 'block',
+            events: '/api/csmatches/calendar',
+            loading(isLoading) {
+                $(element).toggleClass('is-calendar-loading', isLoading);
+            },
+            datesSet(info) {
+                if (expanded && info.view.type !== calendarView) {
+                    calendarView = info.view.type;
+                    calendarViewSelect.val(calendarView);
+                    dashboardCalendar?.changeView(calendarView);
+                }
+            },
+            dateClick(info) {
+                showDayDetails(info.date, matchesForDay(info.view.calendar, info.date));
+            },
+            eventClick(info) {
+                const date = info.event.start || new Date();
+                showDayDetails(date, matchesForDay(info.view.calendar, date));
+            }
+        });
+    }
+
+    function setCalendarView(view) {
+        calendarView = ['dayGridMonth', 'dayGridWeek', 'dayGridDay'].includes(view) ? view : 'dayGridMonth';
+        calendarViewSelect.val(calendarView);
+        dashboardCalendar?.changeView(calendarView);
+        expandedCalendar?.changeView(calendarView);
+    }
+
+    const calendarElement = document.getElementById('dashboardCalendar');
+    dashboardCalendar = buildCalendar(calendarElement, false);
+    dashboardCalendar?.render();
+
+    calendarViewSelect.on('change', function () {
+        setCalendarView(this.value);
+    });
+
+    $('#expandCalendar').on('click', () => {
+        if (dashboardCalendar && expandedCalendar) {
+            expandedCalendar.gotoDate(dashboardCalendar.getDate());
+            expandedCalendar.changeView(calendarView);
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('dashboardCalendarModal')).show();
+    });
+
+    document.getElementById('dashboardCalendarModal')?.addEventListener('shown.bs.modal', function () {
+        const target = document.getElementById('expandedDashboardCalendar');
+        if (!expandedCalendar) {
+            expandedCalendar = buildCalendar(target, true);
+            expandedCalendar.render();
+            window.personalToolsMotion?.reveal(target.querySelectorAll('.fc-header-toolbar, .fc-view-harness'), { fromY: 10, duration: 300 });
+        }
+
+        if (dashboardCalendar) expandedCalendar.gotoDate(dashboardCalendar.getDate());
+        expandedCalendar.changeView(calendarView);
+        expandedCalendar.updateSize();
+    });
     const widgetGrid=document.querySelector('.dashboard-widget-grid');
     if(widgetGrid){
         $.getJSON('/api/dashboard/widget-order').always(order=>{

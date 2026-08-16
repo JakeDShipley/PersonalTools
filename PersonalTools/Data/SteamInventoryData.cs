@@ -1,5 +1,8 @@
 using System.Text.Json;
+using System.Net;
+using System.Text;
 using System.Xml.Linq;
+using HtmlAgilityPack;
 using Microsoft.Extensions.Caching.Memory;
 using PersonalTools.Entities;
 
@@ -144,15 +147,22 @@ public sealed class SteamInventoryData : ISteamInventoryData
 
     private static SteamInventoryItem MapItem(JsonElement asset, JsonElement description)
     {
-        List<string> details = [];
+        List<string> detailsHtml = [];
         if (description.TryGetProperty("descriptions", out JsonElement lines))
-            details.AddRange(lines.EnumerateArray().Select(line => line.TryGetProperty("value", out JsonElement value) ? value.GetString() : null).Where(value => !string.IsNullOrWhiteSpace(value)).Cast<string>().Take(8));
+        {
+            detailsHtml.AddRange(lines.EnumerateArray()
+                .Select(line => line.TryGetProperty("value", out JsonElement value) ? SanitiseDescriptionHtml(value.GetString()) : string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Take(8));
+        }
 
-        string quality = string.Empty;
+        string rarity = string.Empty;
         if (description.TryGetProperty("tags", out JsonElement tags))
         {
-            JsonElement tag = tags.EnumerateArray().FirstOrDefault(item => item.TryGetProperty("category", out JsonElement category) && category.GetString() == "Quality");
-            if (tag.ValueKind != JsonValueKind.Undefined && tag.TryGetProperty("localized_tag_name", out JsonElement value)) quality = value.GetString() ?? string.Empty;
+            // Steam's Quality tag identifies the item variant (for example StatTrak™), while
+            // players expect this field to be the actual CS rarity: Covert, Mil-Spec and so on.
+            JsonElement tag = tags.EnumerateArray().FirstOrDefault(item => item.TryGetProperty("category", out JsonElement category) && category.GetString() == "Rarity");
+            if (tag.ValueKind != JsonValueKind.Undefined && tag.TryGetProperty("localized_tag_name", out JsonElement value)) rarity = value.GetString() ?? string.Empty;
         }
         string inspect = description.TryGetProperty("actions", out JsonElement actions)
             ? actions.EnumerateArray().Select(action => action.TryGetProperty("link", out JsonElement link) ? link.GetString() : null).FirstOrDefault(link => link?.Contains("steam://rungame", StringComparison.OrdinalIgnoreCase) == true) ?? string.Empty
@@ -165,14 +175,60 @@ public sealed class SteamInventoryData : ISteamInventoryData
             Name = description.GetProperty("name").GetString() ?? "Unknown item",
             MarketHashName = description.TryGetProperty("market_hash_name", out JsonElement market) ? market.GetString() ?? string.Empty : string.Empty,
             Type = description.TryGetProperty("type", out JsonElement type) ? type.GetString() ?? string.Empty : string.Empty,
-            Quality = quality,
+            Rarity = rarity,
             IconUrl = description.TryGetProperty("icon_url_large", out JsonElement large) ? ImageBase + large.GetString() : ImageBase + description.GetProperty("icon_url").GetString(),
             InspectLink = inspect,
             Amount = int.TryParse(asset.GetProperty("amount").GetString(), out int amount) ? amount : 1,
             Tradable = description.TryGetProperty("tradable", out JsonElement tradable) && tradable.GetInt32() == 1,
             Marketable = description.TryGetProperty("marketable", out JsonElement marketable) && marketable.GetInt32() == 1,
-            Details = details
+            DetailsHtml = detailsHtml
         };
+    }
+
+    /// <summary>
+    /// Steam description values are HTML fragments. Preserve the useful presentation around
+    /// stickers and line breaks, but deliberately discard links, images, attributes and every
+    /// other tag so upstream content can never become executable markup in the application.
+    /// </summary>
+    private static string SanitiseDescriptionHtml(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+        HtmlDocument document = new();
+        document.LoadHtml(value);
+        StringBuilder output = new();
+        AppendSafeDescriptionNodes(document.DocumentNode.ChildNodes, output);
+        return output.ToString().Trim();
+    }
+
+    private static void AppendSafeDescriptionNodes(HtmlNodeCollection nodes, StringBuilder output)
+    {
+        foreach (HtmlNode node in nodes)
+        {
+            if (node.NodeType == HtmlNodeType.Text)
+            {
+                output.Append(WebUtility.HtmlEncode(HtmlEntity.DeEntitize(node.InnerText)));
+                continue;
+            }
+
+            string name = node.Name.ToLowerInvariant();
+            if (name == "br")
+            {
+                output.Append("<br>");
+                continue;
+            }
+
+            string? tag = name switch
+            {
+                "b" or "strong" => "strong",
+                "i" or "em" => "em",
+                _ => null
+            };
+
+            if (tag is not null) output.Append('<').Append(tag).Append('>');
+            AppendSafeDescriptionNodes(node.ChildNodes, output);
+            if (tag is not null) output.Append("</").Append(tag).Append('>');
+        }
     }
 
     private async Task<string> GetStringWithPacing(Uri uri, CancellationToken cancellationToken)

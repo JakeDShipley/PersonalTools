@@ -230,8 +230,40 @@
     border-radius: var(--pt-control-radius) !important;
 }
 
+/* Tactical owns the complete geometry, not just the colour palette. Bootstrap cards, result
+   containers and modals all become deliberately square so mixed rounded edges cannot leak in. */
+:root[data-app-theme="tactical"] .card,
+:root[data-app-theme="tactical"] .card-header,
+:root[data-app-theme="tactical"] .card-footer,
+:root[data-app-theme="tactical"] .table-responsive,
+:root[data-app-theme="tactical"] .accordion-item,
+:root[data-app-theme="tactical"] .list-group,
+:root[data-app-theme="tactical"] .list-group-item,
+:root[data-app-theme="tactical"] .alert,
+:root[data-app-theme="tactical"] .offcanvas,
+:root[data-app-theme="tactical"] .dropdown-menu,
+:root[data-app-theme="tactical"] .toast,
+:root[data-app-theme="tactical"] .cs-stats-empty,
+:root[data-app-theme="tactical"] .cs-stats-search-card,
+:root[data-app-theme="tactical"] .cs-stats-section-card,
+:root[data-app-theme="tactical"] .cs-rank-panel {
+    border-radius: 0 !important;
+}
+
+:root[data-app-theme="tactical"] .card > :first-child,
+:root[data-app-theme="tactical"] .card > :last-child,
+:root[data-app-theme="tactical"] .table-responsive > :first-child,
+:root[data-app-theme="tactical"] .table-responsive > :last-child {
+    border-radius: 0 !important;
+}
+
 :root[data-app-theme="tactical"] .app-sidebar-link.active {
     box-shadow: inset 3px 0 0 var(--pt-coral);
+}
+
+:root[data-app-theme="tactical"] .blits-sidebar-link::before,
+:root[data-app-theme="tactical"] .blits-sidebar-link::after {
+    border-radius: 0;
 }
 
 :root[data-app-theme="tactical"] .tool-card {

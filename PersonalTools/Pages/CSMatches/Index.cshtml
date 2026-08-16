@@ -1059,7 +1059,10 @@
             applyMatchView(view);
         });
 
-        applyMatchView(localStorage.getItem(VIEW_STORAGE_KEY) || 'list');
+        const savedMatchView = localStorage.getItem(VIEW_STORAGE_KEY);
+        // Preserve an explicit browser choice, but do not make a first-time mobile visitor
+        // pinch and scroll a dense table when the card layout is already available.
+        applyMatchView(savedMatchView || (window.matchMedia('(max-width: 767.98px)').matches ? 'cards' : 'list'));
 
         // #6 — Add New Map opened from within Add/Edit Match should return to that modal on close
         let csMatchOriginModalId = null;

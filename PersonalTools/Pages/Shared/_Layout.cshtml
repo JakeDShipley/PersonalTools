@@ -43,7 +43,7 @@
         <div class="d-none" aria-hidden="true">@Html.AntiForgeryToken()</div>
     }
     <div id="appToastMessages" data-success-message="@successToastMessage" data-error-message="@errorToastMessage" hidden></div>
-    <div class="toast-container position-fixed top-0 end-0 p-3 app-toast-container" id="appToastContainer" aria-label="Notifications"></div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3 app-toast-container" id="appToastContainer" aria-label="Notifications"></div>
 
     <div class="app-loader-overlay" id="appLoader" aria-hidden="true">
         <div class="app-loader-card" role="status" aria-live="polite" aria-atomic="true">
@@ -97,8 +97,8 @@
                         <a class="app-sidebar-link @ActivePage("/Inventory")" asp-page="/Inventory/Index" title="Steam Inventory">
                             <span class="app-nav-icon"><i class="fa-brands fa-steam"></i></span><span class="sidebar-label">Steam Inventory</span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/CSStats")" asp-page="/CSStats/Index" title="CS2 Player Stats">
-                            <span class="app-nav-icon"><i class="fa-solid fa-chart-simple"></i></span><span class="sidebar-label">CS2 Player Stats</span>
+                        <a class="app-sidebar-link cs-stats-sidebar-link @ActivePage("/CSStats")" asp-page="/CSStats/Index" title="CS2 Player Stats">
+                            <span class="app-nav-icon"><i class="fa-solid fa-chart-simple"></i></span><span class="sidebar-label">CS2 Player Stats</span><span class="cs-stats-nav-pulse" aria-hidden="true"></span>
                         </a>
                         <a class="app-sidebar-link @ActivePage("/Skins")" asp-page="/Skins/Index" title="CS2 Skin Tracker">
                             <span class="app-nav-icon"><i class="fa-solid fa-gun"></i></span><span class="sidebar-label">CS2 Skin Tracker</span>
@@ -124,7 +124,7 @@
                     <div class="app-nav-group app-nav-group-blits">
                         <span class="app-nav-heading sidebar-label">Blits</span>
                         <a class="app-sidebar-link blits-sidebar-link @ActivePage("/CSMatches")" asp-page="/CSMatches/Index" title="CS Match Tracker">
-                            <span class="app-nav-icon"><i class="fa-solid fa-crosshairs"></i></span><span class="sidebar-label">CS Match Tracker</span>
+                            <span class="app-nav-icon"><i class="fa-solid fa-crosshairs"></i></span><span class="sidebar-label">CS Match Tracker</span><span class="blits-nav-scan" aria-hidden="true"></span>
                         </a>
                     </div>
 

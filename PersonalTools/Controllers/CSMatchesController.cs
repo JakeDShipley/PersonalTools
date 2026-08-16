@@ -151,6 +151,23 @@ public sealed class CSMatchesController : ControllerBase
         List<string>? maps = activeDutyOnly ? await _referenceData.GetActiveDutyPool() : null;
         return Ok(await _matches.GetStats(UserId, profileId, gameTypes, maps));
     }
+
+    /// <summary>
+    /// FullCalendar supplies its visible start/end dates. Returning only that range keeps the
+    /// dashboard responsive even after a user has built up a substantial match history.
+    /// </summary>
+    [HttpGet("calendar")]
+    public async Task<ActionResult<List<CSMatchCalendarEventObj>>> GetCalendarEvents([FromQuery] DateTime start, [FromQuery] DateTime end)
+    {
+        try
+        {
+            return Ok(await _matches.GetCalendarEvents(UserId, start, end));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
+    }
 }
 
 public sealed record CSMatchRequest(string StartSide, string MapName, string GameType, int TeamScore, int OpponentScore, int? OvertimeCount)

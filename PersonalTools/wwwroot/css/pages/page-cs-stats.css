@@ -191,7 +191,27 @@
     display: flex;
     gap: 1rem;
     margin-bottom: 1.25rem;
+    overflow: hidden;
     padding: .15rem 0 1.25rem;
+    position: relative;
+}
+
+/* Positioned and animated by page-cs-stats.js only after a profile has loaded. It gives the
+   profile reveal a brief telemetry-pass feeling without creating permanent page motion. */
+.cs-profile-scan {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, #6c8cff 72%, transparent), transparent);
+    height: 1px;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 12%;
+    z-index: 3;
+}
+
+:root[data-app-theme="tactical"] .cs-profile-scan {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--pt-coral) 78%, transparent), transparent);
 }
 
 .cs-profile-avatar {
@@ -387,10 +407,10 @@
 }
 
 .cs-rank-panel {
-    background: #111214;
-    border: 1px solid #2d3035;
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
     border-radius: .8rem;
-    color: #f5f5f6;
+    color: var(--pt-ink);
     height: 100%;
     min-height: 12.25rem;
     overflow: hidden;
@@ -400,7 +420,7 @@
 
 .cs-rank-brand {
     align-items: center;
-    color: #f5f5f6;
+    color: var(--pt-ink);
     display: flex;
     gap: .5rem;
     min-height: 1.7rem;
@@ -420,7 +440,7 @@
 }
 
 .cs-rank-brand > span {
-    color: #92969e;
+    color: var(--pt-ink-soft);
     font-size: .65rem;
     margin-left: auto;
 }
@@ -428,7 +448,7 @@
 .cs-premier-panel {
     --premier-accent: #808287;
     --premier-accent-deep: #494b50;
-    background: linear-gradient(120deg, #18191c 0%, #111214 75%);
+    background: linear-gradient(120deg, color-mix(in srgb, var(--premier-accent) 8%, var(--pt-canvas)) 0%, var(--pt-surface) 75%);
 }
 
 .cs-premier-panel::before {
@@ -452,7 +472,7 @@
 .cs-premier-rating {
     align-items: center;
     display: flex;
-    height: 4rem;
+    height: 4.35rem;
     margin-top: 1.3rem;
     position: relative;
 }
@@ -461,7 +481,7 @@
     display: grid;
     gap: 2px;
     grid-template-columns: repeat(3, 4px);
-    height: 3.5rem;
+    height: 3.8rem;
     margin-right: -2px;
     padding: 3px 0;
     position: relative;
@@ -480,16 +500,16 @@
 
 .cs-premier-rating-plate {
     align-items: center;
-    background: linear-gradient(104deg, color-mix(in srgb, var(--premier-accent) 28%, #5e5f65) 0%, #393a3e 47%, #25262a 100%);
-    border-bottom: 1px solid rgba(255, 255, 255, .14);
-    border-top: 1px solid color-mix(in srgb, #fff 24%, var(--premier-accent));
-    box-shadow: .35rem .45rem .8rem rgba(0, 0, 0, .28), inset .5rem 0 0 var(--premier-accent-deep);
-    clip-path: polygon(0 0, 100% 0, 87% 100%, 0 100%);
+    background: linear-gradient(104deg, color-mix(in srgb, var(--premier-accent) 29%, var(--pt-canvas)) 0%, color-mix(in srgb, var(--premier-accent-deep) 24%, var(--pt-surface)) 47%, var(--pt-canvas) 100%);
+    border-bottom: 1px solid var(--pt-line);
+    border-top: 1px solid color-mix(in srgb, var(--pt-surface) 38%, var(--premier-accent));
+    box-shadow: .35rem .45rem .8rem color-mix(in srgb, var(--pt-ink) 20%, transparent), inset .6rem 0 0 var(--premier-accent-deep);
+    clip-path: polygon(9% 0, 100% 0, 87% 100%, 0 100%);
     display: flex;
-    height: 3.5rem;
+    height: 3.8rem;
     justify-content: center;
     min-width: 11.75rem;
-    padding: 0 1.4rem 0 1.15rem;
+    padding: 0 1.5rem 0 1.7rem;
     position: relative;
 }
 
@@ -504,7 +524,7 @@
 
 .cs-premier-rating-plate strong {
     color: color-mix(in srgb, #fff 24%, var(--premier-accent));
-    font-size: 1.45rem;
+    font-size: clamp(1.65rem, 2.1vw, 2rem);
     font-style: italic;
     font-weight: 850;
     letter-spacing: -.055em;
@@ -513,9 +533,28 @@
     z-index: 1;
 }
 
+/* The diagonal plate and the rail pack now share their leading angle, instead of a vertical
+   seam between them. The overlap is decorative only and cannot affect the rating text. */
+.cs-premier-rating-plate::before {
+    background: linear-gradient(180deg, color-mix(in srgb, #fff 62%, var(--premier-accent)), var(--premier-accent));
+    clip-path: polygon(38% 0, 100% 0, 62% 100%, 0 100%);
+    content: "";
+    height: 100%;
+    left: 0;
+    opacity: .88;
+    position: absolute;
+    top: 0;
+    width: .7rem;
+    z-index: 1;
+}
+
+.cs-premier-rating-plate strong {
+    z-index: 2;
+}
+
 .cs-rank-caption {
     align-items: center;
-    color: #a8abb1;
+    color: var(--pt-ink-soft);
     display: flex;
     font-size: .68rem;
     gap: .4rem;
@@ -530,7 +569,7 @@
 }
 
 .cs-faceit-panel {
-    background: radial-gradient(circle at 50% 45%, rgba(255, 85, 0, .13), transparent 40%), #111214;
+    background: radial-gradient(circle at 50% 45%, rgba(255, 85, 0, .13), transparent 40%), var(--pt-surface);
 }
 
 .cs-faceit-rank,
@@ -556,14 +595,14 @@
 
 .cs-faceit-rank span,
 .cs-competitive-rank-main span {
-    color: #9ca0a8;
+    color: var(--pt-ink-soft);
     display: block;
     font-size: .7rem;
     margin-top: .18rem;
 }
 
 .cs-competitive-panel {
-    background: radial-gradient(circle at 40% 50%, rgba(250, 172, 25, .11), transparent 44%), #111214;
+    background: radial-gradient(circle at 40% 50%, rgba(250, 172, 25, .11), transparent 44%), var(--pt-surface);
 }
 
 .cs-competitive-rank-main > img {
@@ -574,7 +613,7 @@
 
 .cs-rank-empty {
     align-items: center;
-    border: 1px dashed #4a4d53;
+    border: 1px dashed var(--pt-line);
     border-radius: 50%;
     display: flex !important;
     font-size: 1.5rem !important;

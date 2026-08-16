@@ -6,6 +6,7 @@ namespace PersonalTools.Data.CSMatches;
 public interface IMatchesData
 {
     Task<List<CSMatchDbModel>> GetMatches(Guid userId, Guid? profileId);
+    Task<List<CSMatchDbModel>> GetMatchesForCalendar(Guid userId, DateTime startUtc, DateTime endUtc);
     Task CreateMatch(Guid userId, Guid? profileId, CSMatchDbModel match);
     Task UpdateMatch(Guid userId, Guid matchId, CSMatchDbModel match);
     Task DeleteMatch(Guid userId, Guid matchId);
@@ -23,6 +24,16 @@ public sealed class MatchesData : IMatchesData
     /// </summary>
     public Task<List<CSMatchDbModel>> GetMatches(Guid userId, Guid? profileId) =>
         _database.GetBulkDataSP("sp_cs_matches_get", ReadDbModel, Parameters(("p_user_id", userId), ("p_profile_id", ProfileParam(profileId))));
+
+    /// <summary>
+    /// Reads every profile's matches inside FullCalendar's visible range. Restricting this at
+    /// the stored procedure avoids loading a user's complete history for every navigation click.
+    /// </summary>
+    public Task<List<CSMatchDbModel>> GetMatchesForCalendar(Guid userId, DateTime startUtc, DateTime endUtc) =>
+        _database.GetBulkDataSP("sp_cs_matches_get_range", ReadDbModel, Parameters(
+            ("p_user_id", userId),
+            ("p_start_utc", startUtc),
+            ("p_end_utc", endUtc)));
 
     public async Task CreateMatch(Guid userId, Guid? profileId, CSMatchDbModel match) =>
         await _database.ExecuteSP("sp_cs_matches_create", Parameters(

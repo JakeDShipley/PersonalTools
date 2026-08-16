@@ -256,7 +256,8 @@
             ),
             $('<div>', { class: 'ms-lg-auto d-flex flex-column align-items-lg-end gap-2' }).append(
                 $('<span>', { class: `badge rounded-pill ${profile.privacyMode === 'private' ? 'text-bg-secondary' : 'text-bg-success'}`, text: profile.privacyMode === 'private' ? 'Private data' : 'Public data' }), reportCountBadge(profile.reportCount || 0)
-            )
+            ),
+            $('<span>', { class: 'cs-profile-scan', 'aria-hidden': 'true' })
         );
 
         const $ranks = $('<div>', { class: 'row g-3 mb-4' }).append(
@@ -320,6 +321,41 @@
 
         $pane.empty().append($header, $ranks, $overview, accountStandingCard(profile.accountStanding), $competitiveMaps, $('<div>', { class: 'row g-3' }).append($('<div>', { class: 'col-12 col-xl-5' }).append($ratings), $('<div>', { class: 'col-12 col-xl-7' }).append($metrics)));
         $pane.find('[data-bs-toggle="tooltip"]').each(function () { bootstrap.Tooltip.getOrCreateInstance(this); });
+        animateProfileTelemetry($pane);
+    }
+
+    function animateProfileTelemetry($pane) {
+        if (!window.personalToolsMotion?.available() || !window.anime?.animate) {
+            return;
+        }
+
+        // This is intentionally tied to new profile content, rather than hover or a timer. It
+        // helps a user orient themselves as a potentially large set of player data arrives.
+        window.personalToolsMotion.reveal(
+            $pane.find('.cs-profile-header, .cs-rank-panel, .cs-confidence-card, .cs-summary-card, .cs-standing-card, .cs-stats-section-card').toArray(),
+            { fromY: 8, fromScale: .99, delay: 28, duration: 320 }
+        );
+
+        const { animate } = window.anime;
+        const $scan = $pane.find('.cs-profile-scan');
+        animate($scan.get(0), {
+            opacity: [0, .8, 0],
+            top: ['12%', '88%'],
+            duration: 640,
+            ease: 'out(3)'
+        });
+
+        const bars = $pane.find('.cs-rating-row .progress-bar').toArray();
+        bars.forEach((bar, index) => {
+            const targetWidth = bar.style.width;
+            bar.style.width = '0%';
+            animate(bar, {
+                width: targetWidth,
+                delay: index * 55,
+                duration: 460,
+                ease: 'out(4)'
+            });
+        });
     }
 
     function activateTab(steam64Id) {
