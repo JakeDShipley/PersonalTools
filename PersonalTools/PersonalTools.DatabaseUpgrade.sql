@@ -17,7 +17,25 @@ CREATE TABLE IF NOT EXISTS CSMatchProfiles (
 
 ALTER TABLE CSMatches ADD COLUMN IF NOT EXISTS ProfileId CHAR(36) NULL AFTER UserId;
 ALTER TABLE CSMatches ADD INDEX IF NOT EXISTS IX_CSMatches_UserId_ProfileId (UserId, ProfileId);
-ALTER TABLE CSMatches DROP INDEX IF EXISTS UX_CSMatches_UserId_LeetifyMatchId;
+
+-- Remove every historical unique index involving LeetifyMatchId, regardless of
+-- the name used when it was created, before adding the correctly scoped index.
+SELECT GROUP_CONCAT(CONCAT('DROP INDEX `', REPLACE(IndexName, '`', '``'), '`') SEPARATOR ', ')
+INTO @LeetifyIndexDrops
+FROM (
+    SELECT DISTINCT INDEX_NAME AS IndexName
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'CSMatches'
+      AND COLUMN_NAME = 'LeetifyMatchId'
+      AND NON_UNIQUE = 0
+      AND INDEX_NAME <> 'PRIMARY'
+) AS ExistingLeetifyIndexes;
+SET @LeetifyIndexSql = IFNULL(CONCAT('ALTER TABLE CSMatches ', @LeetifyIndexDrops), 'SELECT 1');
+PREPARE LeetifyIndexStatement FROM @LeetifyIndexSql;
+EXECUTE LeetifyIndexStatement;
+DEALLOCATE PREPARE LeetifyIndexStatement;
+
 ALTER TABLE CSMatches ADD UNIQUE INDEX IF NOT EXISTS UX_CSMatches_UserId_ProfileId_LeetifyMatchId (UserId, ProfileId, LeetifyMatchId);
 
 CREATE TABLE IF NOT EXISTS CSActiveDutyMaps (
