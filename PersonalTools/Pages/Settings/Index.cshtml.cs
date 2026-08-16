@@ -5,6 +5,7 @@ using PersonalTools.Classes;
 using PersonalTools.Entities;
 using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
+using PersonalTools.Classes.Tracker;
 
 namespace PersonalTools.Pages.Settings;
 
@@ -14,17 +15,20 @@ public sealed class IndexModel : PageModel
     private readonly ICSMatchReferenceData _referenceData;
     private readonly IMapPoolSuggestionFuncs _mapPoolSuggestion;
     private readonly IAppSettingsFuncs _settings;
+    private readonly ITrackerFuncs _tracker;
 
     public IndexModel(
         IAuthFuncs auth,
         ICSMatchReferenceData referenceData,
         IMapPoolSuggestionFuncs mapPoolSuggestion,
-        IAppSettingsFuncs settings)
+        IAppSettingsFuncs settings,
+        ITrackerFuncs tracker)
     {
         _auth = auth;
         _referenceData = referenceData;
         _mapPoolSuggestion = mapPoolSuggestion;
         _settings = settings;
+        _tracker = tracker;
     }
 
     public string? LinkedSteamId { get; private set; }
@@ -32,6 +36,7 @@ public sealed class IndexModel : PageModel
     public List<string> ActiveDutyPool { get; private set; } = [];
     public List<string>? PendingMapPoolSuggestion { get; private set; }
     public List<AppSettingView> Settings { get; private set; } = [];
+    public int TrackerAutoCloseAfterDays { get; private set; }
 
     [BindProperty(SupportsGet = true)]
     public bool SteamRequired { get; set; }
@@ -48,6 +53,7 @@ public sealed class IndexModel : PageModel
         ActiveDutyPool = await _referenceData.GetActiveDutyPool();
         PendingMapPoolSuggestion = await _mapPoolSuggestion.GetPendingSuggestion();
         Settings = await _settings.Get(UserId);
+        TrackerAutoCloseAfterDays = (await _tracker.GetSettings()).AutoCloseAfterDays;
     }
 
     public async Task<IActionResult> OnPostUnlinkSteam()

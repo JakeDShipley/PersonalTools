@@ -7,6 +7,7 @@
 @section Head {
     <link rel="stylesheet" href="~/css/pages/page-dashboard.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/page-dashboard-calendar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tracker.css" asp-append-version="true" />
 }
 
 <div class="container px-3 px-lg-4">
@@ -49,6 +50,25 @@
         }
     </div>
 
+    <section class="trk-page trk-dashboard-section" aria-labelledby="trackerDashboardTitle">
+        <div class="trk-dashboard-head">
+            <span class="dashboard-tool-group-icon"><i class="fa-solid fa-bug" aria-hidden="true"></i></span>
+            <h2 class="h6 mb-0" id="trackerDashboardTitle">Bug/Feature Tracker</h2>
+            <span class="badge rounded-pill text-bg-light" id="trackerDashboardCount">0</span>
+            <div class="trk-dashboard-actions">
+                <div class="trk-scope-toggle" role="group" aria-label="Show">
+                    <button type="button" class="trk-scope-btn js-dashboard-scope" data-scope="all">All</button>
+                    <button type="button" class="trk-scope-btn js-dashboard-scope" data-scope="mine">Assigned to me</button>
+                </div>
+                <a class="trk-view-all" asp-page="/Tracker/Index">View all<i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#trackerItemModal">
+                    <i class="fa-solid fa-plus me-1"></i>Add item
+                </button>
+            </div>
+        </div>
+        <div class="trk-board" id="trackerDashboardBoard"></div>
+    </section>
+
     <aside class="quick-links-float" aria-label="Quick links">
         <div class="collapse collapse-horizontal quick-links-panel-collapse" id="quickLinksPanel">
             <section class="quick-links-panel card border-0 shadow-sm">
@@ -79,7 +99,10 @@
 
 <div class="modal fade" id="quickLinkModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><form id="quickLinkForm"><div class="modal-header"><h2 class="modal-title h5" id="quickLinkModalTitle">Add quick link</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input id="quickLinkId" type="hidden" /><div class="mb-3"><label class="form-label" for="quickLinkTitle">Title</label><input id="quickLinkTitle" class="form-control" maxlength="100" required /></div><div class="mb-3"><label class="form-label" for="quickLinkUrl">Website address</label><input id="quickLinkUrl" class="form-control" placeholder="https://example.com" required /></div><div><label class="form-label" for="quickLinkIcon">Font Awesome icon <span class="small-muted">(optional)</span></label><input id="quickLinkIcon" class="form-control" placeholder="fa-solid fa-star" maxlength="100" /></div><div id="quickLinkError" class="alert alert-danger d-none mt-3 mb-0"></div></div><div class="modal-footer"><button id="deleteQuickLink" class="btn btn-outline-danger me-auto d-none" type="button">Remove</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save link</button></div></form></div></div></div>
 
+@await Html.PartialAsync("_TrackerModals")
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
     <script src="~/js/pages/page-dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/tracker.js" asp-append-version="true"></script>
 }

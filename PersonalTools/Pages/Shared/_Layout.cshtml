@@ -37,7 +37,7 @@
     @await RenderSectionAsync("Head", required: false)
     <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
 </head>
-<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)">
+<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)" data-user-id="@(showNavigation ? User.FindFirstValue(ClaimTypes.NameIdentifier) : string.Empty)">
     @if (showNavigation)
     {
         <div class="d-none" aria-hidden="true">@Html.AntiForgeryToken()</div>
@@ -135,6 +135,9 @@
                         </a>
                         <a class="app-sidebar-link @ActivePage("/Monitoring/Database")" asp-page="/Monitoring/Database/Index" title="Database Monitor">
                             <span class="app-nav-icon"><i class="fa-solid fa-database"></i></span><span class="sidebar-label">Database Monitor</span>
+                        </a>
+                        <a class="app-sidebar-link @ActivePage("/Tracker")" asp-page="/Tracker/Index" title="Bug/Feature Tracker">
+                            <span class="app-nav-icon"><i class="fa-solid fa-bug"></i></span><span class="sidebar-label">Bug/Feature Tracker</span>
                         </a>
                         <span class="app-sidebar-link is-disabled" title="Logs Viewer — coming soon" aria-disabled="true">
                             <span class="app-nav-icon"><i class="fa-solid fa-file-lines"></i></span><span class="sidebar-label">Logs Viewer <span class="app-nav-soon">Soon</span></span>
