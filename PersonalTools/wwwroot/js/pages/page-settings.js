@@ -11,12 +11,16 @@
             contentType: 'application/json',
             data: JSON.stringify({ key: key, value: value }),
             headers: { RequestVerificationToken: antiForgeryToken() },
+            successToast: 'Setting saved.',
             showLoader: true,
             loaderTitle: 'Saving setting',
             loaderMessage: 'Applying your preference…'
         })
-            .done(function () { $item.addClass('is-saved'); window.personalToolsToast.success('Setting saved.'); window.setTimeout(() => $item.removeClass('is-saved'), 650); })
-            .fail(function (xhr) { window.personalToolsToast.error(xhr.responseJSON?.message || 'This setting could not be saved.'); });
+            .done(function () {
+                window.personalToolsAppearance?.applySetting(key, value);
+                $item.addClass('is-saved');
+                window.setTimeout(() => $item.removeClass('is-saved'), 650);
+            });
     }
     $('.settings-item select').on('change', function () { save($(this).closest('.settings-item'), $(this).val()); });
     $('.settings-item input[type="checkbox"]').on('change', function () { save($(this).closest('.settings-item'), this.checked ? 'true' : 'false'); });

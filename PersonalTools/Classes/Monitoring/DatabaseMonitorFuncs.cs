@@ -11,7 +11,6 @@ public interface IDatabaseMonitorFuncs
 
 public sealed class DatabaseMonitorFuncs : IDatabaseMonitorFuncs
 {
-    private const int RequiredStructureCount = 12;
     private readonly IDatabaseMonitorData _data;
     private readonly ILogger<DatabaseMonitorFuncs> _logger;
     private readonly IMemoryCache _cache;
@@ -45,7 +44,8 @@ public sealed class DatabaseMonitorFuncs : IDatabaseMonitorFuncs
             double connectionErrorPercent = Percent(reading.AbortedConnects, reading.Questions + reading.AbortedConnects);
             double queriesPerSecond = reading.UptimeSeconds > 0 ? Math.Round(reading.Questions / (double)reading.UptimeSeconds, 2) : 0;
 
-            bool structuresReady = reading.RequiredStructuresAvailable == RequiredStructureCount;
+            bool structuresReady = reading.RequiredStructuresTotal > 0
+                && reading.RequiredStructuresAvailable >= reading.RequiredStructuresTotal;
             string health = !structuresReady || connectionUsage >= 90 || reading.ResponseTimeMs >= 1000
                 ? "Critical"
                 : connectionUsage >= 70 || reading.ResponseTimeMs >= 350 || slowQueryPercent >= 2
@@ -73,7 +73,7 @@ public sealed class DatabaseMonitorFuncs : IDatabaseMonitorFuncs
                 ConnectionErrorPercent = connectionErrorPercent,
                 UptimeSeconds = reading.UptimeSeconds,
                 RequiredStructuresAvailable = reading.RequiredStructuresAvailable,
-                RequiredStructuresTotal = RequiredStructureCount
+                RequiredStructuresTotal = reading.RequiredStructuresTotal
             };
         }
         catch (Exception exception)

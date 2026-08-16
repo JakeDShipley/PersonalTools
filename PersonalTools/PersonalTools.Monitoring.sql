@@ -14,7 +14,8 @@ BEGIN
         CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='QUESTIONS'),0) AS UNSIGNED) AS Questions,
         CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='SLOW_QUERIES'),0) AS UNSIGNED) AS SlowQueries,
         CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='ABORTED_CONNECTS'),0) AS UNSIGNED) AS AbortedConnects,
-        (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins')) AS RequiredStructuresAvailable;
+        (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins','DashboardWidgetOrders','DashboardWeatherLocations','CSMatches','CSMatchProfiles','CSPlayerReports','AppSettings','CSActiveDutyMaps')) AS RequiredStructuresAvailable,
+        12 AS RequiredStructuresTotal;
 END$$
 
 DELIMITER ;

@@ -33,6 +33,8 @@ public sealed class AppSettingsFuncs : IAppSettingsFuncs
             await _data.Set(userId, key, _protector.Protect(clean), cancellationToken);
             return;
         }
+        if (key == AppSettingKey.AppearanceTheme && clean is not ("personal" or "tactical")) throw new InvalidOperationException("Choose a valid workspace theme.");
+        if (key == AppSettingKey.AppearanceMode && clean is not ("light" or "dark")) throw new InvalidOperationException("Choose a valid colour mode.");
         if (key == AppSettingKey.DashboardDefaultView && clean is not ("cards" or "list")) throw new InvalidOperationException("Choose a valid dashboard view.");
         if (key == AppSettingKey.DashboardMotion && clean is not ("true" or "false")) throw new InvalidOperationException("Choose a valid motion setting.");
         if (key == AppSettingKey.DashboardWeatherUnit && clean is not ("celsius" or "fahrenheit")) throw new InvalidOperationException("Choose a valid weather unit.");
@@ -46,5 +48,5 @@ public sealed class AppSettingsFuncs : IAppSettingsFuncs
         try { return _protector.Unprotect(protectedValue); }
         catch (CryptographicException) { return null; }
     }
-    private static string Default(AppSettingKey key) => key switch { AppSettingKey.DashboardDefaultView => "cards", AppSettingKey.DashboardMotion => "true", AppSettingKey.DashboardWeatherUnit => "celsius", _ => string.Empty };
+    private static string Default(AppSettingKey key) => key switch { AppSettingKey.AppearanceTheme => "personal", AppSettingKey.AppearanceMode => "light", AppSettingKey.DashboardDefaultView => "cards", AppSettingKey.DashboardMotion => "true", AppSettingKey.DashboardWeatherUnit => "celsius", _ => string.Empty };
 }

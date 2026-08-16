@@ -26,6 +26,7 @@ using PersonalTools.Hubs;
 using PersonalTools.Classes.CSStats;
 using PersonalTools.Data.CSStats;
 using System.Net.Http.Headers;
+using PersonalTools.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,7 @@ builder.Services.AddDataProtection()
     .SetApplicationName("PersonalTools");
 
 builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -191,6 +193,7 @@ if (!app.Environment.IsDevelopment())
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseMiddleware<ContentSecurityPolicyMiddleware>();
 
 app.UseRouting();
 

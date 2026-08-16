@@ -1,0 +1,62 @@
+.login-launch-sequence {
+    background: #b96b00;
+    inset: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity .1s linear;
+    visibility: hidden;
+    z-index: 2400;
+}
+
+.login-launch-sequence.is-active { opacity: 1; pointer-events: all; visibility: visible; }
+
+.login-launch-content {
+    align-items: center;
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 2rem;
+    position: absolute;
+}
+
+.login-launch-wordmark {
+    color: #050505;
+    display: flex;
+    font-family: "Arial Black", Arial, sans-serif;
+    font-size: clamp(2.7rem, 8.25vw, 9rem);
+    font-style: italic;
+    font-weight: 900;
+    justify-content: center;
+    letter-spacing: -.095em;
+    line-height: .86;
+    margin: 0;
+    max-width: 92vw;
+    text-transform: uppercase;
+    transform: skewX(-10deg);
+    white-space: nowrap;
+}
+
+.login-launch-wordmark > span { display: inline-flex; white-space: pre; }
+.login-launch-wordmark .launch-letter { display: inline-block; transform-origin: center bottom; }
+
+.login-launch-accent {
+    background: #050505;
+    height: clamp(.28rem, .55vw, .65rem);
+    position: absolute;
+    right: clamp(2rem, 10.5vw, 14rem);
+    top: clamp(2rem, 24vh, 12rem);
+    transform: skewX(-24deg);
+    transform-origin: right center;
+    width: clamp(4rem, 6.8vw, 8.4rem);
+}
+
+@media (max-width: 575.98px) {
+    .login-launch-wordmark { font-size: clamp(2.25rem, 11vw, 4.5rem); letter-spacing: -.11em; }
+    .login-launch-accent { right: 13vw; top: 28vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-launch-sequence { transition: none; }
+}

@@ -4,6 +4,73 @@
     const form = $('#loginForm');
     if (!form.length) return;
 
+    const launch = document.getElementById('loginLaunchSequence');
+    let launchStarted = false;
+    let launchStartedAt = 0;
+
+    function splitLaunchWordmark() {
+        launch?.querySelectorAll('[data-launch-word]').forEach((word) => {
+            if (word.dataset.split === 'true') return;
+            const text = word.textContent || '';
+            word.textContent = '';
+            [...text].forEach((character) => {
+                const letter = document.createElement('span');
+                letter.className = 'launch-letter';
+                letter.textContent = character;
+                word.appendChild(letter);
+            });
+            word.dataset.split = 'true';
+        });
+    }
+
+    function playLaunchSequence() {
+        if (!launch || launchStarted) return;
+        launchStarted = true;
+        launchStartedAt = Date.now();
+        launch.classList.add('is-active');
+        launch.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('login-launch-active');
+        splitLaunchWordmark();
+
+        if (window.personalToolsMotion?.reducedMotion() || !window.anime?.animate) return;
+
+        const { animate, stagger } = window.anime;
+        const letters = launch.querySelectorAll('.launch-letter');
+        const wordmark = launch.querySelector('.login-launch-wordmark');
+        const accent = launch.querySelector('.login-launch-accent');
+
+        animate(letters, {
+            opacity: { from: 0, to: 1 },
+            x: { from: 34, to: 0 },
+            scaleX: { from: .45, to: 1 },
+            delay: stagger(18, { start: 95 }),
+            duration: 420,
+            ease: 'out(5)'
+        });
+        animate(wordmark, {
+            opacity: { from: 0, to: 1 },
+            scale: { from: .96, to: 1 },
+            duration: 300,
+            ease: 'out(4)'
+        });
+        animate(accent, {
+            scaleX: { from: 0, to: 1 },
+            opacity: { from: 0, to: 1 },
+            delay: 230,
+            duration: 300,
+            ease: 'out(4)'
+        });
+    }
+
+    function clearLaunchSequence() {
+        if (!launchStarted) return;
+        launchStarted = false;
+        launchStartedAt = 0;
+        launch?.classList.remove('is-active');
+        launch?.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('login-launch-active');
+    }
+
     function runSplashSequence() {
         const card = document.getElementById('loginCard');
         const title = document.getElementById('loginSplashTitle');
@@ -68,6 +135,7 @@
 
         error.addClass('d-none').text('');
         button.prop('disabled', true).text('Signing in…');
+        playLaunchSequence();
 
         $.ajax({
             url: '/api/auth/login',
@@ -78,13 +146,18 @@
                 email: $('#Email').val(),
                 password: $('#Password').val(),
                 rememberMe: $('#RememberMe').is(':checked')
-            })
+            }),
+            showLoader: false,
+            showToast: false
         })
             .done(() => {
                 const returnUrl = $('#ReturnUrl').val();
-                window.location.assign(returnUrl || '/');
+                const minimumDuration = window.personalToolsMotion?.reducedMotion() ? 120 : 850;
+                const remaining = Math.max(0, minimumDuration - (Date.now() - launchStartedAt));
+                window.setTimeout(() => window.location.assign(returnUrl || '/'), remaining);
             })
             .fail((xhr) => {
+                clearLaunchSequence();
                 error.text(xhr.responseJSON?.message || 'Sign-in failed. Please try again.').removeClass('d-none');
             })
             .always(() => {

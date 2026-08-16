@@ -15,7 +15,7 @@
         }
 
         function show(input, fallbackType) {
-            if (!container || typeof bootstrap === 'undefined') return null;
+            if (!container) return null;
             const options = normalise(input, fallbackType);
             const type = types[options.type] ? options.type : 'info';
             const appearance = types[type];
@@ -53,14 +53,23 @@
             window.requestAnimationFrame(() => window.personalToolsMotion?.pop(element, { fromScale: .96, fromOpacity: 0 }));
 
             while (container.children.length > 4) container.firstElementChild?.remove();
-            const instance = bootstrap.Toast.getOrCreateInstance(element, {
-                animation: true,
-                autohide: options.autohide !== false,
-                delay: options.delay || (type === 'error' ? 6500 : 4300)
-            });
-            element.addEventListener('hidden.bs.toast', () => element.remove(), { once: true });
-            instance.show();
-            return instance;
+            const delay = options.delay || (type === 'error' ? 6500 : 4300);
+            if (typeof window.bootstrap?.Toast === 'function') {
+                const instance = window.bootstrap.Toast.getOrCreateInstance(element, {
+                    animation: true,
+                    autohide: options.autohide !== false,
+                    delay
+                });
+                element.addEventListener('hidden.bs.toast', () => element.remove(), { once: true });
+                instance.show();
+                return instance;
+            }
+
+            // Notifications remain usable if the Bootstrap JavaScript CDN is briefly unavailable.
+            element.classList.add('show');
+            close.addEventListener('click', () => element.remove(), { once: true });
+            if (options.autohide !== false) window.setTimeout(() => element.remove(), delay);
+            return element;
         }
 
         function queue(input, fallbackType) {
@@ -409,14 +418,13 @@
         window.setTimeout(() => row.remove(), 4000);
     }
 
-    const themeKey = 'personal-tools-theme';
-    const savedTheme = localStorage.getItem(themeKey);
-
-    function setTheme(theme) {
-        document.documentElement.dataset.theme = theme;
-        localStorage.setItem(themeKey, theme);
+    function setAppearance(theme, mode) {
+        const safeTheme = theme === 'tactical' ? 'tactical' : 'personal';
+        const safeMode = mode === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.appTheme = safeTheme;
+        document.documentElement.dataset.theme = safeMode;
         document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-            const dark = theme === 'dark';
+            const dark = safeMode === 'dark';
             const icon = button.querySelector('i');
             const label = button.querySelector('.theme-toggle-label');
             const hint = button.querySelector('.theme-toggle-hint');
@@ -431,13 +439,47 @@
         });
     }
 
-    setTheme(savedTheme || 'light');
+    function currentAppearance() {
+        return {
+            theme: document.documentElement.dataset.appTheme === 'tactical' ? 'tactical' : 'personal',
+            mode: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+        };
+    }
+
+    function saveAppearanceMode(mode, previous) {
+        return $.ajax({
+            url: '/api/settings',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ key: 'AppearanceMode', value: mode }),
+            headers: { RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val() },
+            showLoader: false,
+            showToast: false
+        }).fail(() => {
+            setAppearance(previous.theme, previous.mode);
+            window.personalToolsToast?.error('Your colour mode could not be saved.');
+        });
+    }
+
+    setAppearance(document.documentElement.dataset.appTheme, document.documentElement.dataset.theme);
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => button.addEventListener('click', () => {
-        const switchingToLight = document.documentElement.dataset.theme === 'dark';
-        setTheme(switchingToLight ? 'light' : 'dark');
+        const previous = currentAppearance();
+        const switchingToLight = previous.mode === 'dark';
+        const nextMode = switchingToLight ? 'light' : 'dark';
+        setAppearance(previous.theme, nextMode);
         window.personalToolsMotion?.pop(button, { fromScale: .78, fromOpacity: .45, duration: 300 });
         spawnKillfeedRow(switchingToLight ? FLASHBANG_ICON_SVG : HEADSHOT_ICON_SVG);
+        saveAppearanceMode(nextMode, previous);
     }));
+
+    window.personalToolsAppearance = {
+        applySetting(key, value) {
+            const current = currentAppearance();
+            if (key === 'AppearanceTheme') setAppearance(value, current.mode);
+            if (key === 'AppearanceMode') setAppearance(current.theme, value);
+        },
+        current: currentAppearance
+    };
     document.querySelectorAll('.app-sidebar-utilities [data-bs-toggle="tooltip"]').forEach(element => bootstrap.Tooltip.getOrCreateInstance(element));
 
     const sidebarKey = 'personal-tools-sidebar-collapsed';

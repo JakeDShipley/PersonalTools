@@ -17,6 +17,7 @@ public sealed record DatabaseMonitorReading(
     long SlowQueries,
     long AbortedConnects,
     int RequiredStructuresAvailable,
+    int RequiredStructuresTotal,
     double ResponseTimeMs);
 
 public sealed class DatabaseMonitorData : IDatabaseMonitorData
@@ -39,6 +40,7 @@ public sealed class DatabaseMonitorData : IDatabaseMonitorData
                 ReadInt64(reader, "SlowQueries"),
                 ReadInt64(reader, "AbortedConnects"),
                 Convert.ToInt32(reader["RequiredStructuresAvailable"]),
+                ReadInt32OrDefault(reader, "RequiredStructuresTotal", 12),
                 0),
             cancellationToken: cancellationToken);
 
@@ -47,4 +49,10 @@ public sealed class DatabaseMonitorData : IDatabaseMonitorData
     }
 
     private static long ReadInt64(MySqlDataReader reader, string name) => Convert.ToInt64(reader[name]);
+
+    private static int ReadInt32OrDefault(MySqlDataReader reader, string name, int fallback)
+    {
+        try { return Convert.ToInt32(reader[name]); }
+        catch (IndexOutOfRangeException) { return fallback; }
+    }
 }

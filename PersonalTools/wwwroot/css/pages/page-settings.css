@@ -3,6 +3,10 @@
 .settings-item { align-items: center; background: var(--pt-canvas); border: 1px solid var(--pt-line); border-radius: .8rem; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(13rem, 22rem); padding: 1rem; transition: border-color .2s ease, box-shadow .2s ease; }
 .settings-item.is-saved { border-color: var(--pt-mint); box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--pt-mint) 16%, transparent); }
 .settings-control { min-width: 0; }
+.theme-setting-preview { display: flex; gap: .4rem; margin-top: .55rem; }
+.theme-setting-preview span { border: 1px solid var(--pt-line); border-radius: .4rem; display: block; height: .55rem; overflow: hidden; width: 2.5rem; }
+.theme-setting-personal { background: linear-gradient(90deg, #182033 0 40%, #8fd0c2 40% 68%, #e76f51 68%); }
+.theme-setting-tactical { background: linear-gradient(90deg, #101114 0 54%, #f0aa1d 54%); }
 .settings-control .form-check { display: flex; justify-content: flex-end; }
 .settings-control .form-check-input { cursor: pointer; }
 .active-duty-map-tile { background: #10151c; border: 1px solid var(--pt-line); border-radius: .8rem; min-height: 8.8rem; overflow: hidden; position: relative; }

@@ -1,0 +1,161 @@
+/*
+   Personal Tools theme tokens.
+   New themes belong here: each theme defines the same semantic variables for its
+   light and dark modes, while page layout continues to use Bootstrap utilities.
+*/
+
+:root {
+    --pt-sidebar-width: 17.5rem;
+    --pt-sidebar-compact-width: 5.25rem;
+    --pt-focus-ring: color-mix(in srgb, var(--pt-mint) 55%, transparent);
+}
+
+:root[data-app-theme="personal"][data-theme="light"] {
+    --pt-ink: #182033;
+    --pt-ink-soft: #586178;
+    --pt-canvas: #f7f7f4;
+    --pt-surface: #ffffff;
+    --pt-line: #e4e6eb;
+    --pt-coral: #e76f51;
+    --pt-mint: #8fd0c2;
+    --bs-primary: #182033;
+    --bs-primary-rgb: 24, 32, 51;
+    --bs-body-bg: var(--pt-canvas);
+    --bs-body-color: var(--pt-ink);
+    --bs-border-color: var(--pt-line);
+    --app-muted: var(--pt-ink-soft);
+    color-scheme: light;
+}
+
+:root[data-app-theme="personal"][data-theme="dark"] {
+    --pt-ink: #edf0f7;
+    --pt-ink-soft: #aeb7c9;
+    --pt-canvas: #111726;
+    --pt-surface: #1a2234;
+    --pt-line: #2e3a52;
+    --pt-coral: #ff9a7e;
+    --pt-mint: #8fd0c2;
+    --bs-primary: #e9edf6;
+    --bs-primary-rgb: 233, 237, 246;
+    --bs-body-bg: var(--pt-canvas);
+    --bs-body-color: var(--pt-ink);
+    --bs-border-color: var(--pt-line);
+    --app-muted: var(--pt-ink-soft);
+    color-scheme: dark;
+}
+
+:root[data-app-theme="tactical"][data-theme="light"] {
+    --pt-ink: #111317;
+    --pt-ink-soft: #69707a;
+    --pt-canvas: #efeee9;
+    --pt-surface: #fbfaf6;
+    --pt-line: #d9d7d0;
+    --pt-coral: #d68a0b;
+    --pt-mint: #d69a24;
+    --bs-primary: #15171b;
+    --bs-primary-rgb: 21, 23, 27;
+    --bs-body-bg: var(--pt-canvas);
+    --bs-body-color: var(--pt-ink);
+    --bs-border-color: var(--pt-line);
+    --app-muted: var(--pt-ink-soft);
+    color-scheme: light;
+}
+
+:root[data-app-theme="tactical"][data-theme="dark"] {
+    --pt-ink: #f2f0e8;
+    --pt-ink-soft: #a8afb9;
+    --pt-canvas: #0c0d0f;
+    --pt-surface: #15171b;
+    --pt-line: #2a2e34;
+    --pt-coral: #f0aa1d;
+    --pt-mint: #e5a222;
+    --bs-primary: #f0aa1d;
+    --bs-primary-rgb: 240, 170, 29;
+    --bs-body-bg: var(--pt-canvas);
+    --bs-body-color: var(--pt-ink);
+    --bs-border-color: var(--pt-line);
+    --app-muted: var(--pt-ink-soft);
+    color-scheme: dark;
+}
+
+/* Tactical is deliberately a visual layer only: layout remains Bootstrap-led. */
+:root[data-app-theme="tactical"] .page-title,
+:root[data-app-theme="tactical"] .csm-page h1,
+:root[data-app-theme="tactical"] .settings-hero h2 {
+    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+    font-stretch: condensed;
+    letter-spacing: .015em;
+    text-transform: uppercase;
+}
+
+:root[data-app-theme="tactical"] .eyebrow,
+:root[data-app-theme="tactical"] .app-nav-heading {
+    color: var(--pt-coral);
+    font-weight: 800;
+}
+
+:root[data-app-theme="tactical"] .tool-card,
+:root[data-app-theme="tactical"] .settings-group,
+:root[data-app-theme="tactical"] .settings-hero,
+:root[data-app-theme="tactical"] .modal-content,
+:root[data-app-theme="tactical"] .monitor-status,
+:root[data-app-theme="tactical"] .monitor-panel,
+:root[data-app-theme="tactical"] .monitor-metric-card {
+    border-radius: .32rem !important;
+}
+
+:root[data-app-theme="tactical"] .btn-primary {
+    --bs-btn-bg: var(--pt-coral);
+    --bs-btn-border-color: var(--pt-coral);
+    --bs-btn-color: #101114;
+    --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+    --bs-btn-hover-color: #101114;
+    border-radius: .14rem;
+    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+}
+
+:root[data-app-theme="tactical"] .btn-outline-primary {
+    --bs-btn-color: var(--pt-coral);
+    --bs-btn-border-color: var(--pt-coral);
+    --bs-btn-hover-bg: var(--pt-coral);
+    --bs-btn-hover-border-color: var(--pt-coral);
+    --bs-btn-hover-color: #101114;
+    border-radius: .14rem;
+}
+
+:root[data-app-theme="tactical"] .app-sidebar,
+:root[data-app-theme="tactical"] .app-mobile-header {
+    background: color-mix(in srgb, var(--pt-surface) 98%, #000000);
+}
+
+:root[data-app-theme="tactical"] .app-sidebar-link.active,
+:root[data-app-theme="tactical"] .app-sidebar-link:hover {
+    border-color: color-mix(in srgb, var(--pt-coral) 58%, var(--pt-line));
+}
+
+:root[data-app-theme="tactical"] .brand-wordmark span,
+:root[data-app-theme="tactical"] .tool-card-link i {
+    color: var(--pt-coral);
+}
+
+:root[data-app-theme="tactical"] .brand-mark {
+    border-radius: .3rem;
+}
+
+:root[data-app-theme="tactical"] .settings-hero {
+    background: linear-gradient(115deg, color-mix(in srgb, var(--pt-coral) 12%, var(--pt-surface)), var(--pt-surface));
+}
+
+:root[data-app-theme="tactical"] .form-control:focus,
+:root[data-app-theme="tactical"] .form-select:focus {
+    border-color: var(--pt-coral);
+    box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
+}
+
+:root[data-app-theme="tactical"] .tooltip {
+    --bs-tooltip-bg: var(--pt-ink);
+    --bs-tooltip-color: var(--pt-surface);
+}

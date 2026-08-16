@@ -52,8 +52,9 @@ BEGIN
             SELECT COUNT(*)
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME IN ('Users', 'UserSessions', 'QuickLinks', 'Notes', 'TrackedSkins', 'DashboardWidgetOrders', 'DashboardWeatherLocations', 'CSMatches', 'CSPlayerReports', 'AppSettings', 'CSActiveDutyMaps')
-        ) AS RequiredStructuresAvailable;
+              AND TABLE_NAME IN ('Users', 'UserSessions', 'QuickLinks', 'Notes', 'TrackedSkins', 'DashboardWidgetOrders', 'DashboardWeatherLocations', 'CSMatches', 'CSMatchProfiles', 'CSPlayerReports', 'AppSettings', 'CSActiveDutyMaps')
+        ) AS RequiredStructuresAvailable,
+        12 AS RequiredStructuresTotal;
 END$$
 
 DELIMITER ;

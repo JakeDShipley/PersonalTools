@@ -36,7 +36,13 @@
                 {
                     <article class="settings-item" data-setting-key="@setting.Definition.Key" data-secret="@setting.Definition.IsServerSecret.ToString().ToLowerInvariant()"><div><h3 class="h6 mb-1">@setting.Definition.Name</h3><p class="small-muted mb-0">@setting.Definition.Description</p></div><div class="settings-control">
                     @if (setting.Definition.InputType == AppSettingInputType.Select)
-                    { <select class="form-select" aria-label="@setting.Definition.Name">@foreach (var option in setting.Definition.Options!) { <option value="@option.Value" selected="@(setting.Value == option.Value)">@option.Label</option> }</select> }
+                    {
+                        <select class="form-select" aria-label="@setting.Definition.Name">@foreach (var option in setting.Definition.Options!) { <option value="@option.Value" selected="@(setting.Value == option.Value)">@option.Label</option> }</select>
+                        @if (setting.Definition.Key == AppSettingKey.AppearanceTheme)
+                        {
+                            <div class="theme-setting-preview" aria-hidden="true"><span class="theme-setting-personal"></span><span class="theme-setting-tactical"></span></div>
+                        }
+                    }
                     else if (setting.Definition.InputType == AppSettingInputType.Switch)
                     { <div class="form-check form-switch"><input class="form-check-input pt-switch" type="checkbox" role="switch" checked="@(setting.Value == "true")" aria-label="@setting.Definition.Name" /></div> }
                     else

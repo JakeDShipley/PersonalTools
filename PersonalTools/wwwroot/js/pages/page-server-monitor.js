@@ -73,6 +73,7 @@ $(function () {
         }
 
         $('#monitorUnavailable').addClass('d-none');
+        markPollingHealthy();
         setHealth(snapshot.health, snapshot.summary);
         $('#monitorUpdated').text(formatTime(snapshot.capturedUtc));
         setPercentMetric('cpuUsagePercent', snapshot.cpuUsagePercent);
@@ -132,7 +133,7 @@ $(function () {
 
     function connectSignalR() {
         if (typeof signalR === 'undefined') {
-            setConnection('Polling', false);
+            setConnection('Polling', true);
             fallbackTimer = window.setInterval(loadSnapshot, 5000);
             return;
         }
@@ -141,8 +142,12 @@ $(function () {
         connection.on('monitoringPulse', scope => { if (scope === 'server') loadSnapshot(); });
         connection.onreconnecting(() => setConnection('Reconnecting', false));
         connection.onreconnected(() => setConnection('Live', true));
-        connection.onclose(() => { setConnection('Polling', false); if (!fallbackTimer) fallbackTimer = window.setInterval(loadSnapshot, 5000); });
-        connection.start().then(() => setConnection('Live', true)).catch(() => { setConnection('Polling', false); fallbackTimer = window.setInterval(loadSnapshot, 5000); });
+        connection.onclose(() => { setConnection('Polling', true); if (!fallbackTimer) fallbackTimer = window.setInterval(loadSnapshot, 5000); });
+        connection.start().then(() => setConnection('Live', true)).catch(() => { setConnection('Polling', true); fallbackTimer = window.setInterval(loadSnapshot, 5000); });
+    }
+
+    function markPollingHealthy() {
+        if ($connection.find('span:last').text() === 'Connecting') setConnection('Polling', true);
     }
 
     function setConnection(label, live) {
@@ -160,7 +165,7 @@ $(function () {
     }
 
     const observer = new MutationObserver(updateChartTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-app-theme'] });
     $refresh.on('click', loadSnapshot);
     loadSnapshot();
     connectSignalR();

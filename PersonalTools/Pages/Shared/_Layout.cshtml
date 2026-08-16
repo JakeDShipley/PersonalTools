@@ -1,3 +1,7 @@
+@using System.Security.Claims
+@using PersonalTools.Classes
+@using PersonalTools.Entities
+@inject IAppSettingsFuncs AppSettings
 @{
     bool showNavigation = User.Identity?.IsAuthenticated == true;
     string currentPath = Context.Request.Path.Value ?? "/";
@@ -5,9 +9,17 @@
         (exact ? currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) : currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
     string successToastMessage = TempData.Peek("SuccessMessage")?.ToString() ?? string.Empty;
     string errorToastMessage = TempData.Peek("ErrorMessage")?.ToString() ?? string.Empty;
+    string appearanceTheme = "personal";
+    string appearanceMode = "light";
+    if (showNavigation && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out Guid currentUserId))
+    {
+        var appearanceSettings = await AppSettings.Get(currentUserId);
+        appearanceTheme = appearanceSettings.Single(setting => setting.Definition.Key == AppSettingKey.AppearanceTheme).Value;
+        appearanceMode = appearanceSettings.Single(setting => setting.Definition.Key == AppSettingKey.AppearanceMode).Value;
+    }
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-app-theme="@appearanceTheme" data-theme="@appearanceMode">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,8 +35,13 @@
     <link rel="stylesheet" href="~/css/sortable.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/mediaextractor.css" />
     @await RenderSectionAsync("Head", required: false)
+    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
 </head>
 <body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)">
+    @if (showNavigation)
+    {
+        <div class="d-none" aria-hidden="true">@Html.AntiForgeryToken()</div>
+    }
     <div id="appToastMessages" data-success-message="@successToastMessage" data-error-message="@errorToastMessage" hidden></div>
     <div class="toast-container position-fixed top-0 end-0 p-3 app-toast-container" id="appToastContainer" aria-label="Notifications"></div>
 
