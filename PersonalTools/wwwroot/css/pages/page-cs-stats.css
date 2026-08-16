@@ -356,54 +356,81 @@
 }
 
 .tab-pane.is-reported .cs-profile-header {
-    background: linear-gradient(105deg, color-mix(in srgb, #c83a3a 15%, var(--pt-surface)), var(--pt-surface) 62%);
-    border: 1px solid color-mix(in srgb, #c83a3a 48%, var(--pt-line));
-    border-radius: .9rem;
-    box-shadow: 0 .65rem 1.5rem color-mix(in srgb, #c83a3a 10%, transparent);
-    margin-inline: -.25rem;
-    padding: .85rem;
+    border-color: color-mix(in srgb, #c83a3a 56%, var(--pt-line));
+    box-shadow: 0 .65rem 1.5rem color-mix(in srgb, #c83a3a 13%, transparent);
+    overflow: hidden;
     position: relative;
 }
 
-.tab-pane.is-reported .cs-profile-header::before {
-    background: linear-gradient(90deg, #c83a3a, transparent 78%);
-    border-radius: .9rem 0 0 .9rem;
-    content: "";
-    inset: 0 auto 0 0;
-    opacity: .7;
-    pointer-events: none;
-    position: absolute;
-    width: 4px;
+.tab-pane.is-reported .cs-profile-header > :not(.cs-report-smoke-layer):not(.cs-report-stamp) {
+    position: relative;
+    z-index: 1;
 }
 
-.tab-pane.is-reported .cs-profile-header::after {
-    align-items: center;
-    background: color-mix(in srgb, #c83a3a 16%, var(--pt-surface));
-    border: 1px solid color-mix(in srgb, #e56d6d 68%, var(--pt-line));
-    border-radius: .55rem;
-    color: color-mix(in srgb, #fff 74%, #e56d6d);
-    content: "REPORT RECORDED";
-    display: inline-flex;
-    font-size: .7rem;
-    font-weight: 900;
-    letter-spacing: .11em;
+.cs-report-smoke-layer {
+    background: radial-gradient(ellipse at center, rgba(85, 91, 101, .4), rgba(29, 32, 39, .62) 62%, transparent 82%);
+    inset: -18%;
     opacity: 0;
-    padding: .5rem .6rem;
+    overflow: hidden;
     pointer-events: none;
     position: absolute;
-    right: .85rem;
-    top: .85rem;
-    transform: translateY(-.35rem) scale(.92);
-    transition: opacity .18s ease .08s, transform .3s cubic-bezier(.2,.75,.22,1) .08s;
+    z-index: 3;
 }
 
-.tab-pane.is-reported-convicted .cs-profile-header::after { opacity: 1; transform: translateY(0) scale(1); }
-.tab-pane.is-reported .cs-profile-avatar { position: relative; z-index: 1; }
-.tab-pane.is-reported .cs-profile-avatar::after { background: linear-gradient(50deg, transparent 47%, rgba(255,255,255,.72) 48% 50%, transparent 51%), linear-gradient(-38deg, transparent 43%, rgba(255,255,255,.56) 44% 46%, transparent 47%); content: ""; inset: 0; pointer-events: none; position: absolute; }
+.cs-report-smoke-puff {
+    background: radial-gradient(circle at 42% 39%, rgba(196, 201, 207, .88), rgba(96, 103, 114, .68) 44%, rgba(32, 36, 43, .2) 70%, transparent 74%);
+    border-radius: 50%;
+    opacity: 0;
+    position: absolute;
+    transform: scale(.25);
+}
+
+/* This is intentionally more like a wet ink stamp than a system alert: it makes the report
+   action feel decisive while remaining clear that it is a personal signal, not a game ban. */
+.cs-report-stamp {
+    align-items: center;
+    border: clamp(3px, .42vw, 6px) double rgba(178, 34, 42, .96);
+    box-shadow: inset 0 0 0 2px rgba(88, 13, 18, .2), 0 2px 0 rgba(255, 214, 214, .22);
+    color: #b2222a;
+    display: flex;
+    flex-direction: column;
+    inset: 14% 3%;
+    justify-content: center;
+    mix-blend-mode: multiply;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    transform: rotate(-12deg) scale(1.65);
+    transform-origin: center;
+    z-index: 4;
+}
+
+[data-theme="dark"] .cs-report-stamp {
+    box-shadow: inset 0 0 0 2px rgba(255, 160, 160, .16), 0 1px 0 rgba(255, 214, 214, .12);
+    color: #ff737b;
+    mix-blend-mode: screen;
+}
+
+.cs-report-stamp > span {
+    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+    font-size: clamp(2.25rem, 7.5vw, 6.5rem);
+    font-style: italic;
+    letter-spacing: .055em;
+    line-height: .78;
+    text-shadow: 1px 1px 0 rgba(92, 13, 18, .36);
+}
+
+.cs-report-stamp small {
+    font-size: clamp(.48rem, .85vw, .78rem);
+    font-weight: 800;
+    letter-spacing: .24em;
+    margin-top: .55rem;
+}
 
 @media (max-width: 575.98px) {
-    .tab-pane.is-reported .cs-profile-header { padding-top: 3.8rem; }
-    .tab-pane.is-reported .cs-profile-header::after { left: .85rem; right: auto; top: .75rem; }
+    .cs-report-stamp { inset: 18% 2%; }
+    .cs-report-stamp > span { font-size: clamp(2rem, 13vw, 3.55rem); }
 }
 
 .cs-rank-panel {

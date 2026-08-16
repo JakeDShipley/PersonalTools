@@ -191,16 +191,60 @@
 
     function playReportAnimation($pane) {
         const $profile = $pane.find('.cs-profile-header');
-        const $avatar = $profile.find('.cs-profile-avatar');
+
+        if (!$profile.length) return;
+
+        // These layers only exist for the report moment. Keeping them event-scoped avoids a
+        // permanent animation cost on every open player tab.
+        $profile.find('.cs-report-smoke-layer, .cs-report-stamp').remove();
+        const $smoke = $('<div>', { class: 'cs-report-smoke-layer', 'aria-hidden': 'true' });
+        const $puffs = Array.from({ length: 11 }, (_, index) => $('<span>', { class: 'cs-report-smoke-puff' }).css({
+            left: `${4 + ((index * 17) % 91)}%`,
+            top: `${14 + ((index * 29) % 68)}%`,
+            width: `${4.5 + (index % 4) * 1.6}rem`,
+            height: `${4.5 + (index % 4) * 1.6}rem`
+        }));
+        const $stamp = $('<div>', { class: 'cs-report-stamp', 'aria-hidden': 'true' }).append(
+            $('<span>', { text: 'REPORTED' }),
+            $('<small>', { text: 'PERSONAL TOOLS • PLAYER SIGNAL' })
+        );
+
+        $smoke.append($puffs);
+        $profile.append($smoke, $stamp);
         $pane.addClass('is-reported');
+
         if (window.personalToolsMotion?.reducedMotion() || !window.anime?.animate) {
-            $pane.addClass('is-reported-convicted');
+            $stamp.css({ opacity: 1, transform: 'rotate(-12deg) scale(1)' });
             return;
         }
+
         const { animate } = window.anime;
-        animate($avatar.get(0), { rotate: [{ to: -4, duration: 100 }, { to: 3, duration: 120 }, { to: 0, duration: 170 }], scale: [{ to: 1.06, duration: 110 }, { to: 1, duration: 240 }], ease: 'out(3)' });
-        animate($profile.get(0), { boxShadow: { from: '0 0 0 rgba(200,58,58,0)', to: '0 .65rem 1.5rem rgba(200,58,58,.14)' }, duration: 320, ease: 'out(3)' });
-        window.setTimeout(() => $pane.addClass('is-reported-convicted'), 100);
+
+        animate($smoke.get(0), {
+            opacity: [{ to: 1, duration: 180 }, { to: .92, duration: 330 }, { to: 0, duration: 720 }],
+            ease: 'out(4)'
+        });
+        animate($puffs.map($puff => $puff.get(0)), {
+            opacity: { from: 0, to: .88 },
+            scale: { from: .25, to: 1.75 },
+            x: (element, index) => (index % 2 ? 28 : -28) + (index % 3) * 9,
+            y: (element, index) => -18 - (index % 4) * 12,
+            delay: (element, index) => index * 32,
+            duration: 610,
+            ease: 'out(5)'
+        });
+        animate($stamp.get(0), {
+            opacity: { from: 0, to: 1 },
+            scale: [{ from: 1.65, to: .9, duration: 120 }, { to: 1.07, duration: 95 }, { to: 1, duration: 170 }],
+            rotate: { from: -18, to: -12 },
+            delay: 430,
+            duration: 385,
+            ease: 'out(6)'
+        });
+
+        // Once the smoke has dispersed it no longer needs to occupy the DOM. The ink stamp is
+        // left in place as a clear, non-verdict visual cue that this account recorded a report.
+        window.setTimeout(() => $smoke.remove(), 1300);
     }
 
     function openReport(profile) {

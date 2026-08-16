@@ -37,6 +37,12 @@
         const { animate, stagger } = window.anime;
         const letters = launch.querySelectorAll('.launch-letter');
         const wordmark = launch.querySelector('.login-launch-wordmark');
+        const greeting = launch.querySelector('.login-launch-greeting');
+
+        if (greeting) {
+            greeting.textContent = '';
+            greeting.style.opacity = '0';
+        }
 
         animate(letters, {
             opacity: { from: 0, to: 1 },
@@ -50,6 +56,30 @@
             opacity: { from: 0, to: 1 },
             scale: { from: .96, to: 1 },
             duration: 300,
+            ease: 'out(4)'
+        });
+    }
+
+    function showLaunchGreeting(displayName) {
+        const greeting = launch?.querySelector('.login-launch-greeting');
+        const safeName = String(displayName || '').trim();
+
+        if (!greeting || !safeName) return;
+
+        // textContent keeps a display name as text even if it contains characters that would
+        // otherwise be meaningful HTML. The server only supplies the authenticated account's name.
+        greeting.textContent = `Welcome back, ${safeName}`;
+
+        if (window.personalToolsMotion?.reducedMotion() || !window.anime?.animate) {
+            greeting.style.opacity = '1';
+            return;
+        }
+
+        window.anime.animate(greeting, {
+            opacity: { from: 0, to: 1 },
+            x: { from: -12, to: 0 },
+            letterSpacing: { from: '.28em', to: '.12em' },
+            duration: 430,
             ease: 'out(4)'
         });
     }
@@ -142,9 +172,10 @@
             showLoader: false,
             showToast: false
         })
-            .done(() => {
+            .done((response) => {
+                showLaunchGreeting(response?.displayName);
                 const returnUrl = $('#ReturnUrl').val();
-                const minimumDuration = window.personalToolsMotion?.reducedMotion() ? 120 : 850;
+                const minimumDuration = window.personalToolsMotion?.reducedMotion() ? 120 : 1600;
                 const remaining = Math.max(0, minimumDuration - (Date.now() - launchStartedAt));
                 window.setTimeout(() => window.location.assign(returnUrl || '/'), remaining);
             })

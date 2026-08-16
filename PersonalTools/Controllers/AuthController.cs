@@ -22,18 +22,18 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<ApiResponse>> Login([FromBody] LoginRequest request)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password))
-                return BadRequest(new ApiResponse(false, "Enter your email address and password."));
+                return BadRequest(new LoginResponse(false, "Enter your email address and password.", string.Empty));
 
             var user = await _auth.Authenticate(request.Email, request.Password);
 
             if (user is null)
             {
-                return Unauthorized(new ApiResponse(false, "Email or password is incorrect."));
+                return Unauthorized(new LoginResponse(false, "Email or password is incorrect.", string.Empty));
             }
 
             var session = await _auth.CreateSession(user.UserId, request.RememberMe, Request.Headers.UserAgent.ToString());
@@ -55,7 +55,9 @@ public sealed class AuthController : ControllerBase
                 new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)),
                 properties);
 
-            return Ok(new ApiResponse(true, "Signed in."));
+            // The launch screen can welcome the just-authenticated account without another
+            // round-trip. This is a display-only value and never includes session information.
+            return Ok(new LoginResponse(true, "Signed in.", user.DisplayName));
         }
         catch (Exception exception)
         {
@@ -68,7 +70,7 @@ public sealed class AuthController : ControllerBase
             {
                 // Authentication must never fail because an optional log provider is unavailable.
             }
-            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse(false, "Sign-in could not be completed. Please try again."));
+            return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse(false, "Sign-in could not be completed. Please try again.", string.Empty));
         }
     }
     [HttpPost("logout")]
@@ -87,3 +89,4 @@ public sealed class AuthController : ControllerBase
 }
 
 public sealed record LoginRequest(string? Email, string? Password, bool RememberMe);
+public sealed record LoginResponse(bool Success, string Message, string DisplayName);
