@@ -9,11 +9,15 @@ CREATE TABLE IF NOT EXISTS CSMatchProfiles (
     UserId CHAR(36) NOT NULL,
     Name VARCHAR(100) NOT NULL,
     SteamId CHAR(17) NOT NULL,
+    AvatarUrl VARCHAR(2048) NULL,
     CreatedUtc DATETIME NOT NULL,
     PRIMARY KEY (ProfileId),
     KEY IX_CSMatchProfiles_UserId (UserId),
     CONSTRAINT FK_CSMatchProfiles_Users FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE CASCADE
 );
+
+-- Adds the avatar column for profiles created before this feature existed - safe to re-run.
+ALTER TABLE CSMatchProfiles ADD COLUMN IF NOT EXISTS AvatarUrl VARCHAR(2048) NULL AFTER SteamId;
 
 ALTER TABLE CSMatches ADD COLUMN IF NOT EXISTS ProfileId CHAR(36) NULL AFTER UserId;
 ALTER TABLE CSMatches ADD INDEX IF NOT EXISTS IX_CSMatches_UserId_ProfileId (UserId, ProfileId);
@@ -62,11 +66,11 @@ DROP PROCEDURE IF EXISTS sp_cs_active_duty_maps_set$$
 DROP PROCEDURE IF EXISTS sp_monitor_database_snapshot$$
 
 CREATE PROCEDURE sp_cs_match_profiles_get(IN p_user_id CHAR(36))
-SELECT ProfileId, Name, SteamId, CreatedUtc FROM CSMatchProfiles WHERE UserId = p_user_id ORDER BY CreatedUtc$$
-CREATE PROCEDURE sp_cs_match_profiles_create(IN p_user_id CHAR(36), IN p_profile_id CHAR(36), IN p_name VARCHAR(100), IN p_steam_id CHAR(17))
-INSERT INTO CSMatchProfiles(ProfileId, UserId, Name, SteamId, CreatedUtc) VALUES(p_profile_id, p_user_id, p_name, p_steam_id, UTC_TIMESTAMP())$$
-CREATE PROCEDURE sp_cs_match_profiles_update(IN p_user_id CHAR(36), IN p_profile_id CHAR(36), IN p_name VARCHAR(100), IN p_steam_id CHAR(17))
-UPDATE CSMatchProfiles SET Name = p_name, SteamId = p_steam_id WHERE ProfileId = p_profile_id AND UserId = p_user_id$$
+SELECT ProfileId, Name, SteamId, AvatarUrl, CreatedUtc FROM CSMatchProfiles WHERE UserId = p_user_id ORDER BY CreatedUtc$$
+CREATE PROCEDURE sp_cs_match_profiles_create(IN p_user_id CHAR(36), IN p_profile_id CHAR(36), IN p_name VARCHAR(100), IN p_steam_id CHAR(17), IN p_avatar_url VARCHAR(2048))
+INSERT INTO CSMatchProfiles(ProfileId, UserId, Name, SteamId, AvatarUrl, CreatedUtc) VALUES(p_profile_id, p_user_id, p_name, p_steam_id, NULLIF(p_avatar_url, ''), UTC_TIMESTAMP())$$
+CREATE PROCEDURE sp_cs_match_profiles_update(IN p_user_id CHAR(36), IN p_profile_id CHAR(36), IN p_name VARCHAR(100), IN p_steam_id CHAR(17), IN p_avatar_url VARCHAR(2048))
+UPDATE CSMatchProfiles SET Name = p_name, SteamId = p_steam_id, AvatarUrl = NULLIF(p_avatar_url, '') WHERE ProfileId = p_profile_id AND UserId = p_user_id$$
 CREATE PROCEDURE sp_cs_match_profiles_delete(IN p_user_id CHAR(36), IN p_profile_id CHAR(36))
 DELETE FROM CSMatchProfiles WHERE ProfileId = p_profile_id AND UserId = p_user_id$$
 

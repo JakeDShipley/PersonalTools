@@ -119,7 +119,10 @@ namespace PersonalTools.Classes.CSMatches
 
         private static string NormalizeMapName(string rawMapName)
         {
-            string name = rawMapName.StartsWith("de_", StringComparison.OrdinalIgnoreCase) ? rawMapName[3..] : rawMapName;
+            // Bomb-defusal maps use the "de_" prefix; Office and Italy use "cs_" instead.
+            bool hasKnownPrefix = rawMapName.StartsWith("de_", StringComparison.OrdinalIgnoreCase)
+                || rawMapName.StartsWith("cs_", StringComparison.OrdinalIgnoreCase);
+            string name = hasKnownPrefix ? rawMapName[3..] : rawMapName;
             return name.Length == 0 ? rawMapName : char.ToUpperInvariant(name[0]) + name[1..];
         }
 

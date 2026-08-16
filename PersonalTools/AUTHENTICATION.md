@@ -35,3 +35,5 @@ Razor Pages provide the HTML route and view. Interactive operations use jQuery t
 All write requests use antiforgery validation. `Controllers/NotesController.cs` is the reference implementation for future interactive tools.
 
 Bootstrap tables use JavaScript/jQuery to render their rows. Keep table markup to the table structure, headers, and an empty body target; use a page-specific script for the row data and rendering.
+
+Prefer AJAX over a full-page navigation or form post for anything that doesn't need one - fetch/save data via the `/api` controllers and update the DOM in place. Reserve a real page load for the initial render and for actions that intentionally leave the page (e.g. Steam OAuth linking). This keeps interactions responsive and avoids resetting page-local UI state (open modals, scroll position, filters) on every save.
