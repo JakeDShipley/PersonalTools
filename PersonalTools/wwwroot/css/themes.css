@@ -25,363 +25,363 @@
     --pt-display-font: inherit;
 }
 
-:root[data-app-theme="personal"][data-theme="light"] {
-    --pt-ink: #182033;
-    --pt-ink-soft: #586178;
-    --pt-canvas: #f7f7f4;
-    --pt-surface: #ffffff;
-    --pt-line: #e4e6eb;
-    --pt-coral: #e76f51;
-    --pt-mint: #8fd0c2;
-    --bs-primary: #182033;
-    --bs-primary-rgb: 24, 32, 51;
-    --bs-body-bg: var(--pt-canvas);
-    --bs-body-color: var(--pt-ink);
-    --bs-border-color: var(--pt-line);
-    --app-muted: var(--pt-ink-soft);
-    color-scheme: light;
-}
+    :root[data-app-theme="personal"][data-theme="light"] {
+        --pt-ink: #182033;
+        --pt-ink-soft: #586178;
+        --pt-canvas: #f7f7f4;
+        --pt-surface: #ffffff;
+        --pt-line: #e4e6eb;
+        --pt-coral: #e76f51;
+        --pt-mint: #8fd0c2;
+        --bs-primary: #182033;
+        --bs-primary-rgb: 24, 32, 51;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        color-scheme: light;
+    }
 
-:root[data-app-theme="personal"][data-theme="dark"] {
-    --pt-ink: #edf0f7;
-    --pt-ink-soft: #aeb7c9;
-    --pt-canvas: #111726;
-    --pt-surface: #1a2234;
-    --pt-line: #2e3a52;
-    --pt-coral: #ff9a7e;
-    --pt-mint: #8fd0c2;
-    --bs-primary: #e9edf6;
-    --bs-primary-rgb: 233, 237, 246;
-    --bs-body-bg: var(--pt-canvas);
-    --bs-body-color: var(--pt-ink);
-    --bs-border-color: var(--pt-line);
-    --app-muted: var(--pt-ink-soft);
-    color-scheme: dark;
-}
+    :root[data-app-theme="personal"][data-theme="dark"] {
+        --pt-ink: #edf0f7;
+        --pt-ink-soft: #aeb7c9;
+        --pt-canvas: #111726;
+        --pt-surface: #1a2234;
+        --pt-line: #2e3a52;
+        --pt-coral: #ff9a7e;
+        --pt-mint: #8fd0c2;
+        --bs-primary: #e9edf6;
+        --bs-primary-rgb: 233, 237, 246;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        color-scheme: dark;
+    }
 
-:root[data-app-theme="tactical"][data-theme="light"] {
-    --pt-ink: #111317;
-    --pt-ink-soft: #69707a;
-    --pt-canvas: #efeee9;
-    --pt-surface: #fbfaf6;
-    --pt-line: #d9d7d0;
-    --pt-coral: #d68a0b;
-    --pt-mint: #d69a24;
-    --bs-primary: #15171b;
-    --bs-primary-rgb: 21, 23, 27;
-    --bs-body-bg: var(--pt-canvas);
-    --bs-body-color: var(--pt-ink);
-    --bs-border-color: var(--pt-line);
-    --app-muted: var(--pt-ink-soft);
-    --pt-page-space: 2.25rem;
-    --pt-section-space: 1.35rem;
-    --pt-panel-space: .9rem;
-    --pt-card-space: .8rem;
-    --pt-control-radius: 0;
-    --pt-card-radius: .2rem;
-    --pt-panel-radius: .3rem;
-    --pt-small-radius: 0;
-    --pt-pill-radius: .12rem;
-    --pt-card-shadow: none;
-    --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
-    --pt-card-hover-border: var(--pt-coral);
-    --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-    color-scheme: light;
-}
+    :root[data-app-theme="tactical"][data-theme="light"] {
+        --pt-ink: #111317;
+        --pt-ink-soft: #69707a;
+        --pt-canvas: #efeee9;
+        --pt-surface: #fbfaf6;
+        --pt-line: #d9d7d0;
+        --pt-coral: #d68a0b;
+        --pt-mint: #d69a24;
+        --bs-primary: #15171b;
+        --bs-primary-rgb: 21, 23, 27;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.25rem;
+        --pt-section-space: 1.35rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .8rem;
+        --pt-control-radius: 0;
+        --pt-card-radius: .2rem;
+        --pt-panel-radius: .3rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .12rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+        --pt-card-hover-border: var(--pt-coral);
+        --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        color-scheme: light;
+    }
 
-:root[data-app-theme="tactical"][data-theme="dark"] {
-    --pt-ink: #f2f0e8;
-    --pt-ink-soft: #a8afb9;
-    --pt-canvas: #0c0d0f;
-    --pt-surface: #15171b;
-    --pt-line: #2a2e34;
-    --pt-coral: #f0aa1d;
-    --pt-mint: #e5a222;
-    --bs-primary: #f0aa1d;
-    --bs-primary-rgb: 240, 170, 29;
-    --bs-body-bg: var(--pt-canvas);
-    --bs-body-color: var(--pt-ink);
-    --bs-border-color: var(--pt-line);
-    --app-muted: var(--pt-ink-soft);
-    --pt-page-space: 2.25rem;
-    --pt-section-space: 1.35rem;
-    --pt-panel-space: .9rem;
-    --pt-card-space: .8rem;
-    --pt-control-radius: 0;
-    --pt-card-radius: .2rem;
-    --pt-panel-radius: .3rem;
-    --pt-small-radius: 0;
-    --pt-pill-radius: .12rem;
-    --pt-card-shadow: none;
-    --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
-    --pt-card-hover-border: var(--pt-coral);
-    --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-    color-scheme: dark;
-}
+    :root[data-app-theme="tactical"][data-theme="dark"] {
+        --pt-ink: #f2f0e8;
+        --pt-ink-soft: #a8afb9;
+        --pt-canvas: #0c0d0f;
+        --pt-surface: #15171b;
+        --pt-line: #2a2e34;
+        --pt-coral: #f0aa1d;
+        --pt-mint: #e5a222;
+        --bs-primary: #f0aa1d;
+        --bs-primary-rgb: 240, 170, 29;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.25rem;
+        --pt-section-space: 1.35rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .8rem;
+        --pt-control-radius: 0;
+        --pt-card-radius: .2rem;
+        --pt-panel-radius: .3rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .12rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+        --pt-card-hover-border: var(--pt-coral);
+        --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        color-scheme: dark;
+    }
 
-/* Tactical is deliberately a visual layer only: layout remains Bootstrap-led. */
-:root[data-app-theme="tactical"] .page-title,
-:root[data-app-theme="tactical"] .csm-page h1,
-:root[data-app-theme="tactical"] .settings-hero h2 {
-    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-    font-stretch: condensed;
-    letter-spacing: .015em;
-    text-transform: uppercase;
-}
+    /* Tactical is deliberately a visual layer only: layout remains Bootstrap-led. */
+    :root[data-app-theme="tactical"] .page-title,
+    :root[data-app-theme="tactical"] .csm-page h1,
+    :root[data-app-theme="tactical"] .settings-hero h2 {
+        font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        font-stretch: condensed;
+        letter-spacing: .015em;
+        text-transform: uppercase;
+    }
 
-:root[data-app-theme="tactical"] .eyebrow,
-:root[data-app-theme="tactical"] .app-nav-heading {
-    color: var(--pt-coral);
-    font-weight: 800;
-}
+    :root[data-app-theme="tactical"] .eyebrow,
+    :root[data-app-theme="tactical"] .app-nav-heading {
+        color: var(--pt-coral);
+        font-weight: 800;
+    }
 
-/* Tactical is intentionally compact and squared-off. It does not change the
+    /* Tactical is intentionally compact and squared-off. It does not change the
    Personal theme because every override is scoped to the selected theme. */
-:root[data-app-theme="tactical"] .app-main {
-    padding-block: var(--pt-page-space);
-}
+    :root[data-app-theme="tactical"] .app-main {
+        padding-block: var(--pt-page-space);
+    }
 
-:root[data-app-theme="tactical"] .page-title,
-:root[data-app-theme="tactical"] .section-title,
-:root[data-app-theme="tactical"] .csm-stat-value,
-:root[data-app-theme="tactical"] .csm-score,
-:root[data-app-theme="tactical"] .csm-card-score {
-    font-family: var(--pt-display-font);
-    letter-spacing: .025em;
-}
+    :root[data-app-theme="tactical"] .page-title,
+    :root[data-app-theme="tactical"] .section-title,
+    :root[data-app-theme="tactical"] .csm-stat-value,
+    :root[data-app-theme="tactical"] .csm-score,
+    :root[data-app-theme="tactical"] .csm-card-score {
+        font-family: var(--pt-display-font);
+        letter-spacing: .025em;
+    }
 
-:root[data-app-theme="tactical"] .tool-card,
-:root[data-app-theme="tactical"] .settings-group,
-:root[data-app-theme="tactical"] .settings-hero,
-:root[data-app-theme="tactical"] .modal-content,
-:root[data-app-theme="tactical"] .monitor-status,
-:root[data-app-theme="tactical"] .monitor-panel,
-:root[data-app-theme="tactical"] .monitor-metric-card {
-    border-radius: var(--pt-card-radius) !important;
-    box-shadow: none !important;
-}
+    :root[data-app-theme="tactical"] .tool-card,
+    :root[data-app-theme="tactical"] .settings-group,
+    :root[data-app-theme="tactical"] .settings-hero,
+    :root[data-app-theme="tactical"] .modal-content,
+    :root[data-app-theme="tactical"] .monitor-status,
+    :root[data-app-theme="tactical"] .monitor-panel,
+    :root[data-app-theme="tactical"] .monitor-metric-card {
+        border-radius: var(--pt-card-radius) !important;
+        box-shadow: none !important;
+    }
 
-:root[data-app-theme="tactical"] .btn-primary {
-    --bs-btn-bg: var(--pt-coral);
-    --bs-btn-border-color: var(--pt-coral);
-    --bs-btn-color: #101114;
-    --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
-    --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
-    --bs-btn-hover-color: #101114;
-    border-radius: var(--pt-control-radius);
-    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-    letter-spacing: .045em;
-    text-transform: uppercase;
-}
+    :root[data-app-theme="tactical"] .btn-primary {
+        --bs-btn-bg: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-color: #101114;
+        --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+        --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+        --bs-btn-hover-color: #101114;
+        border-radius: var(--pt-control-radius);
+        font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
 
-:root[data-app-theme="tactical"] .btn-outline-primary {
-    --bs-btn-color: var(--pt-coral);
-    --bs-btn-border-color: var(--pt-coral);
-    --bs-btn-hover-bg: var(--pt-coral);
-    --bs-btn-hover-border-color: var(--pt-coral);
-    --bs-btn-hover-color: #101114;
-    border-radius: var(--pt-control-radius);
-}
+    :root[data-app-theme="tactical"] .btn-outline-primary {
+        --bs-btn-color: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-hover-bg: var(--pt-coral);
+        --bs-btn-hover-border-color: var(--pt-coral);
+        --bs-btn-hover-color: #101114;
+        border-radius: var(--pt-control-radius);
+    }
 
-:root[data-app-theme="tactical"] .app-sidebar,
-:root[data-app-theme="tactical"] .app-mobile-header {
-    background: color-mix(in srgb, var(--pt-surface) 98%, #000000);
-}
+    :root[data-app-theme="tactical"] .app-sidebar,
+    :root[data-app-theme="tactical"] .app-mobile-header {
+        background: color-mix(in srgb, var(--pt-surface) 98%, #000000);
+    }
 
-:root[data-app-theme="tactical"] .app-sidebar-link.active,
-:root[data-app-theme="tactical"] .app-sidebar-link:hover {
-    border-color: color-mix(in srgb, var(--pt-coral) 58%, var(--pt-line));
-}
+    :root[data-app-theme="tactical"] .app-sidebar-link.active,
+    :root[data-app-theme="tactical"] .app-sidebar-link:hover {
+        border-color: color-mix(in srgb, var(--pt-coral) 58%, var(--pt-line));
+    }
 
-:root[data-app-theme="tactical"] .brand-wordmark span,
-:root[data-app-theme="tactical"] .tool-card-link i {
-    color: var(--pt-coral);
-}
+    :root[data-app-theme="tactical"] .brand-wordmark span,
+    :root[data-app-theme="tactical"] .tool-card-link i {
+        color: var(--pt-coral);
+    }
 
-:root[data-app-theme="tactical"] .brand-mark {
-    border-radius: var(--pt-card-radius);
-}
+    :root[data-app-theme="tactical"] .brand-mark {
+        border-radius: var(--pt-card-radius);
+    }
 
-:root[data-app-theme="tactical"] .settings-hero {
-    background: linear-gradient(115deg, color-mix(in srgb, var(--pt-coral) 12%, var(--pt-surface)), var(--pt-surface));
-}
+    :root[data-app-theme="tactical"] .settings-hero {
+        background: linear-gradient(115deg, color-mix(in srgb, var(--pt-coral) 12%, var(--pt-surface)), var(--pt-surface));
+    }
 
-:root[data-app-theme="tactical"] .form-control:focus,
-:root[data-app-theme="tactical"] .form-select:focus {
-    border-color: var(--pt-coral);
-    box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
-}
+    :root[data-app-theme="tactical"] .form-control:focus,
+    :root[data-app-theme="tactical"] .form-select:focus {
+        border-color: var(--pt-coral);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
+    }
 
-:root[data-app-theme="tactical"] .tooltip {
-    --bs-tooltip-bg: var(--pt-ink);
-    --bs-tooltip-color: var(--pt-surface);
-}
+    :root[data-app-theme="tactical"] .tooltip {
+        --bs-tooltip-bg: var(--pt-ink);
+        --bs-tooltip-color: var(--pt-surface);
+    }
 
-:root[data-app-theme="tactical"] .app-sidebar-link,
-:root[data-app-theme="tactical"] .app-utility-link,
-:root[data-app-theme="tactical"] .app-nav-soon,
-:root[data-app-theme="tactical"] .tool-card-icon,
-:root[data-app-theme="tactical"] .view-switcher,
-:root[data-app-theme="tactical"] .view-switcher-button,
-:root[data-app-theme="tactical"] .form-control,
-:root[data-app-theme="tactical"] .form-select,
-:root[data-app-theme="tactical"] .input-group > .btn,
-:root[data-app-theme="tactical"] .pagination .page-link {
-    border-radius: var(--pt-control-radius) !important;
-}
+    :root[data-app-theme="tactical"] .app-sidebar-link,
+    :root[data-app-theme="tactical"] .app-utility-link,
+    :root[data-app-theme="tactical"] .app-nav-soon,
+    :root[data-app-theme="tactical"] .tool-card-icon,
+    :root[data-app-theme="tactical"] .view-switcher,
+    :root[data-app-theme="tactical"] .view-switcher-button,
+    :root[data-app-theme="tactical"] .form-control,
+    :root[data-app-theme="tactical"] .form-select,
+    :root[data-app-theme="tactical"] .input-group > .btn,
+    :root[data-app-theme="tactical"] .pagination .page-link {
+        border-radius: var(--pt-control-radius) !important;
+    }
 
-/* Tactical owns the complete geometry, not just the colour palette. Bootstrap cards, result
+    /* Tactical owns the complete geometry, not just the colour palette. Bootstrap cards, result
    containers and modals all become deliberately square so mixed rounded edges cannot leak in. */
-:root[data-app-theme="tactical"] .card,
-:root[data-app-theme="tactical"] .card-header,
-:root[data-app-theme="tactical"] .card-footer,
-:root[data-app-theme="tactical"] .table-responsive,
-:root[data-app-theme="tactical"] .accordion-item,
-:root[data-app-theme="tactical"] .list-group,
-:root[data-app-theme="tactical"] .list-group-item,
-:root[data-app-theme="tactical"] .alert,
-:root[data-app-theme="tactical"] .offcanvas,
-:root[data-app-theme="tactical"] .dropdown-menu,
-:root[data-app-theme="tactical"] .toast,
-:root[data-app-theme="tactical"] .cs-stats-empty,
-:root[data-app-theme="tactical"] .cs-stats-search-card,
-:root[data-app-theme="tactical"] .cs-stats-section-card,
-:root[data-app-theme="tactical"] .cs-rank-panel {
-    border-radius: 0 !important;
-}
+    :root[data-app-theme="tactical"] .card,
+    :root[data-app-theme="tactical"] .card-header,
+    :root[data-app-theme="tactical"] .card-footer,
+    :root[data-app-theme="tactical"] .table-responsive,
+    :root[data-app-theme="tactical"] .accordion-item,
+    :root[data-app-theme="tactical"] .list-group,
+    :root[data-app-theme="tactical"] .list-group-item,
+    :root[data-app-theme="tactical"] .alert,
+    :root[data-app-theme="tactical"] .offcanvas,
+    :root[data-app-theme="tactical"] .dropdown-menu,
+    :root[data-app-theme="tactical"] .toast,
+    :root[data-app-theme="tactical"] .cs-stats-empty,
+    :root[data-app-theme="tactical"] .cs-stats-search-card,
+    :root[data-app-theme="tactical"] .cs-stats-section-card,
+    :root[data-app-theme="tactical"] .cs-rank-panel {
+        border-radius: 0 !important;
+    }
 
-:root[data-app-theme="tactical"] .card > :first-child,
-:root[data-app-theme="tactical"] .card > :last-child,
-:root[data-app-theme="tactical"] .table-responsive > :first-child,
-:root[data-app-theme="tactical"] .table-responsive > :last-child {
-    border-radius: 0 !important;
-}
+        :root[data-app-theme="tactical"] .card > :first-child,
+        :root[data-app-theme="tactical"] .card > :last-child,
+        :root[data-app-theme="tactical"] .table-responsive > :first-child,
+        :root[data-app-theme="tactical"] .table-responsive > :last-child {
+            border-radius: 0 !important;
+        }
 
-:root[data-app-theme="tactical"] .app-sidebar-link.active {
-    box-shadow: inset 3px 0 0 var(--pt-coral);
-}
+    :root[data-app-theme="tactical"] .app-sidebar-link.active {
+        box-shadow: inset 3px 0 0 var(--pt-coral);
+    }
 
-:root[data-app-theme="tactical"] .blits-sidebar-link::before,
-:root[data-app-theme="tactical"] .blits-sidebar-link::after {
-    border-radius: 0;
-}
+    :root[data-app-theme="tactical"] .blits-sidebar-link::before,
+    :root[data-app-theme="tactical"] .blits-sidebar-link::after {
+        border-radius: 0;
+    }
 
-:root[data-app-theme="tactical"] .tool-card {
-    background: var(--pt-surface);
-}
+    :root[data-app-theme="tactical"] .tool-card {
+        background: var(--pt-surface);
+    }
 
-:root[data-app-theme="tactical"] .tool-card:hover {
-    border-color: var(--pt-card-hover-border);
-    box-shadow: var(--pt-card-hover-shadow) !important;
-}
+        :root[data-app-theme="tactical"] .tool-card:hover {
+            border-color: var(--pt-card-hover-border);
+            box-shadow: var(--pt-card-hover-shadow) !important;
+        }
 
-/* CS Match Tracker adopts the dense workshop layout shown by this theme. */
-:root[data-app-theme="tactical"] .csm-tabs {
-    border-bottom: 0;
-    gap: .2rem;
-    padding: 0;
-}
+    /* CS Match Tracker adopts the dense workshop layout shown by this theme. */
+    :root[data-app-theme="tactical"] .csm-tabs {
+        border-bottom: 0;
+        gap: .2rem;
+        padding: 0;
+    }
 
-:root[data-app-theme="tactical"] .csm-tabs .nav-link {
-    border-radius: 0;
-    font-family: var(--pt-display-font);
-    font-size: .82rem;
-    letter-spacing: .035em;
-    min-height: 2.35rem;
-    padding: .45rem 1.65rem .45rem .7rem;
-    text-transform: uppercase;
-}
+        :root[data-app-theme="tactical"] .csm-tabs .nav-link {
+            border-radius: 0;
+            font-family: var(--pt-display-font);
+            font-size: .82rem;
+            letter-spacing: .035em;
+            min-height: 2.35rem;
+            padding: .45rem 1.65rem .45rem .7rem;
+            text-transform: uppercase;
+        }
 
-:root[data-app-theme="tactical"] .csm-tabs .nav-link.active {
-    border-top: 2px solid var(--pt-coral);
-}
+            :root[data-app-theme="tactical"] .csm-tabs .nav-link.active {
+                border-top: 2px solid var(--pt-coral);
+            }
 
-:root[data-app-theme="tactical"] .csm-tab-add,
-:root[data-app-theme="tactical"] .csm-tab-close,
-:root[data-app-theme="tactical"] .csm-tab-avatar,
-:root[data-app-theme="tactical"] .csm-chip,
-:root[data-app-theme="tactical"] .csm-ot-chip,
-:root[data-app-theme="tactical"] .csm-already-badge,
-:root[data-app-theme="tactical"] .csm-gt-pill,
-:root[data-app-theme="tactical"] .csm-icon-btn,
-:root[data-app-theme="tactical"] .csm-side-toggle-btn,
-:root[data-app-theme="tactical"] .csm-map-preview img {
-    border-radius: var(--pt-small-radius);
-}
+    :root[data-app-theme="tactical"] .csm-tab-add,
+    :root[data-app-theme="tactical"] .csm-tab-close,
+    :root[data-app-theme="tactical"] .csm-tab-avatar,
+    :root[data-app-theme="tactical"] .csm-chip,
+    :root[data-app-theme="tactical"] .csm-ot-chip,
+    :root[data-app-theme="tactical"] .csm-already-badge,
+    :root[data-app-theme="tactical"] .csm-gt-pill,
+    :root[data-app-theme="tactical"] .csm-icon-btn,
+    :root[data-app-theme="tactical"] .csm-side-toggle-btn,
+    :root[data-app-theme="tactical"] .csm-map-preview img {
+        border-radius: var(--pt-small-radius);
+    }
 
-:root[data-app-theme="tactical"] .csm-tabs-panel {
-    background: transparent;
-    border-radius: 0;
-    border-top: 1px solid var(--pt-line);
-    padding: var(--pt-panel-space) 0 0;
-}
+    :root[data-app-theme="tactical"] .csm-tabs-panel {
+        background: transparent;
+        border-radius: 0;
+        border-top: 1px solid var(--pt-line);
+        padding: var(--pt-panel-space) 0 0;
+    }
 
-:root[data-app-theme="tactical"] .csm-stats {
-    gap: .55rem;
-}
+    :root[data-app-theme="tactical"] .csm-stats {
+        gap: .55rem;
+    }
 
-:root[data-app-theme="tactical"] .csm-stat {
-    background: var(--pt-surface);
-    border-radius: 0;
-    border-top: 2px solid var(--pt-coral);
-    padding: .75rem .85rem;
-}
+    :root[data-app-theme="tactical"] .csm-stat {
+        background: var(--pt-surface);
+        border-radius: 0;
+        border-top: 2px solid var(--pt-coral);
+        padding: .75rem .85rem;
+    }
 
-:root[data-app-theme="tactical"] .csm-stat-label,
-:root[data-app-theme="tactical"] .csm-panel-head-label {
-    letter-spacing: .07em;
-    text-transform: uppercase;
-}
+    :root[data-app-theme="tactical"] .csm-stat-label,
+    :root[data-app-theme="tactical"] .csm-panel-head-label {
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
 
-:root[data-app-theme="tactical"] .csm-view-toggle,
-:root[data-app-theme="tactical"] .csm-table-wrap,
-:root[data-app-theme="tactical"] .csm-empty,
-:root[data-app-theme="tactical"] .csm-match-card,
-:root[data-app-theme="tactical"] .csm-toggle-cell {
-    border-radius: 0;
-    box-shadow: none;
-}
+    :root[data-app-theme="tactical"] .csm-view-toggle,
+    :root[data-app-theme="tactical"] .csm-table-wrap,
+    :root[data-app-theme="tactical"] .csm-empty,
+    :root[data-app-theme="tactical"] .csm-match-card,
+    :root[data-app-theme="tactical"] .csm-toggle-cell {
+        border-radius: 0;
+        box-shadow: none;
+    }
 
-:root[data-app-theme="tactical"] .csm-view-toggle button {
-    border-radius: 0;
-    padding: .45rem .7rem;
-}
+        :root[data-app-theme="tactical"] .csm-view-toggle button {
+            border-radius: 0;
+            padding: .45rem .7rem;
+        }
 
-:root[data-app-theme="tactical"] .csm-match-table thead th {
-    padding: .55rem .75rem;
-}
+    :root[data-app-theme="tactical"] .csm-match-table thead th {
+        padding: .55rem .75rem;
+    }
 
-:root[data-app-theme="tactical"] .csm-match-table td {
-    background: var(--pt-surface);
-    border-bottom: .5rem solid var(--pt-canvas);
-    padding: .65rem .75rem;
-}
+    :root[data-app-theme="tactical"] .csm-match-table td {
+        background: var(--pt-surface);
+        border-bottom: .5rem solid var(--pt-canvas);
+        padding: .65rem .75rem;
+    }
 
-:root[data-app-theme="tactical"] .csm-match-table tbody tr:last-child td {
-    border-bottom: 0;
-}
+    :root[data-app-theme="tactical"] .csm-match-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
 
-:root[data-app-theme="tactical"] .csm-matches-cards {
-    gap: .65rem;
-}
+    :root[data-app-theme="tactical"] .csm-matches-cards {
+        gap: .65rem;
+    }
 
-:root[data-app-theme="tactical"] .csm-match-card {
-    border-top-width: 3px;
-}
+    :root[data-app-theme="tactical"] .csm-match-card {
+        border-top-width: 3px;
+    }
 
-:root[data-app-theme="tactical"] .csm-match-card .csm-card-body {
-    gap: .45rem;
-    padding: .75rem .85rem .85rem;
-}
+        :root[data-app-theme="tactical"] .csm-match-card .csm-card-body {
+            gap: .45rem;
+            padding: .75rem .85rem .85rem;
+        }
 
-:root[data-app-theme="tactical"] .csm-gt-pill {
-    font-family: var(--pt-display-font);
-    letter-spacing: .03em;
-    padding: .3rem .65rem;
-    text-transform: uppercase;
-}
+    :root[data-app-theme="tactical"] .csm-gt-pill {
+        font-family: var(--pt-display-font);
+        letter-spacing: .03em;
+        padding: .3rem .65rem;
+        text-transform: uppercase;
+    }
 
-:root[data-app-theme="tactical"] .modal-header,
-:root[data-app-theme="tactical"] .modal-footer {
-    border-color: var(--pt-line);
-}
+    :root[data-app-theme="tactical"] .modal-header,
+    :root[data-app-theme="tactical"] .modal-footer {
+        border-color: var(--pt-line);
+    }

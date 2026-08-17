@@ -34,6 +34,11 @@ namespace PersonalTools.Entities.CSMatches
         [JsonPropertyName("map_name")]
         public string MapName { get; set; } = string.Empty;
 
+        // Source links are temporary and are only used to offer a direct browser download.
+        // The Demo Library never transfers or stores the actual replay file.
+        [JsonPropertyName("replay_url")]
+        public string? ReplayUrl { get; set; }
+
         [JsonPropertyName("team_scores")]
         public List<LeetifyTeamScoreModel> TeamScores { get; set; } = new();
 

@@ -10,122 +10,430 @@
     --csm-win: #4ade9b;
 }
 
-.csm-page .win { color: var(--csm-win); }
-.csm-page .loss { color: var(--csm-loss); }
+.csm-page .win {
+    color: var(--csm-win);
+}
+
+.csm-page .loss {
+    color: var(--csm-loss);
+}
 
 /* Dimmed briefly while an AJAX tab switch is in flight (see csMatchesSwitchProfile). */
-#csMatchesWorkspace { transition: opacity 0.15s ease; }
+#csMatchesWorkspace {
+    transition: opacity 0.15s ease;
+}
 
 /* --pt-ink is the theme-aware foreground colour - it flips from dark navy to near-white in dark
    mode, so anything using it as an "active" background needs its text to flip too (matching the
    dark-mode override this app's own .btn-primary already uses), or it renders bright-on-bright. */
 [data-theme="dark"] .csm-view-toggle button.active,
-[data-theme="dark"] .csm-gt-pill.on { color: #141a2a; }
+[data-theme="dark"] .csm-gt-pill.on {
+    color: #141a2a;
+}
 
 /* ---------- profile tabs, mimicking the CS2 Player Stats page's nav-tabs treatment:
    real Bootstrap .nav-tabs so the active tab visually merges into the panel below it. ---------- */
-.csm-tabs { border-bottom-color: var(--pt-line); flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; overflow-y: hidden; padding: 0 0.25rem; margin-bottom: 0 !important; }
-.csm-tab-item { align-items: center; display: flex; position: relative; }
-.csm-tabs .nav-link {
-    align-items: center; border: 1px solid transparent; border-bottom: 0 !important; color: var(--pt-ink-soft);
-    display: flex; font-size: 0.8rem; font-weight: 700; gap: 0.5rem; min-height: 2.75rem;
-    padding: 0.55rem 2rem 0.55rem 0.9rem; white-space: nowrap;
+.csm-tabs {
+    border-bottom-color: var(--pt-line);
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0.25rem;
+    margin-bottom: 0 !important;
 }
-.csm-tabs .nav-link:hover { border-color: var(--pt-line); color: var(--pt-ink); }
-.csm-tabs .nav-link.active { background: var(--pt-surface); border-color: var(--pt-line); color: var(--pt-ink); }
+
+.csm-tab-item {
+    align-items: center;
+    display: flex;
+    position: relative;
+}
+
+.csm-tabs .nav-link {
+    align-items: center;
+    border: 1px solid transparent;
+    border-bottom: 0 !important;
+    color: var(--pt-ink-soft);
+    display: flex;
+    font-size: 0.8rem;
+    font-weight: 700;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 2rem 0.55rem 0.9rem;
+    white-space: nowrap;
+}
+
+    .csm-tabs .nav-link:hover {
+        border-color: var(--pt-line);
+        color: var(--pt-ink);
+    }
+
+    .csm-tabs .nav-link.active {
+        background: var(--pt-surface);
+        border-color: var(--pt-line);
+        color: var(--pt-ink);
+    }
 /* Same avatar-or-initials treatment as .cs-player-tab-avatar on the CS2 Player Stats page. */
 .csm-tab-avatar {
-    align-items: center; background: #172a3d; border-radius: 50%; color: #fff; display: flex; flex: 0 0 1.65rem;
-    font-size: 0.6rem; font-weight: 800; height: 1.65rem; justify-content: center; overflow: hidden;
+    align-items: center;
+    background: #172a3d;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    flex: 0 0 1.65rem;
+    font-size: 0.6rem;
+    font-weight: 800;
+    height: 1.65rem;
+    justify-content: center;
+    overflow: hidden;
 }
-.csm-tab-avatar img { height: 100%; object-fit: cover; width: 100%; }
+
+    .csm-tab-avatar img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+    }
+
 .csm-tab-close {
-    background: transparent; border: 0; border-radius: 50%; color: var(--pt-ink-soft); font-size: 0.7rem;
-    height: 1.6rem; width: 1.6rem; position: absolute; right: 0.4rem; top: 50%; transform: translateY(-50%); z-index: 2;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--pt-ink-soft);
+    font-size: 0.7rem;
+    height: 1.6rem;
+    width: 1.6rem;
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
 }
-.csm-tab-close:hover, .csm-tab-close:focus-visible { background: var(--pt-canvas); color: var(--pt-ink); outline: 0; }
+
+    .csm-tab-close:hover, .csm-tab-close:focus-visible {
+        background: var(--pt-canvas);
+        color: var(--pt-ink);
+        outline: 0;
+    }
+
 .csm-tab-add {
-    border: 1px dashed var(--pt-line); border-bottom: 1px dashed var(--pt-line) !important; color: var(--pt-ink-soft);
-    background: none; padding: 0.5rem 0.9rem; font-size: 0.8rem; align-self: center; margin-bottom: 0.4rem; border-radius: 0.5rem;
+    border: 1px dashed var(--pt-line);
+    border-bottom: 1px dashed var(--pt-line) !important;
+    color: var(--pt-ink-soft);
+    background: none;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.8rem;
+    align-self: center;
+    margin-bottom: 0.4rem;
+    border-radius: 0.5rem;
 }
-.csm-tab-add:hover { color: var(--pt-ink); border-color: var(--pt-mint); }
+
+    .csm-tab-add:hover {
+        color: var(--pt-ink);
+        border-color: var(--pt-mint);
+    }
 
 /* ---------- stats panel: the "folder" content the tabs sit on top of ---------- */
-.csm-tabs-panel { background: var(--pt-surface); border: 1px solid var(--pt-line); border-top: 0; border-radius: 0 0 1rem 1rem; padding: 1.1rem; }
-.csm-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
-@media (max-width: 1100px) { .csm-stats { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 700px) { .csm-stats { grid-template-columns: repeat(2, 1fr); } }
-.csm-stat {
-    background: var(--pt-canvas); border: 1px solid var(--pt-line); border-radius: 0.75rem; padding: 0.9rem 1rem; position: relative;
+.csm-tabs-panel {
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-top: 0;
+    border-radius: 0 0 1rem 1rem;
+    padding: 1.1rem;
 }
-.csm-stat-label { font-size: 0.72rem; color: var(--pt-ink-soft); margin: 0 0 0.35rem; padding-right: 1rem; }
-.csm-stat-value { font-size: 1.3rem; font-weight: 700; margin: 0; font-variant-numeric: tabular-nums; color: var(--pt-ink); }
-.csm-stat-info { position: absolute; top: 0.6rem; right: 0.6rem; color: var(--pt-ink-soft); font-size: 0.72rem; cursor: help; }
-.csm-stat-info:hover { color: var(--pt-mint); }
+
+.csm-stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+    .csm-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .csm-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.csm-stat {
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    position: relative;
+}
+
+.csm-stat-label {
+    font-size: 0.72rem;
+    color: var(--pt-ink-soft);
+    margin: 0 0 0.35rem;
+    padding-right: 1rem;
+}
+
+.csm-stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--pt-ink);
+}
+
+.csm-stat-info {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    color: var(--pt-ink-soft);
+    font-size: 0.72rem;
+    cursor: help;
+}
+
+    .csm-stat-info:hover {
+        color: var(--pt-mint);
+    }
 
 /* Edit Stats button sits in this header so it reads as acting on the panel below it. */
-.csm-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
-.csm-panel-head-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pt-ink-soft); font-weight: 700; margin: 0; }
+.csm-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.csm-panel-head-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pt-ink-soft);
+    font-weight: 700;
+    margin: 0;
+}
 
 /* ---------- filters + view toggle ---------- */
-.csm-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.85rem; }
-.csm-filters-actions { display: flex; gap: 0.5rem; margin-left: auto; }
-.csm-filter-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 9rem; flex: 1 1 9rem; }
-.csm-filter-field label { font-size: 0.72rem; color: var(--pt-ink-soft); }
-.csm-view-toggle { display: inline-flex; border: 1px solid var(--pt-line); border-radius: 0.65rem; overflow: hidden; flex-shrink: 0; }
-.csm-view-toggle button {
-    border: none; background: var(--pt-surface); color: var(--pt-ink-soft); padding: 0.5rem 0.8rem; font-size: 0.85rem;
-    display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+.csm-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.85rem;
 }
-.csm-view-toggle button + button { border-left: 1px solid var(--pt-line); }
-.csm-view-toggle button.active { background: var(--pt-ink); color: #fff; }
+
+.csm-filters-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.csm-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 9rem;
+    flex: 1 1 9rem;
+}
+
+    .csm-filter-field label {
+        font-size: 0.72rem;
+        color: var(--pt-ink-soft);
+    }
+
+.csm-view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--pt-line);
+    border-radius: 0.65rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+    .csm-view-toggle button {
+        border: none;
+        background: var(--pt-surface);
+        color: var(--pt-ink-soft);
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        cursor: pointer;
+    }
+
+        .csm-view-toggle button + button {
+            border-left: 1px solid var(--pt-line);
+        }
+
+        .csm-view-toggle button.active {
+            background: var(--pt-ink);
+            color: #fff;
+        }
 
 /* ---------- shared match furniture ---------- */
-.csm-thumb { object-fit: cover; flex-shrink: 0; border-radius: 0.4rem; }
-.csm-side-icon { flex-shrink: 0; border-radius: 50%; }
-.csm-chip { font-size: 0.7rem; color: var(--pt-ink-soft); background: var(--pt-canvas); border: 1px solid var(--pt-line); padding: 0.22rem 0.6rem; border-radius: 999px; white-space: nowrap; }
+.csm-thumb {
+    object-fit: cover;
+    flex-shrink: 0;
+    border-radius: 0.4rem;
+}
+
+.csm-side-icon {
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+.csm-chip {
+    font-size: 0.7rem;
+    color: var(--pt-ink-soft);
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
 /* Same height/contain-fit treatment as .cs-rank-brand > img on the CS2 Player Stats page, so these
    read as the same brand marks - Competitive/FaceIT are square, Premier is a wide wordmark. */
-.csm-gametype-logo { height: 1.15rem; max-width: 4.5rem; object-fit: contain; object-position: left center; width: auto; flex-shrink: 0; }
+.csm-gametype-logo {
+    height: 1.15rem;
+    max-width: 4.5rem;
+    object-fit: contain;
+    object-position: left center;
+    width: auto;
+    flex-shrink: 0;
+}
+
 .csm-ot-chip {
     /* Matches the original badge text-bg-warning treatment - Bootstrap's warning yellow needs dark
        text, not white, since it's too light for white-on-badge contrast in either theme. */
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: #212529;
-    background: var(--bs-warning, #ffc107); padding: 0.15rem 0.45rem; border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #212529;
+    background: var(--bs-warning, #ffc107);
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
 }
+
 .csm-icon-btn {
-    background: var(--pt-surface); border: 1px solid var(--pt-line); color: var(--pt-ink-soft); border-radius: 0.55rem;
-    width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.82rem;
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    color: var(--pt-ink-soft);
+    border-radius: 0.55rem;
+    width: 2.1rem;
+    height: 2.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
 }
-.csm-icon-btn:hover { color: var(--pt-ink); border-color: var(--pt-mint); }
-.csm-icon-btn.is-danger:hover { color: var(--csm-loss); border-color: var(--csm-loss); }
+
+    .csm-icon-btn:hover {
+        color: var(--pt-ink);
+        border-color: var(--pt-mint);
+    }
+
+    .csm-icon-btn.is-danger:hover {
+        color: var(--csm-loss);
+        border-color: var(--csm-loss);
+    }
+
 .csm-empty {
-    background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: 0.85rem; padding: 1.75rem;
-    text-align: center; color: var(--pt-ink-soft); font-size: 0.9rem;
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.85rem;
+    padding: 1.75rem;
+    text-align: center;
+    color: var(--pt-ink-soft);
+    font-size: 0.9rem;
 }
 
 /* ---------- list view: a real Bootstrap table, rows rendered by page-cs-match-tracker.js.
    Win/loss reads as a left colour bar on the first cell, since a plain <tr> can't carry one. ---------- */
-.csm-table-wrap { border: 1px solid var(--pt-line); border-radius: 0.85rem; background: var(--pt-surface); }
-.csm-match-table { margin-bottom: 0; }
-.csm-match-table thead th {
-    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
-    color: var(--pt-ink-soft); border-bottom: 1px solid var(--pt-line); padding: 0.7rem 0.9rem;
+.csm-table-wrap {
+    border: 1px solid var(--pt-line);
+    border-radius: 0.85rem;
+    background: var(--pt-surface);
 }
-.csm-match-table td { padding: 0.65rem 0.9rem; vertical-align: middle; border-bottom: 1px solid var(--pt-line); }
-.csm-match-table tbody tr:last-child td { border-bottom: 0; }
-.csm-match-tr td:first-child { box-shadow: inset 3px 0 0 var(--pt-line); }
-.csm-match-tr.is-win td:first-child { box-shadow: inset 3px 0 0 var(--csm-win); }
-.csm-match-tr.is-loss td:first-child { box-shadow: inset 3px 0 0 var(--csm-loss); }
+
+.csm-match-table {
+    margin-bottom: 0;
+}
+
+    .csm-match-table thead th {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+        color: var(--pt-ink-soft);
+        border-bottom: 1px solid var(--pt-line);
+        padding: 0.7rem 0.9rem;
+    }
+
+    .csm-match-table td {
+        padding: 0.65rem 0.9rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--pt-line);
+    }
+
+    .csm-match-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+.csm-match-tr td:first-child {
+    box-shadow: inset 3px 0 0 var(--pt-line);
+}
+
+.csm-match-tr.is-win td:first-child {
+    box-shadow: inset 3px 0 0 var(--csm-win);
+}
+
+.csm-match-tr.is-loss td:first-child {
+    box-shadow: inset 3px 0 0 var(--csm-loss);
+}
 
 /* Cell furniture shared with card view. */
-.csm-match-cell { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-.csm-match-table .csm-thumb { width: 44px; height: 30px; }
-.csm-match-table .csm-side-icon { width: 22px; height: 22px; }
-.csm-map-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.csm-score { font-size: 1.05rem; font-weight: 750; font-variant-numeric: tabular-nums; }
-.csm-match-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
-.csm-date { font-size: 0.78rem; color: var(--pt-ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.csm-match-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.csm-match-table .csm-thumb {
+    width: 44px;
+    height: 30px;
+}
+
+.csm-match-table .csm-side-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.csm-map-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.csm-score {
+    font-size: 1.05rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.csm-match-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.csm-date {
+    font-size: 0.78rem;
+    color: var(--pt-ink-soft);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
 
 /* Tactical uses compressed display type for hierarchy, but match details stay in the regular UI
    face. This keeps names, scores and dates comfortable to scan on smaller desktop displays. */
@@ -137,10 +445,10 @@
     font-family: var(--bs-body-font-family);
 }
 
-:root[data-app-theme="tactical"] .csm-match-table td,
-:root[data-app-theme="tactical"] .csm-fetch-table td {
-    line-height: 1.4;
-}
+    :root[data-app-theme="tactical"] .csm-match-table td,
+    :root[data-app-theme="tactical"] .csm-fetch-table td {
+        line-height: 1.4;
+    }
 
 :root[data-app-theme="tactical"] .csm-map-name {
     font-weight: 650;
@@ -148,8 +456,8 @@
 }
 
 :root[data-app-theme="tactical"] .csm-score {
-    font-weight: 700;
-    letter-spacing: .025em;
+    font-weight: 500;
+    letter-spacing: .045em;
 }
 
 /* The tactical display face is useful for a small amount of hierarchy, but it becomes
@@ -199,86 +507,381 @@
 }
 
 /* Smoothly-animated pagination/view swaps + a dimmed state while the initial fetch is in flight. */
-.csm-table-wrap, .csm-matches-cards { transition: opacity 0.15s ease; opacity: 1; }
-.csm-table-wrap.csm-fade-out, .csm-matches-cards.csm-fade-out { opacity: 0; }
-.csm-table-loading { opacity: 0.5; pointer-events: none; }
+.csm-table-wrap, .csm-matches-cards {
+    transition: opacity 0.15s ease;
+    opacity: 1;
+}
+
+    .csm-table-wrap.csm-fade-out, .csm-matches-cards.csm-fade-out {
+        opacity: 0;
+    }
+
+.csm-table-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
 
 /* ---------- pagination + rows-per-page footer ---------- */
-.csm-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 0.85rem; }
-.csm-page-size { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--pt-ink-soft); }
-.csm-page-size select { width: auto; }
-.csm-page-nav { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
-.csm-page-summary { font-size: 0.8rem; color: var(--pt-ink-soft); white-space: nowrap; }
+.csm-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.85rem;
+}
+
+.csm-page-size {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--pt-ink-soft);
+}
+
+    .csm-page-size select {
+        width: auto;
+    }
+
+.csm-page-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+.csm-page-summary {
+    font-size: 0.8rem;
+    color: var(--pt-ink-soft);
+    white-space: nowrap;
+}
 /* Bootstrap's pagination isn't remapped by the app's dark-mode override elsewhere, same gap the
    table/badge components had - fix it here, scoped to this page's own pagination. */
-.csm-page .pagination .page-link { background: var(--pt-surface); border-color: var(--pt-line); color: var(--pt-ink); }
-.csm-page .pagination .page-link:hover { background: var(--pt-canvas); border-color: var(--pt-line); color: var(--pt-ink); }
-.csm-page .pagination .page-item.active .page-link { background: var(--pt-ink); border-color: var(--pt-ink); color: var(--pt-canvas); }
-.csm-page .pagination .page-item.disabled .page-link { background: var(--pt-canvas); border-color: var(--pt-line); color: var(--pt-ink-soft); opacity: 0.6; }
+.csm-page .pagination .page-link {
+    background: var(--pt-surface);
+    border-color: var(--pt-line);
+    color: var(--pt-ink);
+}
+
+    .csm-page .pagination .page-link:hover {
+        background: var(--pt-canvas);
+        border-color: var(--pt-line);
+        color: var(--pt-ink);
+    }
+
+.csm-page .pagination .page-item.active .page-link {
+    background: var(--pt-ink);
+    border-color: var(--pt-ink);
+    color: var(--pt-canvas);
+}
+
+.csm-page .pagination .page-item.disabled .page-link {
+    background: var(--pt-canvas);
+    border-color: var(--pt-line);
+    color: var(--pt-ink-soft);
+    opacity: 0.6;
+}
 
 /* ---------- card view ---------- */
-.csm-matches-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-.csm-match-card {
-    background: var(--pt-surface); border: 1px solid var(--pt-line); border-top: 4px solid var(--pt-line);
-    border-radius: 0.9rem; overflow: hidden; box-shadow: 0 1px 2px rgba(24,32,51,0.06); display: flex; flex-direction: column;
+.csm-matches-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
 }
-.csm-match-card.is-win { border-top-color: var(--csm-win); }
-.csm-match-card.is-loss { border-top-color: var(--csm-loss); }
-.csm-match-card .csm-card-img { width: 100%; height: 130px; object-fit: cover; }
-.csm-match-card .csm-card-body { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
-.csm-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
-.csm-card-title { display: flex; align-items: center; gap: 0.5rem; }
-.csm-card-title .csm-side-icon { width: 20px; height: 20px; }
-.csm-card-score { text-align: center; padding: 0.4rem 0; font-size: 1.9rem; font-weight: 750; font-variant-numeric: tabular-nums; }
-.csm-card-score .sep { color: var(--pt-ink-soft); font-weight: 400; font-size: 1.2rem; }
-.csm-card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+
+.csm-match-card {
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-top: 4px solid var(--pt-line);
+    border-radius: 0.9rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(24,32,51,0.06);
+    display: flex;
+    flex-direction: column;
+}
+
+    .csm-match-card.is-win {
+        border-top-color: var(--csm-win);
+    }
+
+    .csm-match-card.is-loss {
+        border-top-color: var(--csm-loss);
+    }
+
+    .csm-match-card .csm-card-img {
+        width: 100%;
+        height: 130px;
+        object-fit: cover;
+    }
+
+    .csm-match-card .csm-card-body {
+        padding: 1rem 1.1rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        flex: 1;
+    }
+
+.csm-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.csm-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+    .csm-card-title .csm-side-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+.csm-card-score {
+    text-align: center;
+    padding: 0.4rem 0;
+    font-size: 1.9rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+    .csm-card-score .sep {
+        color: var(--pt-ink-soft);
+        font-weight: 400;
+        font-size: 1.2rem;
+    }
+
+.csm-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
 
 /* ---------- modal restyle (subtle, mostly Bootstrap defaults + form-grid layout) ---------- */
-.csm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.csm-form-field { display: flex; flex-direction: column; gap: 0.4rem; }
-.csm-form-field.full { grid-column: 1 / -1; }
-.csm-form-field label { font-size: 0.78rem; font-weight: 600; color: var(--pt-ink-soft); }
-
-.csm-side-toggle { display: flex; gap: 0.5rem; }
-.csm-side-toggle-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.55rem;
-    border: 1px solid var(--pt-line); border-radius: 0.65rem; background: var(--pt-canvas); color: var(--pt-ink-soft); font-weight: 650;
+.csm-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
 }
-.csm-side-toggle-btn.active { border-color: var(--pt-mint); background: var(--pt-surface); color: var(--pt-ink); box-shadow: 0 0 0 2px rgba(143,208,194,0.35); }
-.csm-side-toggle-btn img { width: 20px; height: 20px; border-radius: 50%; }
 
-.csm-map-preview { display: flex; align-items: center; gap: 0.7rem; }
-.csm-map-preview img { width: 60px; height: 36px; object-fit: cover; border-radius: 0.4rem; flex-shrink: 0; }
+.csm-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+    .csm-form-field.full {
+        grid-column: 1 / -1;
+    }
+
+    .csm-form-field label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--pt-ink-soft);
+    }
+
+.csm-side-toggle {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.csm-side-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem;
+    border: 1px solid var(--pt-line);
+    border-radius: 0.65rem;
+    background: var(--pt-canvas);
+    color: var(--pt-ink-soft);
+    font-weight: 650;
+}
+
+    .csm-side-toggle-btn.active {
+        border-color: var(--pt-mint);
+        background: var(--pt-surface);
+        color: var(--pt-ink);
+        box-shadow: 0 0 0 2px rgba(143,208,194,0.35);
+    }
+
+    .csm-side-toggle-btn img {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+    }
+
+.csm-map-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+    .csm-map-preview img {
+        width: 60px;
+        height: 36px;
+        object-fit: cover;
+        border-radius: 0.4rem;
+        flex-shrink: 0;
+    }
 
 /* ---------- fetch-from-leetify modal ---------- */
-.csm-filter-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.csm-gt-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.csm-gt-pill {
-    font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.8rem; border-radius: 999px;
-    border: 1px solid var(--pt-line); color: var(--pt-ink-soft); background: var(--pt-canvas);
+.csm-filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
-.csm-gt-pill.on { color: #fff; border-color: var(--pt-ink); background: var(--pt-ink); }
-.csm-fetch-count { font-size: 0.82rem; color: var(--pt-ink-soft); display: flex; align-items: center; gap: 0.4rem; }
-.csm-fetch-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.csm-fetch-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pt-ink-soft); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--pt-line); }
-.csm-fetch-table td { padding: 0.5rem; border-bottom: 1px solid var(--pt-line); vertical-align: middle; }
-.csm-fetch-table tbody tr { cursor: pointer; }
-.csm-fetch-table tbody tr:hover { background: var(--pt-canvas); }
-.csm-fetch-table tr.leetify-row-imported td { color: var(--pt-ink-soft); }
-.csm-fetch-table tr.leetify-row-imported { cursor: not-allowed; }
-.csm-fetch-table tr.leetify-row-imported:hover { background: transparent; }
-.csm-already-badge { font-size: 0.66rem; padding: 0.18rem 0.55rem; border-radius: 999px; background: var(--pt-canvas); border: 1px solid var(--pt-line); color: var(--pt-ink-soft); }
+
+.csm-gt-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.csm-gt-pill {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--pt-line);
+    color: var(--pt-ink-soft);
+    background: var(--pt-canvas);
+}
+
+    .csm-gt-pill.on {
+        color: #fff;
+        border-color: var(--pt-ink);
+        background: var(--pt-ink);
+    }
+
+.csm-fetch-count {
+    font-size: 0.82rem;
+    color: var(--pt-ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.csm-fetch-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+    .csm-fetch-table th {
+        text-align: left;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--pt-ink-soft);
+        padding: 0.4rem 0.5rem;
+        border-bottom: 1px solid var(--pt-line);
+    }
+
+    .csm-fetch-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--pt-line);
+        vertical-align: middle;
+    }
+
+    .csm-fetch-table tbody tr {
+        cursor: pointer;
+    }
+
+        .csm-fetch-table tbody tr:hover {
+            background: var(--pt-canvas);
+        }
+
+    .csm-fetch-table tr.leetify-row-imported td {
+        color: var(--pt-ink-soft);
+    }
+
+    .csm-fetch-table tr.leetify-row-imported {
+        cursor: not-allowed;
+    }
+
+        .csm-fetch-table tr.leetify-row-imported:hover {
+            background: transparent;
+        }
+
+.csm-already-badge {
+    font-size: 0.66rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    color: var(--pt-ink-soft);
+}
 
 /* ---------- edit-stats modal: XL, toggles in a 6-col grid ---------- */
-.csm-toggle-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.65rem; }
-@media (max-width: 992px) { .csm-toggle-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 576px) { .csm-toggle-grid { grid-template-columns: repeat(2, 1fr); } }
-.csm-toggle-cell {
-    background: var(--pt-canvas); border: 1px solid var(--pt-line); border-radius: 0.65rem; padding: 0.6rem 0.7rem;
-    display: flex; flex-direction: column; gap: 0.4rem; cursor: pointer; transition: border-color 0.15s ease;
+.csm-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.65rem;
 }
-.csm-toggle-cell:hover { border-color: var(--pt-mint); }
-.csm-toggle-cell-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; }
-.csm-toggle-cell-head label { font-size: 0.8rem; font-weight: 600; color: var(--pt-ink); line-height: 1.2; }
-.csm-toggle-cell-head i { color: var(--pt-ink-soft); font-size: 0.75rem; flex-shrink: 0; margin-top: 0.15rem; cursor: help; }
-.csm-section-label { font-size: 0.78rem; color: var(--pt-ink-soft); margin: 1rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+@media (max-width: 992px) {
+    .csm-toggle-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .csm-toggle-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.csm-toggle-cell {
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.65rem;
+    padding: 0.6rem 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+    .csm-toggle-cell:hover {
+        border-color: var(--pt-mint);
+    }
+
+.csm-toggle-cell-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+    .csm-toggle-cell-head label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--pt-ink);
+        line-height: 1.2;
+    }
+
+    .csm-toggle-cell-head i {
+        color: var(--pt-ink-soft);
+        font-size: 0.75rem;
+        flex-shrink: 0;
+        margin-top: 0.15rem;
+        cursor: help;
+    }
+
+.csm-section-label {
+    font-size: 0.78rem;
+    color: var(--pt-ink-soft);
+    margin: 1rem 0 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}

@@ -1,1 +1,73 @@
-.notes-sort-control{align-items:center;background:var(--pt-surface);border:1px solid var(--pt-line);border-radius:.65rem;color:var(--pt-ink-soft);display:flex;gap:.45rem;padding:.18rem .35rem .18rem .6rem}.notes-sort-control .form-select{background-color:transparent;border:0;color:var(--pt-ink);font-size:.82rem;font-weight:650;padding-block:.25rem;padding-right:1.8rem;width:9.5rem}.notes-sort-control .form-select:focus{box-shadow:none}.note-sortable-item{animation:note-arrive .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--note-index,0) * 35ms)}.note-sortable-item.is-removing{animation:note-remove .26s ease forwards;pointer-events:none}.note-sortable-item.is-saving .tool-card{border-color:var(--pt-mint);box-shadow:0 0 0 .2rem rgba(143,208,194,.16)!important}.notes-collection.is-sorting .note-sortable-item{transition:transform .28s cubic-bezier(.2,.8,.2,1)}@keyframes note-arrive{from{opacity:0;transform:scale(.975)}to{opacity:1;transform:scale(1)}}@keyframes note-remove{to{opacity:0;transform:scale(.96)}}@media(prefers-reduced-motion:reduce){.note-sortable-item,.note-sortable-item.is-removing{animation:none}.notes-collection.is-sorting .note-sortable-item{transition:none}}
+.notes-sort-control {
+    align-items: center;
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-radius: .65rem;
+    color: var(--pt-ink-soft);
+    display: flex;
+    gap: .45rem;
+    padding: .18rem .35rem .18rem .6rem
+}
+
+    .notes-sort-control .form-select {
+        background-color: transparent;
+        border: 0;
+        color: var(--pt-ink);
+        font-size: .82rem;
+        font-weight: 650;
+        padding-block: .25rem;
+        padding-right: 1.8rem;
+        width: 9.5rem
+    }
+
+        .notes-sort-control .form-select:focus {
+            box-shadow: none
+        }
+
+.note-sortable-item {
+    animation: note-arrive .38s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--note-index,0) * 35ms)
+}
+
+    .note-sortable-item.is-removing {
+        animation: note-remove .26s ease forwards;
+        pointer-events: none
+    }
+
+    .note-sortable-item.is-saving .tool-card {
+        border-color: var(--pt-mint);
+        box-shadow: 0 0 0 .2rem rgba(143,208,194,.16) !important
+    }
+
+.notes-collection.is-sorting .note-sortable-item {
+    transition: transform .28s cubic-bezier(.2,.8,.2,1)
+}
+
+@keyframes note-arrive {
+    from {
+        opacity: 0;
+        transform: scale(.975)
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1)
+    }
+}
+
+@keyframes note-remove {
+    to {
+        opacity: 0;
+        transform: scale(.96)
+    }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    .note-sortable-item, .note-sortable-item.is-removing {
+        animation: none
+    }
+
+    .notes-collection.is-sorting .note-sortable-item {
+        transition: none
+    }
+}

@@ -22,6 +22,8 @@ using PersonalTools.Data.Monitoring;
 using PersonalTools.Hubs;
 using PersonalTools.Classes.CSStats;
 using PersonalTools.Data.CSStats;
+using PersonalTools.Classes.CSDemos;
+using PersonalTools.Data.CSDemos;
 using PersonalTools.Classes.Tracker;
 using PersonalTools.Data.Tracker;
 using System.Net.Http.Headers;
@@ -175,6 +177,8 @@ builder.Services.AddHttpClient<ILeetifyProfileData, LeetifyProfileData>(client =
 builder.Services.AddScoped<ICSStatsFuncs, CSStatsFuncs>();
 builder.Services.AddScoped<IReportedPlayersData, ReportedPlayersData>();
 builder.Services.AddScoped<IReportedPlayersFuncs, ReportedPlayersFuncs>();
+builder.Services.AddScoped<ICSDemoData, CSDemoData>();
+builder.Services.AddScoped<ICSDemoFuncs, CSDemoFuncs>();
 builder.Services.AddHttpClient<IAccountStandingData, AccountStandingData>(client =>
 {
     client.BaseAddress = new Uri("https://api.steampowered.com/");

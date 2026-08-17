@@ -1,0 +1,71 @@
+@page
+@model PersonalTools.Pages.CSDemos.IndexModel
+@{
+    ViewData["Title"] = "CS2 Demo Library";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-cs-demos.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 cs-demos-page" data-linked-steam-id="@Model.LinkedSteamId">
+    @Html.AntiForgeryToken()
+
+    <div class="row align-items-end gy-3 section-spacing">
+        <div class="col-12 col-xl">
+            <p class="eyebrow">Counter-Strike 2</p>
+            <h1 class="page-title">Demo library</h1>
+            <p class="page-subtitle">Recent replay links, ready to open or download directly to your device.</p>
+        </div>
+        <div class="col-12 col-xl-auto">
+            <a class="cs-demos-attribution" href="https://leetify.com" target="_blank" rel="noopener" aria-label="Data provided by Leetify">
+                <img class="cs-leetify-badge-dark" src="~/images/cs-stats/brand/leetify-dark.png" alt="Data provided by Leetify" />
+                <img class="cs-leetify-badge-light" src="~/images/cs-stats/brand/leetify-light.png" alt="Data provided by Leetify" />
+            </a>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Search a Steam profile, or use your linked Steam account to load its recent Leetify matches.",
+        "Only demos which the original provider still makes available are shown here.",
+        "Open a replay link or download it directly to your device; Personal Tools stores no demo files."
+    })
+
+    <section class="card border-0 shadow-sm cs-demos-search-card section-spacing" aria-labelledby="csDemosSearchTitle">
+        <div class="card-body p-3 p-lg-4">
+            <form id="csDemosSearchForm">
+                <label class="form-label fw-semibold" id="csDemosSearchTitle" for="csDemosProfile">Find recent demos</label>
+                <div class="cs-demos-search-controls">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text" aria-hidden="true"><i class="fa-brands fa-steam"></i></span>
+                        <input class="form-control" id="csDemosProfile" placeholder="Steam profile URL, custom name, or SteamID64" maxlength="200" autocomplete="off" required />
+                    </div>
+                    <button class="btn btn-primary btn-lg" type="submit"><i class="fa-solid fa-film me-2"></i>Load demos</button>
+                    @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                    {
+                        <button class="btn steam-account-button" id="loadLinkedDemos" type="button" data-steam-id="@Model.LinkedSteamId"><i class="fa-brands fa-steam"></i><span>My demos</span></button>
+                    }
+                </div>
+                <p class="form-text mb-0 mt-2">The list is saved privately for faster revisits. Refresh it whenever you need fresh source links.</p>
+            </form>
+        </div>
+    </section>
+
+    <div class="alert alert-danger d-none" id="csDemosError" role="alert"></div>
+
+    <section class="cs-demos-empty" id="csDemosEmptyState">
+        <span class="cs-demos-empty-icon" aria-hidden="true"><i class="fa-solid fa-film"></i></span>
+        <h2 class="h5 fw-semibold">No demo library loaded</h2>
+        <p class="small-muted mb-0">Search a player above to see recent demos that are still available.</p>
+    </section>
+
+    <section class="d-none" id="csDemosWorkspace" aria-live="polite">
+        <div class="cs-demos-player-summary card border-0 shadow-sm mb-3" id="csDemosPlayerSummary"></div>
+        <div class="cs-demos-list" id="csDemosList"></div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/pages/page-cs-demos.js" asp-append-version="true"></script>
+}

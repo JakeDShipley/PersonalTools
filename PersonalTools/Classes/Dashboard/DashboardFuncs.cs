@@ -33,6 +33,15 @@ namespace PersonalTools.Classes.Dashboard
                 },
                 new DashboardToolObj
                 {
+                    Title = "CS2 Demo Library",
+                    Description = "Open or download the latest available CS2 replays directly to your device.",
+                    IconClass = "fa-solid fa-film",
+                    PageUrl = "/CSDemos",
+                    ButtonText = "Browse demos",
+                    Category = "Workspace",
+                },
+                new DashboardToolObj
+                {
                     Title = "CS2 Skin Tracker",
                     Description = "Track skins, prices, purchase dates, notes and other useful details.",
                     IconClass = "fa-solid fa-gun",

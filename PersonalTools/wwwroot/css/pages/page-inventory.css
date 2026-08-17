@@ -13,9 +13,7 @@
 
 .inventory-steam-account {
     align-items: center;
-    background:
-        radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--steam-blue) 12%, transparent), transparent 38%),
-        color-mix(in srgb, var(--steam-deep) 4%, var(--pt-surface));
+    background: radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--steam-blue) 12%, transparent), transparent 38%), color-mix(in srgb, var(--steam-deep) 4%, var(--pt-surface));
     border: 1px solid color-mix(in srgb, var(--steam-blue) 24%, var(--pt-line));
     border-radius: 1rem;
     display: flex;
@@ -25,9 +23,7 @@
 }
 
 [data-theme="dark"] .inventory-steam-account {
-    background:
-        radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--steam-blue) 15%, transparent), transparent 40%),
-        color-mix(in srgb, var(--steam-deep) 38%, var(--pt-surface));
+    background: radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--steam-blue) 15%, transparent), transparent 40%), color-mix(in srgb, var(--steam-deep) 38%, var(--pt-surface));
 }
 
 .inventory-steam-account-copy {
@@ -37,20 +33,20 @@
     min-width: 0;
 }
 
-.inventory-steam-account-copy > span:last-child {
-    display: grid;
-    gap: .16rem;
-}
+    .inventory-steam-account-copy > span:last-child {
+        display: grid;
+        gap: .16rem;
+    }
 
-.inventory-steam-account-copy strong {
-    color: var(--pt-ink);
-    font-size: .87rem;
-}
+    .inventory-steam-account-copy strong {
+        color: var(--pt-ink);
+        font-size: .87rem;
+    }
 
-.inventory-steam-account-copy small {
-    color: var(--pt-ink-soft);
-    font-size: .75rem;
-}
+    .inventory-steam-account-copy small {
+        color: var(--pt-ink-soft);
+        font-size: .75rem;
+    }
 
 .inventory-steam-mark {
     align-items: center;
@@ -86,22 +82,22 @@
     padding-inline: .9rem;
 }
 
-.steam-account-button:hover,
-.steam-account-button:focus-visible,
-.steam-search-button:hover,
-.steam-search-button:focus-visible {
-    background: linear-gradient(135deg, #1b6698, #168bdc);
-    border-color: var(--steam-blue-soft);
-    box-shadow: 0 0 0 .22rem color-mix(in srgb, var(--steam-blue) 24%, transparent), 0 .45rem 1.1rem rgba(26, 159, 255, .2);
-    color: #fff;
-}
+    .steam-account-button:hover,
+    .steam-account-button:focus-visible,
+    .steam-search-button:hover,
+    .steam-search-button:focus-visible {
+        background: linear-gradient(135deg, #1b6698, #168bdc);
+        border-color: var(--steam-blue-soft);
+        box-shadow: 0 0 0 .22rem color-mix(in srgb, var(--steam-blue) 24%, transparent), 0 .45rem 1.1rem rgba(26, 159, 255, .2);
+        color: #fff;
+    }
 
-.steam-account-button:active,
-.steam-search-button:active {
-    background: #176faa !important;
-    border-color: var(--steam-blue-soft) !important;
-    color: #fff !important;
-}
+    .steam-account-button:active,
+    .steam-search-button:active {
+        background: #176faa !important;
+        border-color: var(--steam-blue-soft) !important;
+        color: #fff !important;
+    }
 
 .inventory-search-controls {
     align-items: stretch;
@@ -113,19 +109,19 @@
     flex: 1 1 auto;
 }
 
-.inventory-profile-input .input-group-text {
-    background: color-mix(in srgb, var(--steam-blue) 8%, var(--pt-canvas));
-    border-color: var(--pt-line);
-    border-radius: .75rem 0 0 .75rem;
-    color: color-mix(in srgb, var(--steam-blue) 70%, var(--pt-ink));
-    width: 3.25rem;
-    justify-content: center;
-}
+    .inventory-profile-input .input-group-text {
+        background: color-mix(in srgb, var(--steam-blue) 8%, var(--pt-canvas));
+        border-color: var(--pt-line);
+        border-radius: .75rem 0 0 .75rem;
+        color: color-mix(in srgb, var(--steam-blue) 70%, var(--pt-ink));
+        width: 3.25rem;
+        justify-content: center;
+    }
 
-.inventory-profile-input .form-control {
-    border-radius: 0 .75rem .75rem 0;
-    min-height: 3.25rem;
-}
+    .inventory-profile-input .form-control {
+        border-radius: 0 .75rem .75rem 0;
+        min-height: 3.25rem;
+    }
 
 .steam-search-button {
     flex: 0 0 auto;
@@ -167,16 +163,16 @@
     padding: .35rem .58rem;
 }
 
-.inventory-view-button:hover,
-.inventory-view-button:focus-visible {
-    background: var(--pt-canvas);
-    color: var(--pt-ink);
-}
+    .inventory-view-button:hover,
+    .inventory-view-button:focus-visible {
+        background: var(--pt-canvas);
+        color: var(--pt-ink);
+    }
 
-.inventory-view-button.active {
-    background: var(--pt-ink);
-    color: var(--pt-surface);
-}
+    .inventory-view-button.active {
+        background: var(--pt-ink);
+        color: var(--pt-surface);
+    }
 
 [data-theme="dark"] .inventory-view-button.active {
     color: #141a2a;
@@ -186,33 +182,33 @@
     overflow: hidden;
 }
 
-.inventory-table-card .table {
-    --bs-table-bg: transparent;
-    --bs-table-color: var(--pt-ink);
-    --bs-table-hover-bg: color-mix(in srgb, var(--pt-mint) 10%, transparent);
-    --bs-table-hover-color: var(--pt-ink);
-}
+    .inventory-table-card .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--pt-ink);
+        --bs-table-hover-bg: color-mix(in srgb, var(--pt-mint) 10%, transparent);
+        --bs-table-hover-color: var(--pt-ink);
+    }
 
-.inventory-table-card thead th {
-    background: color-mix(in srgb, var(--pt-canvas) 72%, var(--pt-surface));
-    border-bottom-color: var(--pt-line);
-    color: var(--pt-ink-soft);
-    font-size: .7rem;
-    font-weight: 750;
-    letter-spacing: .045em;
-    padding: .9rem 1rem;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
+    .inventory-table-card thead th {
+        background: color-mix(in srgb, var(--pt-canvas) 72%, var(--pt-surface));
+        border-bottom-color: var(--pt-line);
+        color: var(--pt-ink-soft);
+        font-size: .7rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        padding: .9rem 1rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
 
-.inventory-table-card tbody td {
-    border-bottom-color: var(--pt-line);
-    padding: .7rem 1rem;
-}
+    .inventory-table-card tbody td {
+        border-bottom-color: var(--pt-line);
+        padding: .7rem 1rem;
+    }
 
-.inventory-table-card tbody tr:last-child td {
-    border-bottom: 0;
-}
+    .inventory-table-card tbody tr:last-child td {
+        border-bottom: 0;
+    }
 
 .inventory-item-summary {
     min-width: 15rem;
@@ -243,11 +239,11 @@
     min-width: 9rem;
 }
 
-.inventory-statuses .badge,
-.inventory-item-card .badge {
-    font-size: .66rem;
-    font-weight: 650;
-}
+    .inventory-statuses .badge,
+    .inventory-item-card .badge {
+        font-size: .66rem;
+        font-weight: 650;
+    }
 
 .inventory-card-grid {
     margin: 0;
@@ -264,16 +260,14 @@
     transition: border-color .18s ease, box-shadow .18s ease;
 }
 
-.inventory-item-card:hover {
-    border-color: color-mix(in srgb, var(--steam-blue) 42%, var(--pt-line));
-    box-shadow: 0 .6rem 1.5rem rgba(15, 28, 45, .08);
-}
+    .inventory-item-card:hover {
+        border-color: color-mix(in srgb, var(--steam-blue) 42%, var(--pt-line));
+        box-shadow: 0 .6rem 1.5rem rgba(15, 28, 45, .08);
+    }
 
 .inventory-card-image-wrap {
     align-items: center;
-    background:
-        radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--steam-blue) 9%, transparent), transparent 62%),
-        var(--pt-canvas);
+    background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--steam-blue) 9%, transparent), transparent 62%), var(--pt-canvas);
     border-bottom: 1px solid var(--pt-line);
     display: flex;
     height: 150px;
@@ -324,27 +318,27 @@
     padding: 1rem;
 }
 
-.inventory-page div.dt-container > .dt-layout-row:first-child {
-    align-items: center;
-    border-bottom: 1px solid var(--pt-line);
-    margin: -1rem -1rem 0;
-    padding: .85rem 1rem;
-}
+    .inventory-page div.dt-container > .dt-layout-row:first-child {
+        align-items: center;
+        border-bottom: 1px solid var(--pt-line);
+        margin: -1rem -1rem 0;
+        padding: .85rem 1rem;
+    }
 
-.inventory-page div.dt-container > .dt-layout-row:last-child {
-    align-items: center;
-    border-top: 1px solid var(--pt-line);
-    margin: 0 -1rem -1rem;
-    padding: .85rem 1rem;
-}
+    .inventory-page div.dt-container > .dt-layout-row:last-child {
+        align-items: center;
+        border-top: 1px solid var(--pt-line);
+        margin: 0 -1rem -1rem;
+        padding: .85rem 1rem;
+    }
 
 .inventory-page .dt-layout-table {
     margin-inline: -1rem !important;
 }
 
-.inventory-page .dt-layout-table .dt-layout-cell {
-    overflow-x: auto;
-}
+    .inventory-page .dt-layout-table .dt-layout-cell {
+        overflow-x: auto;
+    }
 
 .inventory-page .dt-length label,
 .inventory-page .dt-search label {
@@ -385,12 +379,12 @@
     color: var(--pt-ink);
 }
 
-.inventory-page .page-link:hover,
-.inventory-page .page-link:focus {
-    background: var(--pt-canvas);
-    border-color: var(--pt-mint);
-    color: var(--pt-ink);
-}
+    .inventory-page .page-link:hover,
+    .inventory-page .page-link:focus {
+        background: var(--pt-canvas);
+        border-color: var(--pt-mint);
+        color: var(--pt-ink);
+    }
 
 .inventory-page .active > .page-link {
     background: var(--pt-ink);
@@ -413,8 +407,13 @@
 }
 
 @keyframes inventory-content-enter {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @media (max-width: 767.98px) {
@@ -451,10 +450,10 @@
         width: 100%;
     }
 
-    .inventory-page .dt-search label {
-        align-items: stretch;
-        flex-direction: column;
-    }
+        .inventory-page .dt-search label {
+            align-items: stretch;
+            flex-direction: column;
+        }
 }
 
 @media (prefers-reduced-motion: reduce) {

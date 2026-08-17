@@ -10,7 +10,11 @@
     z-index: 2400;
 }
 
-.login-launch-sequence.is-active { opacity: 1; pointer-events: all; visibility: visible; }
+    .login-launch-sequence.is-active {
+        opacity: 1;
+        pointer-events: all;
+        visibility: visible;
+    }
 
 .login-launch-content {
     align-items: center;
@@ -42,8 +46,15 @@
     white-space: nowrap;
 }
 
-.login-launch-wordmark > span { display: inline-flex; white-space: pre; }
-.login-launch-wordmark .launch-letter { display: inline-block; transform-origin: center bottom; }
+    .login-launch-wordmark > span {
+        display: inline-flex;
+        white-space: pre;
+    }
+
+    .login-launch-wordmark .launch-letter {
+        display: inline-block;
+        transform-origin: center bottom;
+    }
 
 /* The greeting is deliberately tucked just under the mark rather than treated as a second
    headline, so the launch screen keeps its clean CS-style silhouette. */
@@ -61,10 +72,19 @@
 }
 
 @media (max-width: 575.98px) {
-    .login-launch-wordmark { font-size: clamp(2.25rem, 11vw, 4.5rem); letter-spacing: -.11em; }
-    .login-launch-greeting { bottom: -1.2rem; left: .35rem; }
+    .login-launch-wordmark {
+        font-size: clamp(2.25rem, 11vw, 4.5rem);
+        letter-spacing: -.11em;
+    }
+
+    .login-launch-greeting {
+        bottom: -1.2rem;
+        left: .35rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .login-launch-sequence { transition: none; }
+    .login-launch-sequence {
+        transition: none;
+    }
 }
