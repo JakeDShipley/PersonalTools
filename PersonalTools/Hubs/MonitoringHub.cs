@@ -22,7 +22,10 @@ public sealed class MonitoringPulseService : BackgroundService
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             pulse++;
+
             await _hub.Clients.All.SendAsync("monitoringPulse", "server", stoppingToken);
+            await _hub.Clients.All.SendAsync("monitoringPulse", "logs", stoppingToken);
+
             if (pulse % 3 == 0)
                 await _hub.Clients.All.SendAsync("monitoringPulse", "database", stoppingToken);
         }

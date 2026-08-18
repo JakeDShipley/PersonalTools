@@ -579,6 +579,77 @@
         link.addEventListener('click', () => playSidebarFeatureMotion(link, kind));
     });
 
+    function playSystemSidebarMotion(link) {
+        if (!link || !window.personalToolsMotion?.available()) return;
+
+        const { animate } = window.anime;
+        const kind = link.dataset.sidebarSystemMotion;
+        const icon = link.querySelector('.app-nav-icon i');
+        const signal = link.querySelector('.system-nav-signal');
+
+        const iconRotation = {
+            server: -10,
+            database: 8,
+            logs: -6
+        };
+
+        if (icon) {
+            animate(icon, {
+                opacity: { from: .45, to: 1 },
+                rotate: { from: iconRotation[kind] || 0, to: 0 },
+                scale: { from: .8, to: 1 },
+                duration: 360,
+                ease: 'out(5)'
+            });
+        }
+
+        if (!signal) return;
+
+        if (kind === 'database') {
+            animate(signal, {
+                opacity: [0, .9, 0],
+                width: ['.5rem', '1.55rem'],
+                height: ['.5rem', '1.55rem'],
+                duration: 520,
+                ease: 'out(3)'
+            });
+
+            return;
+        }
+
+        if (kind === 'logs') {
+            animate(signal, {
+                opacity: [0, .95, 0],
+                width: ['.45rem', '1.25rem'],
+                duration: 500,
+                ease: 'out(4)'
+            });
+
+            return;
+        }
+
+        animate(signal, {
+            opacity: [0, .95, 0],
+            width: ['.45rem', '1.3rem'],
+            duration: 500,
+            ease: 'out(4)'
+        });
+    }
+
+    document.querySelectorAll('[data-sidebar-system-motion]').forEach(function (link) {
+        link.addEventListener('mouseenter', function () {
+            playSystemSidebarMotion(link);
+        });
+
+        link.addEventListener('focusin', function () {
+            playSystemSidebarMotion(link);
+        });
+
+        link.addEventListener('click', function () {
+            playSystemSidebarMotion(link);
+        });
+    });
+
     document.addEventListener('shown.bs.modal', (event) => {
         const modal = event.target;
         if (!(modal instanceof HTMLElement) || modal.id === 'comparePlayersModal') return;

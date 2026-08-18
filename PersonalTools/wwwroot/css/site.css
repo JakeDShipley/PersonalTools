@@ -1150,6 +1150,196 @@ body {
     }
 }
 
+/* System monitoring tools keep the normal sidebar shape but gain a small
+   monitoring-specific signal when deliberately hovered, focused or opened. */
+.system-feature-sidebar-link {
+    --system-feature: #4c82d4;
+    --system-feature-bright: #83aef1;
+    background: color-mix(in srgb, var(--system-feature) 5%, transparent);
+    border-color: color-mix(in srgb, var(--system-feature) 15%, transparent);
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+}
+
+.server-monitor-sidebar-link {
+    --system-feature: #3182ce;
+    --system-feature-bright: #79c8ff;
+}
+
+.database-monitor-sidebar-link {
+    --system-feature: #7564d8;
+    --system-feature-bright: #b6a9ff;
+}
+
+.logs-viewer-sidebar-link {
+    --system-feature: #d7922b;
+    --system-feature-bright: #ffd47a;
+}
+
+[data-theme="dark"] .server-monitor-sidebar-link {
+    --system-feature: #69b9ed;
+    --system-feature-bright: #b5e3ff;
+}
+
+[data-theme="dark"] .database-monitor-sidebar-link {
+    --system-feature: #a99aff;
+    --system-feature-bright: #d8d0ff;
+}
+
+[data-theme="dark"] .logs-viewer-sidebar-link {
+    --system-feature: #f0b85a;
+    --system-feature-bright: #ffe0a0;
+}
+
+.system-feature-sidebar-link > :not(.system-nav-signal) {
+    position: relative;
+    z-index: 3;
+}
+
+.system-feature-sidebar-link::before,
+.system-feature-sidebar-link::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+}
+
+.system-feature-sidebar-link::before {
+    border-radius: calc(.72rem - 1px);
+    inset: 1px;
+    opacity: 0;
+    transition: opacity .18s ease;
+    z-index: 1;
+}
+
+.system-feature-sidebar-link::after {
+    animation: system-feature-edge-trace 2.2s linear infinite paused;
+    background: conic-gradient( from var(--system-feature-edge-angle), transparent 0 55%, var(--system-feature) 67%, var(--system-feature-bright) 76%, transparent 88%);
+    border-radius: inherit;
+    inset: 0;
+    opacity: 0;
+    padding: 1.5px;
+    transition: opacity .18s ease;
+    z-index: 2;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.server-monitor-sidebar-link::before {
+    animation: server-monitor-nav-flow 1.25s linear infinite paused;
+    background-image: repeating-linear-gradient( 90deg, transparent 0 11px, color-mix(in srgb, var(--system-feature) 12%, transparent) 12px 13px, transparent 14px 24px), linear-gradient( 90deg, transparent, color-mix(in srgb, var(--system-feature-bright) 19%, transparent), transparent);
+    background-position: 0 0, -100% 0;
+    background-size: auto, 42% 100%;
+}
+
+.database-monitor-sidebar-link::before {
+    animation: database-monitor-nav-flow 1.5s linear infinite paused;
+    background-image: radial-gradient( circle at 18% 50%, color-mix(in srgb, var(--system-feature-bright) 38%, transparent) 0 2px, transparent 2.5px), repeating-linear-gradient( 90deg, transparent 0 13px, color-mix(in srgb, var(--system-feature) 10%, transparent) 14px 15px, transparent 16px 28px);
+    background-position: -20px 50%, 0 0;
+}
+
+.logs-viewer-sidebar-link::before {
+    animation: logs-viewer-nav-flow 1.25s linear infinite paused;
+    background-image: repeating-linear-gradient( 0deg, transparent 0 6px, color-mix(in srgb, var(--system-feature) 10%, transparent) 7px 8px, transparent 9px 14px), linear-gradient( 90deg, transparent, color-mix(in srgb, var(--system-feature-bright) 22%, transparent), transparent);
+    background-position: 0 0, -110% 0;
+    background-size: auto, 38% 100%;
+}
+
+.system-feature-sidebar-link:hover,
+.system-feature-sidebar-link:focus-visible,
+.system-feature-sidebar-link.active {
+    background: color-mix(in srgb, var(--system-feature) 10%, var(--pt-surface));
+    border-color: color-mix(in srgb, var(--system-feature) 46%, transparent);
+    color: var(--pt-ink);
+}
+
+    .system-feature-sidebar-link:hover::before,
+    .system-feature-sidebar-link:hover::after,
+    .system-feature-sidebar-link:focus-visible::before,
+    .system-feature-sidebar-link:focus-visible::after {
+        animation-play-state: running;
+        opacity: 1;
+    }
+
+    .system-feature-sidebar-link.active::after {
+        opacity: .45;
+    }
+
+    .system-feature-sidebar-link:hover .app-nav-icon,
+    .system-feature-sidebar-link:focus-visible .app-nav-icon,
+    .system-feature-sidebar-link.active .app-nav-icon {
+        color: var(--system-feature);
+        text-shadow: 0 0 12px color-mix(in srgb, var(--system-feature-bright) 45%, transparent);
+    }
+
+.system-nav-signal {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: .75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+}
+
+.server-monitor-nav-signal {
+    background: var(--system-feature-bright);
+    clip-path: polygon( 0 45%, 18% 45%, 27% 8%, 39% 90%, 51% 28%, 62% 45%, 100% 45%, 100% 58%, 64% 58%, 52% 45%, 39% 100%, 25% 28%, 21% 58%, 0 58%);
+    height: .8rem;
+    width: 1.3rem;
+}
+
+.database-monitor-nav-signal {
+    border: 1px solid var(--system-feature-bright);
+    border-radius: 50%;
+    height: .9rem;
+    width: .9rem;
+}
+
+.logs-viewer-nav-signal {
+    background: linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 50% / 68% 1px no-repeat, linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 100% / 86% 1px no-repeat;
+    height: .75rem;
+    width: 1.25rem;
+}
+
+@property --system-feature-edge-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes system-feature-edge-trace {
+    to {
+        --system-feature-edge-angle: 360deg;
+    }
+}
+
+@keyframes server-monitor-nav-flow {
+    to {
+        background-position: 24px 0, 160% 0;
+    }
+}
+
+@keyframes database-monitor-nav-flow {
+    to {
+        background-position: calc(100% + 20px) 50%, 28px 0;
+    }
+}
+
+@keyframes logs-viewer-nav-flow {
+    to {
+        background-position: 0 14px, 160% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .system-feature-sidebar-link::before,
+    .system-feature-sidebar-link::after {
+        animation: none;
+    }
+}
+
 .app-sidebar-utilities {
     border-top: 1px solid var(--pt-line);
     display: grid;

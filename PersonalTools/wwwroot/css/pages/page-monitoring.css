@@ -269,6 +269,114 @@
     }
 }
 
+.monitor-metric-card[data-signal-health="attention"] {
+    border-color: color-mix(in srgb, var(--monitor-watch) 62%, var(--pt-line)) !important;
+}
+
+    .monitor-metric-card[data-signal-health="attention"] .monitor-metric-icon {
+        background: color-mix(in srgb, var(--monitor-watch) 14%, transparent);
+        border-color: color-mix(in srgb, var(--monitor-watch) 38%, transparent);
+        color: var(--monitor-watch);
+    }
+
+.monitor-metric-card[data-signal-health="critical"] {
+    border-color: color-mix(in srgb, var(--monitor-danger) 65%, var(--pt-line)) !important;
+}
+
+    .monitor-metric-card[data-signal-health="critical"] .monitor-metric-icon {
+        background: color-mix(in srgb, var(--monitor-danger) 13%, transparent);
+        border-color: color-mix(in srgb, var(--monitor-danger) 38%, transparent);
+        color: var(--monitor-danger);
+    }
+
+.logs-table th {
+    color: var(--pt-ink-soft);
+    font-size: .7rem;
+    font-weight: 750;
+    letter-spacing: .055em;
+    padding-block: .85rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.logs-table td {
+    padding-block: .8rem;
+}
+
+    .logs-table th:first-child,
+    .logs-table td:first-child {
+        padding-left: 1.5rem;
+    }
+
+    .logs-table th:last-child,
+    .logs-table td:last-child {
+        padding-right: 1.5rem;
+    }
+
+.logs-table tbody tr[data-log-id] {
+    cursor: pointer;
+}
+
+    .logs-table tbody tr[data-log-id]:focus-visible {
+        outline: 2px solid var(--pt-mint);
+        outline-offset: -2px;
+    }
+
+.logs-level-badge {
+    min-width: 5.7rem;
+}
+
+.logs-source-cell {
+    max-width: 18rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.logs-message-cell {
+    min-width: 20rem;
+}
+
+.logs-message-button {
+    color: var(--pt-ink);
+    display: -webkit-box;
+    font-size: .82rem;
+    line-height: 1.45;
+    max-width: 44rem;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+    .logs-message-button:hover,
+    .logs-message-button:focus-visible {
+        color: var(--pt-coral);
+    }
+
+.logs-detail-message {
+    background: color-mix(in srgb, var(--pt-canvas) 72%, transparent);
+    border: 1px solid var(--pt-line);
+    border-radius: .7rem;
+    color: var(--pt-ink);
+    line-height: 1.6;
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+.logs-detail-pre {
+    background: color-mix(in srgb, var(--pt-canvas) 84%, transparent);
+    border: 1px solid var(--pt-line);
+    border-radius: .7rem;
+    color: var(--pt-ink);
+    font-size: .78rem;
+    line-height: 1.55;
+    max-height: 28rem;
+    overflow: auto;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .monitor-live-dot,
     .monitor-refresh-button.is-loading i {

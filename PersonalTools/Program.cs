@@ -5,7 +5,6 @@ using PersonalTools.Classes.GrandExchange;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
 using PersonalTools.Classes.Skins;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +27,7 @@ using PersonalTools.Classes.Tracker;
 using PersonalTools.Data.Tracker;
 using System.Net.Http.Headers;
 using PersonalTools.Security;
+using PersonalTools.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +37,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
+builder.Logging.AddApplicationLogViewer();
 
 // Keep authentication and protected user settings readable across restarts.
 // Never put the key ring in the deployed application directory: production files
@@ -80,6 +81,7 @@ builder.Services.AddSingleton<IServerMonitorData, ServerMonitorData>();
 builder.Services.AddScoped<IServerMonitorFuncs, ServerMonitorFuncs>();
 builder.Services.AddScoped<IDatabaseMonitorData, DatabaseMonitorData>();
 builder.Services.AddScoped<IDatabaseMonitorFuncs, DatabaseMonitorFuncs>();
+builder.Services.AddScoped<ILogsViewerFuncs, LogsViewerFuncs>();
 builder.Services.AddHostedService<MonitoringPulseService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

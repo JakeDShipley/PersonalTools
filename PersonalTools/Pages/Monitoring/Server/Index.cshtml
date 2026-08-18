@@ -13,109 +13,324 @@
         <div>
             <p class="eyebrow">System</p>
             <h1 class="page-title">Server monitor</h1>
-            <p class="page-subtitle mb-0">A live, read-only view of the resources supporting Personal Tools.</p>
+            <p class="page-subtitle mb-0">Live host pressure and Personal Tools process activity in one read-only view.</p>
         </div>
+
         <div class="d-flex align-items-center gap-2">
-            <span class="monitor-live-state" id="monitorConnectionState"><span class="monitor-live-dot"></span><span>Connecting</span></span>
+            <span class="monitor-live-state" id="monitorConnectionState">
+                <span class="monitor-live-dot"></span>
+                <span>Connecting</span>
+            </span>
+
             <button class="btn btn-outline-primary monitor-refresh-button" id="refreshMonitor" type="button">
-                <i class="fa-solid fa-rotate" aria-hidden="true"></i><span>Refresh</span>
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span>Refresh</span>
             </button>
         </div>
     </div>
 
     @await Html.PartialAsync("_ToolGuide", new[]
     {
-        "Wait for the live server health snapshot to connect.",
-        "Read the resource bars and use the information icons for plain-English context.",
-        "Use Refresh for an immediate reading between live updates."
+        "Use Host resources to see overall CPU, physical-memory and storage pressure.",
+        "Use Personal Tools footprint to separate this application's usage from the rest of the server.",
+        "Use Refresh whenever you want a new reading immediately."
     })
 
-    <div class="monitor-status card border-0 shadow-sm mb-3" id="monitorStatusCard" aria-live="polite">
-        <div class="card-body p-3 p-lg-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <span class="monitor-status-icon"><i class="fa-solid fa-shield-heart"></i></span>
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <h2 class="h5 mb-0">Operational health</h2>
-                        <span class="badge monitor-health-badge" id="monitorHealth">Loading</span>
+    <div class="monitor-status card border-0 shadow-sm mb-3" id="monitorStatusCard" aria-live="polite" data-monitor-reveal="hero">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div class="d-flex align-items-start align-items-sm-center gap-3">
+                    <span class="monitor-status-icon flex-shrink-0">
+                        <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+                    </span>
+
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <h2 class="h5 mb-0">Operational health</h2>
+                            <span class="badge monitor-health-badge" id="monitorHealth">Loading</span>
+                        </div>
+
+                        <p class="small-muted mb-0" id="monitorSummary">Collecting a restricted server health snapshot.</p>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                            <span class="badge rounded-pill text-bg-light border">
+                                <i class="fa-solid fa-eye me-1" aria-hidden="true"></i>
+                                Read-only
+                            </span>
+
+                            <span class="badge rounded-pill text-bg-light border" id="monitorProcessSample">
+                                <i class="fa-solid fa-wave-square me-1" aria-hidden="true"></i>
+                                <span id="monitorProcessSampleLabel">Process sampling</span>
+                            </span>
+                        </div>
                     </div>
-                    <p class="small-muted mb-0" id="monitorSummary">Collecting a safe server snapshot.</p>
                 </div>
+
+                <small class="small-muted text-nowrap">
+                    Updated <span id="monitorUpdated">—</span>
+                </small>
             </div>
-            <small class="small-muted text-nowrap">Updated <span id="monitorUpdated">—</span></small>
         </div>
     </div>
 
     <div class="alert alert-warning border-0 shadow-sm d-none" id="monitorUnavailable" role="status">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i>Live metrics are temporarily unavailable. Personal Tools remains protected and no technical details have been exposed.
+        <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>
+        Live server metrics are temporarily unavailable. No host identity or configuration details have been exposed.
+    </div>
+
+    <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-2 mt-4 mb-3" data-monitor-reveal="primary">
+        <div>
+            <p class="eyebrow mb-1">Host resources</p>
+            <h2 class="h5 mb-0">Overall server pressure</h2>
+        </div>
+
+        <span class="small-muted">These values cover the host, not only Personal Tools.</span>
     </div>
 
     <div class="row g-3 mb-3">
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-4" data-monitor-reveal="primary">
             <article class="card monitor-metric-card h-100 border-0 shadow-sm">
                 <div class="card-body p-4">
                     <div class="monitor-metric-heading">
-                        <span class="monitor-metric-icon"><i class="fa-solid fa-microchip"></i></span>
-                        <span>Processor load</span>
-                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="The percentage of available processing capacity currently in use. A brief spike is normal."><i class="fa-solid fa-circle-info"></i></button>
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Host CPU load</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="Overall processor utilisation across the host. This includes Personal Tools and other operating-system or service activity.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
                     </div>
+
                     <div class="monitor-metric-value" data-server-value="cpuUsagePercent">—</div>
-                    <div class="progress monitor-progress" role="progressbar" aria-label="Processor load" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-server-bar="cpuUsagePercent"></div></div>
+
+                    <div class="progress monitor-progress" role="progressbar" aria-label="Host CPU load" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" data-server-bar="cpuUsagePercent"></div>
+                    </div>
+
+                    <div class="monitor-metric-caption mt-2">whole server</div>
                 </div>
             </article>
         </div>
-        <div class="col-12 col-md-4">
+
+        <div class="col-12 col-md-4" data-monitor-reveal="primary">
             <article class="card monitor-metric-card h-100 border-0 shadow-sm">
                 <div class="card-body p-4">
                     <div class="monitor-metric-heading">
-                        <span class="monitor-metric-icon"><i class="fa-solid fa-memory"></i></span>
-                        <span>Memory pressure</span>
-                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="The proportion of physical memory currently being used by the system."><i class="fa-solid fa-circle-info"></i></button>
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-memory" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Host memory use</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="Physical memory currently in use across the whole host, including the operating system and every running service. This is not Personal Tools memory usage.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
                     </div>
+
                     <div class="monitor-metric-value" data-server-value="memoryUsagePercent">—</div>
-                    <div class="progress monitor-progress" role="progressbar" aria-label="Memory pressure" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-server-bar="memoryUsagePercent"></div></div>
+
+                    <div class="progress monitor-progress" role="progressbar" aria-label="Host memory use" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" data-server-bar="memoryUsagePercent"></div>
+                    </div>
+
+                    <div class="monitor-metric-caption mt-2">whole server, not this app</div>
                 </div>
             </article>
         </div>
-        <div class="col-12 col-md-4">
+
+        <div class="col-12 col-md-4" data-monitor-reveal="primary">
             <article class="card monitor-metric-card h-100 border-0 shadow-sm">
                 <div class="card-body p-4">
                     <div class="monitor-metric-heading">
-                        <span class="monitor-metric-icon"><i class="fa-solid fa-hard-drive"></i></span>
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-hard-drive" aria-hidden="true"></i>
+                        </span>
+
                         <span>Storage use</span>
-                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="The percentage of the application's storage volume currently occupied. Capacity details are intentionally hidden."><i class="fa-solid fa-circle-info"></i></button>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="The percentage of the storage volume containing Personal Tools that is currently occupied. Exact capacity and path details remain hidden.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
                     </div>
+
                     <div class="monitor-metric-value" data-server-value="storageUsagePercent">—</div>
-                    <div class="progress monitor-progress" role="progressbar" aria-label="Storage use" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-server-bar="storageUsagePercent"></div></div>
+
+                    <div class="progress monitor-progress" role="progressbar" aria-label="Storage use" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" data-server-bar="storageUsagePercent"></div>
+                    </div>
+
+                    <div class="monitor-metric-caption mt-2">application volume</div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-2 mt-4 mb-3" data-monitor-reveal="secondary">
+        <div>
+            <p class="eyebrow mb-1">Personal Tools</p>
+            <h2 class="h5 mb-0">Application footprint</h2>
+        </div>
+
+        <span class="small-muted">Process-level activity separated from host-wide usage.</span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3" data-monitor-reveal="secondary">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Application CPU</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="Processor time used by Personal Tools as a percentage of the total CPU capacity available to this process. The first sample needs another reading before this can be calculated.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="monitor-metric-value" data-server-value="applicationCpuUsagePercent">—</div>
+
+                    <div class="progress monitor-progress" role="progressbar" aria-label="Personal Tools CPU use" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" data-server-bar="applicationCpuUsagePercent"></div>
+                    </div>
+
+                    <div class="monitor-metric-caption mt-2">of CPU available to app</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3" data-monitor-reveal="secondary">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Working set</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="Physical memory currently resident for the Personal Tools process. It includes managed, native and shared process pages.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="monitor-metric-value" data-server-value="applicationMemoryBytes">—</div>
+                    <div class="monitor-metric-caption">physical process memory</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3" data-monitor-reveal="secondary">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-code" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Managed heap</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="Approximate managed .NET heap size excluding fragmentation. This is only the managed portion of the application's overall working set.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="monitor-metric-value" data-server-value="managedMemoryBytes">—</div>
+                    <div class="monitor-metric-caption">managed .NET memory</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3" data-monitor-reveal="secondary">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                        </span>
+
+                        <span>Host RAM share</span>
+
+                        <button class="monitor-info" type="button" data-bs-toggle="tooltip" title="The Personal Tools working set as a percentage of the host's physical memory. Because working sets can include shared pages, this is a useful footprint indicator rather than an exclusive ownership figure.">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="monitor-metric-value" data-server-value="applicationMemorySharePercent">—</div>
+                    <div class="monitor-metric-caption">application working-set share</div>
                 </div>
             </article>
         </div>
     </div>
 
     <div class="row g-3">
-        <div class="col-12 col-xl-8">
+        <div class="col-12 col-xl-8" data-monitor-reveal="secondary">
             <section class="card monitor-panel h-100 border-0 shadow-sm">
                 <div class="card-body p-4">
-                    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-                        <div><h2 class="h5 mb-1">Resource activity</h2><p class="small-muted mb-0">A short browser-only history of this open session.</p></div>
-                        <span class="badge rounded-pill text-bg-light border">Last 20 samples</span>
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-between gap-3 mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Host resource activity</h2>
+                            <p class="small-muted mb-0">A browser-only history of CPU, memory and storage pressure during this session.</p>
+                        </div>
+
+                        <span class="badge rounded-pill text-bg-light border align-self-start">Last 20 samples</span>
                     </div>
-                    <div class="monitor-chart-wrap"><canvas id="serverMonitorChart"></canvas></div>
+
+                    <div class="monitor-chart-wrap">
+                        <canvas id="serverMonitorChart"></canvas>
+                    </div>
                 </div>
             </section>
         </div>
-        <div class="col-12 col-xl-4">
+
+        <div class="col-12 col-xl-4" data-monitor-reveal="secondary">
             <section class="card monitor-panel h-100 border-0 shadow-sm">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-1">Application runtime</h2>
-                    <p class="small-muted mb-4">Process-level details that are useful without identifying the host.</p>
+                    <p class="small-muted mb-4">Useful process context without identifying the host or exposing configuration.</p>
+
                     <div class="monitor-detail-list">
-                        <div class="monitor-detail"><span><i class="fa-solid fa-clock"></i>Application uptime</span><strong data-server-detail="applicationUptimeSeconds">—</strong></div>
-                        <div class="monitor-detail"><span><i class="fa-solid fa-layer-group"></i>Application memory</span><strong data-server-detail="applicationMemoryBytes">—</strong></div>
-                        <div class="monitor-detail"><span><i class="fa-solid fa-code"></i>Managed memory</span><strong data-server-detail="managedMemoryBytes">—</strong></div>
-                        <div class="monitor-detail"><span><i class="fa-solid fa-lock"></i>Exposure policy</span><strong>Restricted</strong></div>
+                        <div class="monitor-detail">
+                            <span>
+                                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                                Application uptime
+                            </span>
+                            <strong data-server-detail="applicationUptimeSeconds">—</strong>
+                        </div>
+
+                        <div class="monitor-detail">
+                            <span>
+                                <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                                Processors available
+                            </span>
+                            <strong data-server-detail="availableProcessorCount">—</strong>
+                        </div>
+
+                        <div class="monitor-detail">
+                            <span>
+                                <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                Process threads
+                            </span>
+                            <strong data-server-detail="processThreadCount">—</strong>
+                        </div>
+
+                        <div class="monitor-detail">
+                            <span>
+                                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                Exposure policy
+                            </span>
+                            <strong>Restricted</strong>
+                        </div>
                     </div>
-                    <div class="monitor-privacy-note mt-4"><i class="fa-solid fa-shield-halved"></i><span>Host identity, network, software-version and configuration details are never returned to this page.</span></div>
+
+                    <div class="monitor-privacy-note mt-4">
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        <span>Host identity, network information, software versions, paths and exact hardware capacities are never returned to this page.</span>
+                    </div>
                 </div>
             </section>
         </div>

@@ -129,18 +129,48 @@
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">System</span>
-                        <a class="app-sidebar-link @ActivePage("/Monitoring/Server")" asp-page="/Monitoring/Server/Index" title="Server Monitor">
-                            <span class="app-nav-icon"><i class="fa-solid fa-server"></i></span><span class="sidebar-label">Server Monitor</span>
+
+                        <a class="app-sidebar-link system-feature-sidebar-link server-monitor-sidebar-link @ActivePage("/Monitoring/Server")"
+                           asp-page="/Monitoring/Server/Index"
+                           title="Server Monitor"
+                           data-sidebar-system-motion="server">
+                            <span class="app-nav-icon">
+                                <i class="fa-solid fa-server"></i>
+                            </span>
+                            <span class="sidebar-label">Server Monitor</span>
+                            <span class="system-nav-signal server-monitor-nav-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/Monitoring/Database")" asp-page="/Monitoring/Database/Index" title="Database Monitor">
-                            <span class="app-nav-icon"><i class="fa-solid fa-database"></i></span><span class="sidebar-label">Database Monitor</span>
+
+                        <a class="app-sidebar-link system-feature-sidebar-link database-monitor-sidebar-link @ActivePage("/Monitoring/Database")"
+                           asp-page="/Monitoring/Database/Index"
+                           title="Database Monitor"
+                           data-sidebar-system-motion="database">
+                            <span class="app-nav-icon">
+                                <i class="fa-solid fa-database"></i>
+                            </span>
+                            <span class="sidebar-label">Database Monitor</span>
+                            <span class="system-nav-signal database-monitor-nav-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/Tracker")" asp-page="/Tracker/Index" title="Bug/Feature Tracker">
-                            <span class="app-nav-icon"><i class="fa-solid fa-bug"></i></span><span class="sidebar-label">Bug/Feature Tracker</span>
+
+                        <a class="app-sidebar-link @ActivePage("/Tracker")"
+                           asp-page="/Tracker/Index"
+                           title="Bug/Feature Tracker">
+                            <span class="app-nav-icon">
+                                <i class="fa-solid fa-bug"></i>
+                            </span>
+                            <span class="sidebar-label">Bug/Feature Tracker</span>
                         </a>
-                        <span class="app-sidebar-link is-disabled" title="Logs Viewer — coming soon" aria-disabled="true">
-                            <span class="app-nav-icon"><i class="fa-solid fa-file-lines"></i></span><span class="sidebar-label">Logs Viewer <span class="app-nav-soon">Soon</span></span>
-                        </span>
+
+                        <a class="app-sidebar-link system-feature-sidebar-link logs-viewer-sidebar-link @ActivePage("/Monitoring/Logs")"
+                           asp-page="/Monitoring/Logs/Index"
+                           title="Logs Viewer"
+                           data-sidebar-system-motion="logs">
+                            <span class="app-nav-icon">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </span>
+                            <span class="sidebar-label">Logs Viewer</span>
+                            <span class="system-nav-signal logs-viewer-nav-signal" aria-hidden="true"></span>
+                        </a>
                     </div>
                 </nav>
 
