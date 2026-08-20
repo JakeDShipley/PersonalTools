@@ -23,7 +23,7 @@ public sealed class CSDemoDbModel
 public sealed class CSDemoObj
 {
     public Guid DemoId { get; set; }
-    public string MatchId { get; set; } = string.Empty;
+    public string LeetifyMatchId { get; set; } = string.Empty;
     public DateTime PlayedAtUtc { get; set; }
     public string MapName { get; set; } = string.Empty;
     public string GameType { get; set; } = string.Empty;
@@ -31,6 +31,7 @@ public sealed class CSDemoObj
     public int OpponentScore { get; set; }
     public bool IsWin { get; set; }
     public string ReplayUrl { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; }
 }
 
 public sealed class CSDemoLibraryObj

@@ -40,7 +40,7 @@
                         <select class="form-select" aria-label="@setting.Definition.Name">@foreach (var option in setting.Definition.Options!) { <option value="@option.Value" selected="@(setting.Value == option.Value)">@option.Label</option> }</select>
                         @if (setting.Definition.Key == AppSettingKey.AppearanceTheme)
                         {
-                            <div class="theme-setting-preview" aria-hidden="true"><span class="theme-setting-personal"></span><span class="theme-setting-tactical"></span></div>
+                            <div class="theme-setting-preview" aria-hidden="true"><span class="theme-setting-personal"></span><span class="theme-setting-tactical"></span><span class="theme-setting-matrix"></span></div>
                         }
                     }
                     else if (setting.Definition.InputType == AppSettingInputType.Switch)

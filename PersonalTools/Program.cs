@@ -81,7 +81,9 @@ builder.Services.AddSingleton<IServerMonitorData, ServerMonitorData>();
 builder.Services.AddScoped<IServerMonitorFuncs, ServerMonitorFuncs>();
 builder.Services.AddScoped<IDatabaseMonitorData, DatabaseMonitorData>();
 builder.Services.AddScoped<IDatabaseMonitorFuncs, DatabaseMonitorFuncs>();
+builder.Services.AddScoped<IApplicationLogsData, ApplicationLogsData>();
 builder.Services.AddScoped<ILogsViewerFuncs, LogsViewerFuncs>();
+builder.Services.AddHostedService<ApplicationLogPersistenceService>();
 builder.Services.AddHostedService<MonitoringPulseService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

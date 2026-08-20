@@ -54,6 +54,10 @@
     background: linear-gradient(90deg, #101114 0 54%, #f0aa1d 54%);
 }
 
+.theme-setting-matrix {
+    background: linear-gradient(90deg, #010604 0 48%, #00d95f 48% 58%, #7affac 58% 66%, #010604 66%);
+}
+
 .settings-control .form-check {
     display: flex;
     justify-content: flex-end;

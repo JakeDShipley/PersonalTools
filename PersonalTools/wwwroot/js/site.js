@@ -165,6 +165,7 @@
             overlay.classList.add('is-visible');
             overlay.setAttribute('aria-hidden', 'false');
             lockPage(true);
+            window.personalToolsMatrixRain?.start();
         }
 
         function conceal() {
@@ -172,6 +173,7 @@
             if (!overlay || activeRequests > 0) return;
             overlay.classList.remove('is-visible');
             overlay.setAttribute('aria-hidden', 'true');
+            window.personalToolsMatrixRain?.stop();
             lockPage(false);
             shownAt = 0;
         }
@@ -445,10 +447,11 @@
     }
 
     function setAppearance(theme, mode) {
-        const safeTheme = theme === 'tactical' ? 'tactical' : 'personal';
+        const safeTheme = ['personal', 'tactical', 'matrix'].includes(theme) ? theme : 'personal';
         const safeMode = mode === 'dark' ? 'dark' : 'light';
         document.documentElement.dataset.appTheme = safeTheme;
         document.documentElement.dataset.theme = safeMode;
+        window.personalToolsMatrixRain?.sync();
         document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
             const dark = safeMode === 'dark';
             const icon = button.querySelector('i');
@@ -467,7 +470,9 @@
 
     function currentAppearance() {
         return {
-            theme: document.documentElement.dataset.appTheme === 'tactical' ? 'tactical' : 'personal',
+            theme: ['personal', 'tactical', 'matrix'].includes(document.documentElement.dataset.appTheme)
+                ? document.documentElement.dataset.appTheme
+                : 'personal',
             mode: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
         };
     }
@@ -498,11 +503,48 @@
         saveAppearanceMode(nextMode, previous);
     }));
 
+    const matrixAmbientToggle = document.getElementById('matrixAmbientToggle');
+
+    // The ambient canvas is deliberately a user setting rather than a browser preference. This
+    // keeps the choice consistent with the rest of the appearance settings on every signed-in device.
+    matrixAmbientToggle?.addEventListener('click', () => {
+        const previous = document.documentElement.dataset.matrixAmbient === 'true';
+        const enabled = !previous;
+
+        window.personalToolsMatrixRain?.setAmbient(enabled);
+        window.personalToolsMotion?.pop(matrixAmbientToggle, {
+            fromScale: .82,
+            fromOpacity: .5,
+            duration: 280
+        });
+
+        $.ajax({
+            url: '/api/settings',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                key: 'MatrixAmbientBackground',
+                value: enabled ? 'true' : 'false'
+            }),
+            headers: {
+                RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
+            },
+            showLoader: false,
+            successToast: enabled ? 'Matrix background enabled.' : 'Matrix background disabled.',
+            errorToast: 'The Matrix background setting could not be saved.'
+        }).fail(() => {
+            // Restore the database-backed state if the request fails so the screen never suggests
+            // that an unsaved preference will still be active after the next page navigation.
+            window.personalToolsMatrixRain?.setAmbient(previous);
+        });
+    });
+
     window.personalToolsAppearance = {
         applySetting(key, value) {
             const current = currentAppearance();
             if (key === 'AppearanceTheme') setAppearance(value, current.mode);
             if (key === 'AppearanceMode') setAppearance(current.theme, value);
+            if (key === 'MatrixAmbientBackground') window.personalToolsMatrixRain?.setAmbient(value === 'true');
         },
         current: currentAppearance
     };
@@ -529,26 +571,43 @@
         });
     }
 
-    // Sidebar feature links receive a short, interaction-triggered Anime.js response instead of
-    // a permanently running decoration. It gives both CS areas their own identity while keeping
-    // the navigation calm and fully respecting the shared reduced-motion guard.
+    // The persistent identity of an active link lives in CSS. Anime.js only supplies this short
+    // arrival/interaction response so the navigation feels considered without constantly moving.
     function playSidebarFeatureMotion(link, kind) {
         if (!link || !window.personalToolsMotion?.available()) return;
 
         const { animate } = window.anime;
         const icon = link.querySelector('.app-nav-icon i');
+        const rotations = {
+            blits: -18,
+            stats: 10,
+            demos: -12,
+            dashboard: -8,
+            inventory: 12,
+            skins: -14,
+            notes: 8,
+            exchange: -10,
+            extractor: 14,
+            audio: -7,
+            tracker: 11
+        };
 
         if (icon) {
             animate(icon, {
                 opacity: { from: .45 },
-                rotate: { from: kind === 'blits' ? -18 : 10 },
+                rotate: { from: rotations[kind] || 8 },
                 scale: { from: .78 },
                 duration: 360,
                 ease: 'out(5)'
             });
         }
 
-        const signal = link.querySelector(kind === 'blits' ? '.blits-nav-scan' : '.cs-stats-nav-pulse');
+        const signalSelectors = {
+            blits: '.blits-nav-scan',
+            stats: '.cs-stats-nav-pulse',
+            demos: '.cs-demos-nav-tracer'
+        };
+        const signal = link.querySelector(signalSelectors[kind] || '.sidebar-feature-signal');
 
         if (!signal) return;
 
@@ -563,20 +622,34 @@
             return;
         }
 
+        if (kind === 'demos') {
+            animate(signal, {
+                opacity: [0, 1, 0],
+                x: ['-.5rem', '.9rem'],
+                scaleX: [.55, 1.2],
+                duration: 480,
+                ease: 'out(4)'
+            });
+            return;
+        }
+
         animate(signal, {
             opacity: [0, .75, 0],
-            width: ['.65rem', '2.2rem'],
-            height: ['.65rem', '2.2rem'],
-            duration: 520,
-            ease: 'out(3)'
+            scale: [.65, 1.25],
+            duration: 460,
+            ease: 'out(4)'
         });
     }
 
-    document.querySelectorAll('.blits-sidebar-link, .cs-stats-sidebar-link').forEach((link) => {
-        const kind = link.classList.contains('blits-sidebar-link') ? 'blits' : 'stats';
+    document.querySelectorAll('[data-sidebar-motion]').forEach((link) => {
+        const kind = link.dataset.sidebarMotion;
         link.addEventListener('mouseenter', () => playSidebarFeatureMotion(link, kind));
         link.addEventListener('focusin', () => playSidebarFeatureMotion(link, kind));
         link.addEventListener('click', () => playSidebarFeatureMotion(link, kind));
+
+        if (link.classList.contains('active')) {
+            window.requestAnimationFrame(() => playSidebarFeatureMotion(link, kind));
+        }
     });
 
     function playSystemSidebarMotion(link) {

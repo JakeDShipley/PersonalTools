@@ -106,10 +106,22 @@ public sealed class CSDemoFuncs : ICSDemoFuncs
         List<CSDemoDbModel> stored,
         bool wasRefreshed)
     {
-        List<CSDemoObj> availableDemos = stored
-            .Where(demo => demo.IsAvailable && IsSafeReplayUrl(demo.ReplayUrl))
+        // Match history remains useful even after a provider link has expired. Return every
+        // cached match and let the UI disable download actions only for unavailable replays.
+        // This also avoids making a healthy Leetify response look like an empty library.
+        List<CSDemoObj> recentDemos = stored
             .OrderByDescending(demo => demo.PlayedAtUtc)
             .Adapt<List<CSDemoObj>>();
+
+        foreach (CSDemoObj demo in recentDemos)
+        {
+            demo.IsAvailable = demo.IsAvailable && IsSafeReplayUrl(demo.ReplayUrl);
+
+            if (!demo.IsAvailable)
+            {
+                demo.ReplayUrl = string.Empty;
+            }
+        }
 
         return new CSDemoLibraryObj
         {
@@ -117,10 +129,10 @@ public sealed class CSDemoFuncs : ICSDemoFuncs
             PlayerName = string.IsNullOrWhiteSpace(steamProfile?.DisplayName) ? "CS2 player" : steamProfile.DisplayName,
             AvatarUrl = steamProfile?.AvatarUrl ?? string.Empty,
             RecentMatchCount = stored.Count,
-            AvailableDemoCount = availableDemos.Count,
+            AvailableDemoCount = recentDemos.Count(demo => demo.IsAvailable),
             LastRefreshedUtc = stored.Count == 0 ? null : stored.Max(demo => demo.RefreshedUtc),
             WasRefreshed = wasRefreshed,
-            Demos = availableDemos
+            Demos = recentDemos
         };
     }
 

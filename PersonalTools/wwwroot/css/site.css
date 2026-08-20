@@ -752,6 +752,207 @@ body {
     color: color-mix(in srgb, var(--pt-ink) 72%, var(--pt-mint));
 }
 
+/* Every everyday tool has a small, recognisable active-state signature. The background patterns
+   move only when the destination is current (or deliberately hovered/focused), never as idle
+   decoration. That keeps the navigation useful rather than noisy. */
+.sidebar-feature-link {
+    --sidebar-feature: var(--pt-mint);
+    --sidebar-feature-bright: color-mix(in srgb, var(--pt-mint) 62%, #ffffff);
+    --sidebar-feature-pattern: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 24%, transparent), transparent);
+    background: color-mix(in srgb, var(--sidebar-feature) 5%, transparent);
+    border-color: color-mix(in srgb, var(--sidebar-feature) 16%, transparent);
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar-feature-link > :not(.sidebar-feature-signal) {
+    position: relative;
+    z-index: 3;
+}
+
+.sidebar-feature-link::before,
+.sidebar-feature-link::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+}
+
+.sidebar-feature-link::before {
+    animation: sidebar-feature-flow 1.65s linear infinite paused;
+    background-image: var(--sidebar-feature-pattern);
+    background-position: -110% 50%;
+    background-repeat: no-repeat;
+    background-size: var(--sidebar-feature-size, 38% 100%);
+    inset: 1px;
+    opacity: 0;
+    transition: opacity .18s ease;
+    z-index: 1;
+}
+
+.sidebar-feature-link::after {
+    animation: sidebar-feature-edge-trace 2.25s linear infinite paused;
+    background: conic-gradient(from var(--sidebar-feature-edge-angle), transparent 0 55%, var(--sidebar-feature) 67%, var(--sidebar-feature-bright) 76%, transparent 88%);
+    border-radius: inherit;
+    inset: 0;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    padding: 1px;
+    transition: opacity .18s ease;
+    z-index: 2;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+}
+
+.sidebar-feature-link:hover,
+.sidebar-feature-link:focus-visible,
+.sidebar-feature-link.active {
+    background: color-mix(in srgb, var(--sidebar-feature) 11%, var(--pt-surface));
+    border-color: color-mix(in srgb, var(--sidebar-feature) 47%, transparent);
+    box-shadow: inset 3px 0 0 var(--sidebar-feature);
+    color: var(--pt-ink);
+}
+
+.sidebar-feature-link:hover::before,
+.sidebar-feature-link:hover::after,
+.sidebar-feature-link:focus-visible::before,
+.sidebar-feature-link:focus-visible::after,
+.sidebar-feature-link.active::before,
+.sidebar-feature-link.active::after {
+    animation-play-state: running;
+    opacity: 1;
+}
+
+.sidebar-feature-link.active::after { opacity: .48; }
+
+.sidebar-feature-link:hover .app-nav-icon,
+.sidebar-feature-link:focus-visible .app-nav-icon,
+.sidebar-feature-link.active .app-nav-icon {
+    color: var(--sidebar-feature);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--sidebar-feature-bright) 52%, transparent);
+}
+
+.sidebar-feature-signal {
+    background: var(--sidebar-feature-bright);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--sidebar-feature-bright) 70%, transparent);
+    height: .35rem;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: .78rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: .35rem;
+    z-index: 4;
+}
+
+.sidebar-feature-link:hover .sidebar-feature-signal,
+.sidebar-feature-link:focus-visible .sidebar-feature-signal,
+.sidebar-feature-link.active .sidebar-feature-signal {
+    animation: sidebar-feature-signal 1.4s ease-out infinite;
+    opacity: 1;
+}
+
+.dashboard-sidebar-link {
+    --sidebar-feature: #477cf0;
+    --sidebar-feature-bright: #a4c0ff;
+    --sidebar-feature-pattern: linear-gradient(90deg, transparent 44%, color-mix(in srgb, var(--sidebar-feature) 38%, transparent) 45% 48%, transparent 49%), linear-gradient(0deg, transparent 44%, color-mix(in srgb, var(--sidebar-feature-bright) 26%, transparent) 45% 48%, transparent 49%);
+    --sidebar-feature-size: 12px 12px, 12px 12px;
+}
+
+.dashboard-sidebar-link .sidebar-feature-signal { border-radius: 2px; }
+
+.inventory-sidebar-link {
+    --sidebar-feature: #2d90b8;
+    --sidebar-feature-bright: #9be8ff;
+    --sidebar-feature-pattern: radial-gradient(circle at 18% 50%, transparent 0 5px, color-mix(in srgb, var(--sidebar-feature-bright) 56%, transparent) 6px 7px, transparent 8px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 25%, transparent), transparent);
+    --sidebar-feature-size: 28% 100%, 36% 100%;
+}
+
+.inventory-sidebar-link .sidebar-feature-signal { border: 1px solid var(--sidebar-feature-bright); border-radius: 50%; background: transparent; }
+
+.skins-sidebar-link {
+    --sidebar-feature: #a15bd4;
+    --sidebar-feature-bright: #f0a4ff;
+    --sidebar-feature-pattern: repeating-linear-gradient(105deg, transparent 0 8px, color-mix(in srgb, var(--sidebar-feature) 19%, transparent) 9px 10px, transparent 11px 20px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature-bright) 24%, transparent), transparent);
+    --sidebar-feature-size: auto, 38% 100%;
+}
+
+.skins-sidebar-link .sidebar-feature-signal { border-radius: 2px; transform: translateY(-50%) rotate(45deg); }
+
+.notes-sidebar-link {
+    --sidebar-feature: #4c9d75;
+    --sidebar-feature-bright: #a3efbe;
+    --sidebar-feature-pattern: repeating-linear-gradient(0deg, transparent 0 6px, color-mix(in srgb, var(--sidebar-feature) 17%, transparent) 7px 8px, transparent 9px 14px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature-bright) 20%, transparent), transparent);
+    --sidebar-feature-size: auto, 36% 100%;
+}
+
+.notes-sidebar-link .sidebar-feature-signal { border-radius: 0 0 3px 3px; height: .6rem; transform: translateY(-50%) rotate(35deg); width: 2px; }
+
+.exchange-sidebar-link {
+    --sidebar-feature: #c68226;
+    --sidebar-feature-bright: #ffe28c;
+    --sidebar-feature-pattern: radial-gradient(circle at 15% 50%, color-mix(in srgb, var(--sidebar-feature-bright) 66%, transparent) 0 1px, transparent 2px), radial-gradient(circle at 31% 34%, color-mix(in srgb, var(--sidebar-feature) 54%, transparent) 0 2px, transparent 3px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 23%, transparent), transparent);
+    --sidebar-feature-size: 30% 100%, 30% 100%, 40% 100%;
+}
+
+.exchange-sidebar-link .sidebar-feature-signal { border-radius: 50%; }
+
+.extractor-sidebar-link {
+    --sidebar-feature: #2a9f9a;
+    --sidebar-feature-bright: #9dfff1;
+    --sidebar-feature-pattern: linear-gradient(var(--sidebar-feature-bright), var(--sidebar-feature-bright)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--sidebar-feature-bright), var(--sidebar-feature-bright)) 0 100% / 100% 1px no-repeat, linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 28%, transparent), transparent);
+    --sidebar-feature-size: 26% 74%, 26% 74%, 36% 100%;
+}
+
+.extractor-sidebar-link .sidebar-feature-signal { clip-path: polygon(0 0,100% 0,100% 28%,28% 28%,28% 100%,0 100%); }
+
+.audio-sidebar-link {
+    --sidebar-feature: #b05aa9;
+    --sidebar-feature-bright: #ffb5f3;
+    --sidebar-feature-pattern: repeating-linear-gradient(90deg, transparent 0 3px, color-mix(in srgb, var(--sidebar-feature-bright) 48%, transparent) 4px 5px, transparent 6px 9px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 24%, transparent), transparent);
+    --sidebar-feature-size: 32% 52%, 38% 100%;
+}
+
+.audio-sidebar-link .sidebar-feature-signal { border-radius: 999px; height: .2rem; width: .72rem; }
+
+.tracker-sidebar-link {
+    --sidebar-feature: #d15f5f;
+    --sidebar-feature-bright: #ffb0a8;
+    --sidebar-feature-pattern: radial-gradient(circle at 15% 32%, color-mix(in srgb, var(--sidebar-feature-bright) 58%, transparent) 0 1px, transparent 2px), radial-gradient(circle at 29% 68%, color-mix(in srgb, var(--sidebar-feature) 60%, transparent) 0 2px, transparent 3px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 22%, transparent), transparent);
+    --sidebar-feature-size: 32% 100%, 32% 100%, 38% 100%;
+}
+
+.tracker-sidebar-link .sidebar-feature-signal { border-radius: 50% 50% 20% 20%; }
+
+@property --sidebar-feature-edge-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes sidebar-feature-flow {
+    to { background-position: 150% 50%; }
+}
+
+@keyframes sidebar-feature-edge-trace {
+    to { --sidebar-feature-edge-angle: 1turn; }
+}
+
+@keyframes sidebar-feature-signal {
+    0%, 100% { opacity: .2; transform: translateY(-50%) scale(.72); }
+    45% { opacity: 1; transform: translateY(-50%) scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-feature-link::before,
+    .sidebar-feature-link::after,
+    .sidebar-feature-signal {
+        animation: none;
+    }
+}
+
 .app-nav-soon {
     background: var(--pt-canvas);
     border: 1px solid var(--pt-line);
@@ -840,7 +1041,13 @@ body {
         }
 
         .blits-sidebar-link.active::before {
+            animation-play-state: running;
             opacity: .55;
+        }
+
+        .blits-sidebar-link.active::after {
+            animation-play-state: running;
+            opacity: .46;
         }
 
     /* Blits reads as a compact match-console control rather than a normal navigation item. The
@@ -959,10 +1166,17 @@ body {
     }
 
     .cs-stats-sidebar-link.active::after {
+        animation-play-state: running;
         opacity: .52;
     }
 
     .cs-stats-sidebar-link.active::before {
+        animation-play-state: running;
+        opacity: .72;
+    }
+
+    .cs-stats-sidebar-link.active .cs-stats-nav-pulse {
+        animation-play-state: running;
         opacity: .72;
     }
 
@@ -1046,7 +1260,7 @@ body {
 
 .cs-demos-sidebar-link:hover::after,
 .cs-demos-sidebar-link:focus-visible::after { animation-play-state: running; opacity: 1; }
-.cs-demos-sidebar-link.active::after { opacity: .54; }
+.cs-demos-sidebar-link.active::after { animation-play-state: running; opacity: .54; }
 
 .cs-demos-sidebar-link:hover .app-nav-icon,
 .cs-demos-sidebar-link:focus-visible .app-nav-icon,
@@ -1263,7 +1477,13 @@ body {
     }
 
     .system-feature-sidebar-link.active::after {
+        animation-play-state: running;
         opacity: .45;
+    }
+
+    .system-feature-sidebar-link.active::before {
+        animation-play-state: running;
+        opacity: .64;
     }
 
     .system-feature-sidebar-link:hover .app-nav-icon,

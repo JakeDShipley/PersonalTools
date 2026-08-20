@@ -44,16 +44,18 @@ public sealed class MonitoringController : ControllerBase
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="afterId"></param>
+    /// <param name="page"></param>
+    /// <param name="pageSize"></param>
     /// <param name="minimumLevel"></param>
     /// <param name="search"></param>
-    /// <param name="take"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("logs")]
-    public ActionResult<ApplicationLogResult> GetLogs(
-        [FromQuery] long afterId = 0,
+    public async Task<ActionResult<ApplicationLogResult>> GetLogs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
         [FromQuery] string minimumLevel = "Information",
         [FromQuery] string? search = null,
-        [FromQuery] int take = 200) =>
-        Ok(_logs.GetLogs(afterId, minimumLevel, search, take));
+        CancellationToken cancellationToken = default) =>
+        Ok(await _logs.GetLogs(page, pageSize, minimumLevel, search, cancellationToken));
 }

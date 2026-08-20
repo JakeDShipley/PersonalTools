@@ -62,11 +62,14 @@ public sealed class AppSettingsFuncs : IAppSettingsFuncs
             return;
         }
 
-        if (key == AppSettingKey.AppearanceTheme && clean is not ("personal" or "tactical"))
+        if (key == AppSettingKey.AppearanceTheme && clean is not ("personal" or "tactical" or "matrix"))
             throw new InvalidOperationException("Choose a valid workspace theme.");
 
         if (key == AppSettingKey.AppearanceMode && clean is not ("light" or "dark"))
             throw new InvalidOperationException("Choose a valid colour mode.");
+
+        if (key == AppSettingKey.MatrixAmbientBackground && clean is not ("true" or "false"))
+            throw new InvalidOperationException("Choose a valid Matrix background setting.");
 
         if (key == AppSettingKey.DashboardDefaultView && clean is not ("cards" or "list"))
             throw new InvalidOperationException("Choose a valid dashboard view.");
@@ -116,6 +119,7 @@ public sealed class AppSettingsFuncs : IAppSettingsFuncs
     { 
         AppSettingKey.AppearanceTheme => "personal", 
         AppSettingKey.AppearanceMode => "light", 
+        AppSettingKey.MatrixAmbientBackground => "false",
         AppSettingKey.DashboardDefaultView => "cards", 
         AppSettingKey.DashboardMotion => "true", 
         AppSettingKey.DashboardWeatherUnit => "celsius", _ => string.Empty 

@@ -66,10 +66,21 @@
     }
 
     function demoCard(demo) {
-        const $open = $('<a>', { class: 'btn btn-outline-primary btn-sm', href: demo.replayUrl, target: '_blank', rel: 'noopener noreferrer' })
-            .append($('<i>', { class: 'fa-solid fa-arrow-up-right-from-square me-1', 'aria-hidden': 'true' }), document.createTextNode('Open link'));
-        const $download = $('<a>', { class: 'btn btn-primary btn-sm', href: demo.replayUrl, download: '', rel: 'noopener noreferrer' })
-            .append($('<i>', { class: 'fa-solid fa-download me-1', 'aria-hidden': 'true' }), document.createTextNode('Download'));
+        const hasReplay = Boolean(demo.isAvailable && demo.replayUrl);
+        const $actions = $('<div>', { class: 'cs-demo-card-actions' });
+
+        if (hasReplay) {
+            $actions.append(
+                $('<a>', { class: 'btn btn-outline-primary btn-sm', href: demo.replayUrl, target: '_blank', rel: 'noopener noreferrer' })
+                    .append($('<i>', { class: 'fa-solid fa-arrow-up-right-from-square me-1', 'aria-hidden': 'true' }), document.createTextNode('Open link')),
+                $('<a>', { class: 'btn btn-primary btn-sm', href: demo.replayUrl, download: '', rel: 'noopener noreferrer' })
+                    .append($('<i>', { class: 'fa-solid fa-download me-1', 'aria-hidden': 'true' }), document.createTextNode('Download'))
+            );
+        } else {
+            $actions.append(
+                $('<span>', { class: 'badge text-bg-secondary', text: 'Replay link unavailable' })
+            );
+        }
 
         return $('<article>', { class: `card border-0 shadow-sm cs-demo-card ${demo.isWin ? 'is-win' : 'is-loss'}` }).append(
             $('<div>', { class: 'card-body p-3 p-lg-4' }).append(
@@ -85,7 +96,7 @@
                     $('<strong>', { class: `cs-demos-score ${demo.isWin ? 'is-win' : 'is-loss'}`, text: `${demo.teamScore}–${demo.opponentScore}` }),
                     $('<span>', { text: demo.isWin ? 'Win' : 'Loss' })
                 ),
-                $('<div>', { class: 'cs-demo-card-actions' }).append($open, $download)
+                $actions
             )
         );
     }
@@ -98,8 +109,8 @@
             $list.append($('<section>', { class: 'cs-demos-unavailable card border-0 shadow-sm' }).append(
                 $('<div>', { class: 'card-body p-4 text-center' }).append(
                     $('<span>', { class: 'cs-demos-empty-icon mb-3', 'aria-hidden': 'true' }).append($('<i>', { class: 'fa-solid fa-clock-rotate-left' })),
-                    $('<h3>', { class: 'h6', text: 'No recent demo links are available' }),
-                    $('<p>', { class: 'small-muted mb-0', text: 'The matches were found, but their original demo links may have expired or are not available from the source.' })
+                    $('<h3>', { class: 'h6', text: 'No recent match history is available' }),
+                    $('<p>', { class: 'small-muted mb-0', text: 'Leetify did not return recent matches for this player. The account may not use Leetify or its profile data may be private.' })
                 )
             ));
         } else {

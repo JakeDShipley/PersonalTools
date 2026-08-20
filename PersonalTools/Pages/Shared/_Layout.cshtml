@@ -9,17 +9,22 @@
         (exact ? currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) : currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
     string successToastMessage = TempData.Peek("SuccessMessage")?.ToString() ?? string.Empty;
     string errorToastMessage = TempData.Peek("ErrorMessage")?.ToString() ?? string.Empty;
+    string loaderUserLabel = User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name)
+        ? User.Identity.Name
+        : "GUEST";
     string appearanceTheme = "personal";
     string appearanceMode = "light";
+    bool matrixAmbientBackground = false;
     if (showNavigation && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out Guid currentUserId))
     {
         var appearanceSettings = await AppSettings.Get(currentUserId);
         appearanceTheme = appearanceSettings.Single(setting => setting.Definition.Key == AppSettingKey.AppearanceTheme).Value;
         appearanceMode = appearanceSettings.Single(setting => setting.Definition.Key == AppSettingKey.AppearanceMode).Value;
+        matrixAmbientBackground = appearanceSettings.Single(setting => setting.Definition.Key == AppSettingKey.MatrixAmbientBackground).Value == "true";
     }
 }
 <!DOCTYPE html>
-<html lang="en" data-app-theme="@appearanceTheme" data-theme="@appearanceMode">
+<html lang="en" data-app-theme="@appearanceTheme" data-theme="@appearanceMode" data-matrix-ambient="@(matrixAmbientBackground ? "true" : "false")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -37,13 +42,18 @@
     @await RenderSectionAsync("Head", required: false)
     <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
 </head>
-<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)" data-user-id="@(showNavigation ? User.FindFirstValue(ClaimTypes.NameIdentifier) : string.Empty)">
+<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell") @(matrixAmbientBackground ? "matrix-ambient-active" : string.Empty)" data-display-name="@(User.Identity?.Name ?? string.Empty)" data-user-id="@(showNavigation ? User.FindFirstValue(ClaimTypes.NameIdentifier) : string.Empty)">
     @if (showNavigation)
     {
         <div class="d-none" aria-hidden="true">@Html.AntiForgeryToken()</div>
     }
     <div id="appToastMessages" data-success-message="@successToastMessage" data-error-message="@errorToastMessage" hidden></div>
     <div class="toast-container position-fixed bottom-0 end-0 p-3 app-toast-container" id="appToastContainer" aria-label="Notifications"></div>
+
+    <canvas class="app-matrix-rain-canvas"
+            id="appMatrixRainCanvas"
+            data-user-label="@loaderUserLabel"
+            aria-hidden="true"></canvas>
 
     <div class="app-loader-overlay" id="appLoader" aria-hidden="true">
         <div class="app-loader-launch" role="status" aria-live="polite" aria-atomic="true">
@@ -58,6 +68,16 @@
 
     @if (showNavigation)
     {
+        <button class="matrix-ambient-toggle"
+                id="matrixAmbientToggle"
+                type="button"
+                aria-label="Toggle animated Matrix background"
+                aria-pressed="@(matrixAmbientBackground ? "true" : "false")"
+                title="Toggle Matrix background">
+            <span class="matrix-ambient-toggle-code" aria-hidden="true"><span>01</span><span>10</span></span>
+            <i class="fa-solid fa-code" aria-hidden="true"></i>
+        </button>
+
         <header class="app-mobile-header d-lg-none">
             <a class="navbar-brand" asp-page="/Index" aria-label="Personal Tools dashboard">
                 <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -87,42 +107,42 @@
                 <nav class="app-navigation" aria-label="Personal Tools">
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">Workspace</span>
-                        <a class="app-sidebar-link @ActivePage("/", true)" asp-page="/Index" title="Dashboard">
-                            <span class="app-nav-icon"><i class="fa-solid fa-table-cells-large"></i></span><span class="sidebar-label">Dashboard</span>
+                        <a class="app-sidebar-link sidebar-feature-link dashboard-sidebar-link @ActivePage("/", true)" asp-page="/Index" title="Dashboard" data-sidebar-motion="dashboard">
+                            <span class="app-nav-icon"><i class="fa-solid fa-table-cells-large"></i></span><span class="sidebar-label">Dashboard</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/Inventory")" asp-page="/Inventory/Index" title="Steam Inventory">
-                            <span class="app-nav-icon"><i class="fa-brands fa-steam"></i></span><span class="sidebar-label">Steam Inventory</span>
+                        <a class="app-sidebar-link sidebar-feature-link inventory-sidebar-link @ActivePage("/Inventory")" asp-page="/Inventory/Index" title="Steam Inventory" data-sidebar-motion="inventory">
+                            <span class="app-nav-icon"><i class="fa-brands fa-steam"></i></span><span class="sidebar-label">Steam Inventory</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link cs-stats-sidebar-link @ActivePage("/CSStats")" asp-page="/CSStats/Index" title="CS2 Player Stats">
+                        <a class="app-sidebar-link cs-stats-sidebar-link @ActivePage("/CSStats")" asp-page="/CSStats/Index" title="CS2 Player Stats" data-sidebar-motion="stats">
                             <span class="app-nav-icon"><i class="fa-solid fa-chart-simple"></i></span><span class="sidebar-label">CS2 Player Stats</span><span class="cs-stats-nav-pulse" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link cs-demos-sidebar-link @ActivePage("/CSDemos")" asp-page="/CSDemos/Index" title="CS2 Demo Library">
+                        <a class="app-sidebar-link cs-demos-sidebar-link @ActivePage("/CSDemos")" asp-page="/CSDemos/Index" title="CS2 Demo Library" data-sidebar-motion="demos">
                             <span class="app-nav-icon"><i class="fa-solid fa-film"></i></span><span class="sidebar-label">CS2 Demo Library</span><span class="cs-demos-nav-tracer" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/Skins")" asp-page="/Skins/Index" title="CS2 Skin Tracker">
-                            <span class="app-nav-icon"><i class="fa-solid fa-gun"></i></span><span class="sidebar-label">CS2 Skin Tracker</span>
+                        <a class="app-sidebar-link sidebar-feature-link skins-sidebar-link @ActivePage("/Skins")" asp-page="/Skins/Index" title="CS2 Skin Tracker" data-sidebar-motion="skins">
+                            <span class="app-nav-icon"><i class="fa-solid fa-gun"></i></span><span class="sidebar-label">CS2 Skin Tracker</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/Notes")" asp-page="/Notes/Index" title="Notes">
-                            <span class="app-nav-icon"><i class="fa-solid fa-note-sticky"></i></span><span class="sidebar-label">Notes</span>
+                        <a class="app-sidebar-link sidebar-feature-link notes-sidebar-link @ActivePage("/Notes")" asp-page="/Notes/Index" title="Notes" data-sidebar-motion="notes">
+                            <span class="app-nav-icon"><i class="fa-solid fa-note-sticky"></i></span><span class="sidebar-label">Notes</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/GrandExchange")" asp-page="/GrandExchange/Index" title="Grand Exchange">
-                            <span class="app-nav-icon"><i class="fa-solid fa-coins"></i></span><span class="sidebar-label">Grand Exchange</span>
+                        <a class="app-sidebar-link sidebar-feature-link exchange-sidebar-link @ActivePage("/GrandExchange")" asp-page="/GrandExchange/Index" title="Grand Exchange" data-sidebar-motion="exchange">
+                            <span class="app-nav-icon"><i class="fa-solid fa-coins"></i></span><span class="sidebar-label">Grand Exchange</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
                     </div>
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">Media</span>
-                        <a class="app-sidebar-link @ActivePage("/MediaExtractor")" asp-page="/MediaExtractor/Index" title="Media Extractor">
-                            <span class="app-nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="sidebar-label">Media Extractor</span>
+                        <a class="app-sidebar-link sidebar-feature-link extractor-sidebar-link @ActivePage("/MediaExtractor")" asp-page="/MediaExtractor/Index" title="Media Extractor" data-sidebar-motion="extractor">
+                            <span class="app-nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="sidebar-label">Media Extractor</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link @ActivePage("/AudioStudio")" asp-page="/AudioStudio/Index" title="Audio Studio">
-                            <span class="app-nav-icon"><i class="fa-solid fa-wave-square"></i></span><span class="sidebar-label">Audio Studio</span>
+                        <a class="app-sidebar-link sidebar-feature-link audio-sidebar-link @ActivePage("/AudioStudio")" asp-page="/AudioStudio/Index" title="Audio Studio" data-sidebar-motion="audio">
+                            <span class="app-nav-icon"><i class="fa-solid fa-wave-square"></i></span><span class="sidebar-label">Audio Studio</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
                     </div>
 
                     <div class="app-nav-group app-nav-group-blits">
                         <span class="app-nav-heading sidebar-label">Blits</span>
-                        <a class="app-sidebar-link blits-sidebar-link @ActivePage("/CSMatches")" asp-page="/CSMatches/Index" title="CS Match Tracker">
+                        <a class="app-sidebar-link blits-sidebar-link @ActivePage("/CSMatches")" asp-page="/CSMatches/Index" title="CS Match Tracker" data-sidebar-motion="blits">
                             <span class="app-nav-icon"><i class="fa-solid fa-crosshairs"></i></span><span class="sidebar-label">CS Match Tracker</span><span class="blits-nav-scan" aria-hidden="true"></span>
                         </a>
                     </div>
@@ -152,13 +172,15 @@
                             <span class="system-nav-signal database-monitor-nav-signal" aria-hidden="true"></span>
                         </a>
 
-                        <a class="app-sidebar-link @ActivePage("/Tracker")"
+                        <a class="app-sidebar-link sidebar-feature-link tracker-sidebar-link @ActivePage("/Tracker")"
                            asp-page="/Tracker/Index"
-                           title="Bug/Feature Tracker">
+                           title="Bug/Feature Tracker"
+                           data-sidebar-motion="tracker">
                             <span class="app-nav-icon">
                                 <i class="fa-solid fa-bug"></i>
                             </span>
                             <span class="sidebar-label">Bug/Feature Tracker</span>
+                            <span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
 
                         <a class="app-sidebar-link system-feature-sidebar-link logs-viewer-sidebar-link @ActivePage("/Monitoring/Logs")"
@@ -214,6 +236,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <script src="~/lib/animejs/anime.umd.min.js" asp-append-version="true"></script>
     <script src="~/js/motion.js" asp-append-version="true"></script>
+    <script src="~/js/matrix-rain.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/lib/viewerjs/viewer.min.js"></script>
     <script src="~/lib/video.js/video.min.js"></script>

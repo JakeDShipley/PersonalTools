@@ -385,3 +385,374 @@
     :root[data-app-theme="tactical"] .modal-footer {
         border-color: var(--pt-line);
     }
+
+    /* Matrix is an original terminal-inspired theme: phosphor green, deep black and deliberate
+       flat geometry. It uses system monospace fonts rather than a copied film/typeface asset. */
+    :root[data-app-theme="matrix"][data-theme="light"] {
+        --pt-ink: #082b18;
+        --pt-ink-soft: #397a51;
+        --pt-canvas: #e7f2e8;
+        --pt-surface: #f5fbf5;
+        --pt-line: #a9d7b4;
+        --pt-coral: #087c3e;
+        --pt-mint: #16a65a;
+        --bs-primary: #087c3e;
+        --bs-primary-rgb: 8, 124, 62;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.7rem;
+        --pt-section-space: 1.45rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .85rem;
+        --pt-control-radius: .12rem;
+        --pt-card-radius: .15rem;
+        --pt-panel-radius: .15rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .1rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-mint);
+        --pt-card-hover-border: var(--pt-mint);
+        --pt-display-font: "Cascadia Mono", Consolas, "Courier New", monospace;
+        color-scheme: light;
+    }
+
+    :root[data-app-theme="matrix"][data-theme="dark"] {
+        --pt-ink: #a9ffc7;
+        --pt-ink-soft: #63bd83;
+        --pt-canvas: #010604;
+        --pt-surface: #06100a;
+        --pt-line: #1d5e36;
+        --pt-coral: #28e878;
+        --pt-mint: #0dbd57;
+        --bs-primary: #18cc64;
+        --bs-primary-rgb: 24, 204, 100;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.7rem;
+        --pt-section-space: 1.45rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .85rem;
+        --pt-control-radius: .12rem;
+        --pt-card-radius: .15rem;
+        --pt-panel-radius: .15rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .1rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-mint);
+        --pt-card-hover-border: var(--pt-mint);
+        --pt-display-font: "Cascadia Mono", Consolas, "Courier New", monospace;
+        color-scheme: dark;
+    }
+
+    :root[data-app-theme="matrix"] body {
+        background-image: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--pt-mint) 12%, transparent), transparent 42%);
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    }
+
+    :root[data-app-theme="matrix"] .page-title,
+    :root[data-app-theme="matrix"] .section-title,
+    :root[data-app-theme="matrix"] .settings-hero h2,
+    :root[data-app-theme="matrix"] .csm-page h1,
+    :root[data-app-theme="matrix"] .csm-stat-value,
+    :root[data-app-theme="matrix"] .csm-score,
+    :root[data-app-theme="matrix"] .csm-card-score {
+        font-family: var(--pt-display-font);
+        font-weight: 800;
+        letter-spacing: -.035em;
+    }
+
+    :root[data-app-theme="matrix"] .eyebrow,
+    :root[data-app-theme="matrix"] .app-nav-heading {
+        color: var(--pt-coral);
+        font-weight: 800;
+        letter-spacing: .1em;
+    }
+
+    :root[data-app-theme="matrix"] .app-sidebar,
+    :root[data-app-theme="matrix"] .app-mobile-header {
+        background: color-mix(in srgb, var(--pt-surface) 97%, #000000);
+    }
+
+    :root[data-app-theme="matrix"] .card,
+    :root[data-app-theme="matrix"] .card-header,
+    :root[data-app-theme="matrix"] .card-footer,
+    :root[data-app-theme="matrix"] .modal-content,
+    :root[data-app-theme="matrix"] .table-responsive,
+    :root[data-app-theme="matrix"] .accordion-item,
+    :root[data-app-theme="matrix"] .list-group,
+    :root[data-app-theme="matrix"] .list-group-item,
+    :root[data-app-theme="matrix"] .alert,
+    :root[data-app-theme="matrix"] .offcanvas,
+    :root[data-app-theme="matrix"] .dropdown-menu,
+    :root[data-app-theme="matrix"] .toast,
+    :root[data-app-theme="matrix"] .form-control,
+    :root[data-app-theme="matrix"] .form-select,
+    :root[data-app-theme="matrix"] .input-group > .btn,
+    :root[data-app-theme="matrix"] .app-sidebar-link,
+    :root[data-app-theme="matrix"] .app-utility-link {
+        border-radius: var(--pt-control-radius) !important;
+    }
+
+    :root[data-app-theme="matrix"] .card,
+    :root[data-app-theme="matrix"] .modal-content,
+    :root[data-app-theme="matrix"] .settings-group,
+    :root[data-app-theme="matrix"] .settings-hero {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--pt-line) 74%, transparent) !important;
+    }
+
+    :root[data-app-theme="matrix"] .btn-primary {
+        --bs-btn-bg: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-color: #010604;
+        --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 82%, #d7ffe7);
+        --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 82%, #d7ffe7);
+        --bs-btn-hover-color: #010604;
+        border-radius: var(--pt-control-radius);
+        font-family: var(--pt-display-font);
+        font-weight: 700;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="matrix"] .btn-outline-primary {
+        --bs-btn-color: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-hover-bg: var(--pt-coral);
+        --bs-btn-hover-border-color: var(--pt-coral);
+        --bs-btn-hover-color: #010604;
+        border-radius: var(--pt-control-radius);
+    }
+
+    :root[data-app-theme="matrix"] .form-control:focus,
+    :root[data-app-theme="matrix"] .form-select:focus {
+        border-color: var(--pt-coral);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
+    }
+
+    :root[data-app-theme="matrix"] .app-sidebar-link.active {
+        box-shadow: inset 3px 0 0 var(--pt-coral), 0 0 12px color-mix(in srgb, var(--pt-coral) 18%, transparent);
+    }
+
+    :root[data-app-theme="matrix"] .brand-wordmark span,
+    :root[data-app-theme="matrix"] .tool-card-link i {
+        color: var(--pt-coral);
+    }
+
+    :root[data-app-theme="matrix"] .tooltip {
+        --bs-tooltip-bg: #031009;
+        --bs-tooltip-color: #b5ffd0;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-overlay {
+        background: rgba(1, 6, 4, .18);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-launch {
+        color: #b5ffd0;
+        isolation: isolate;
+        z-index: 2;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-wordmark {
+        color: #79ffac;
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+        font-size: clamp(1.75rem, 5vw, 4.4rem);
+        font-style: normal;
+        letter-spacing: .06em;
+        text-shadow: 0 0 16px color-mix(in srgb, #2cff75 55%, transparent);
+        transform: none;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-copy > span,
+    :root[data-app-theme="matrix"] .app-loader-copy strong {
+        color: #83efa7;
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-scan {
+        background: linear-gradient(90deg, transparent, #37ff7f, transparent);
+        box-shadow: 0 0 12px #37ff7f;
+    }
+
+    .app-matrix-rain-canvas {
+        display: none;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active > .app-matrix-rain-canvas,
+    :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
+        display: block;
+        height: 100%;
+        inset: 0;
+        pointer-events: none;
+        position: fixed;
+        width: 100%;
+        z-index: 0;
+    }
+
+    :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
+        z-index: 2099;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-launch::before {
+        background: radial-gradient(ellipse at center, rgba(1, 6, 4, .96) 0%, rgba(1, 6, 4, .74) 48%, transparent 76%);
+        content: "";
+        inset: -4rem -8rem;
+        pointer-events: none;
+        position: absolute;
+        z-index: -1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        :root[data-app-theme="matrix"] .app-matrix-rain-canvas {
+            opacity: .62;
+        }
+    }
+
+    /* Ambient Matrix mode keeps the rain behind the application while shifting every shared
+       surface onto translucent dark glass. This also keeps Matrix light mode readable. */
+    :root[data-app-theme="matrix"] body.matrix-ambient-active {
+        --pt-canvas: #010604;
+        --pt-surface: #06100a;
+        --pt-ink: #b7ffcf;
+        --pt-ink-soft: #78c993;
+        --pt-line: #246b3e;
+        --bs-body-bg: #010604;
+        --bs-body-color: #b7ffcf;
+        background-color: #010604;
+        background-image: none;
+        color: var(--pt-ink);
+        color-scheme: dark;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-content-shell,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-main,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-footer {
+        background: transparent;
+        position: relative;
+        z-index: 1;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-sidebar,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-mobile-header {
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        background: rgba(2, 13, 7, .91);
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .card,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .modal-content,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-group,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-hero,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .table-responsive,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .accordion-item,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .list-group-item,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .alert,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .dropdown-menu,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .toast,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .offcanvas {
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        background-color: rgba(4, 17, 10, .9) !important;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .table {
+        --bs-table-bg: rgba(4, 17, 10, .88);
+        --bs-table-striped-bg: rgba(17, 61, 34, .42);
+        --bs-table-hover-bg: rgba(27, 105, 54, .46);
+        --bs-table-color: var(--pt-ink);
+        --bs-table-striped-color: var(--pt-ink);
+        --bs-table-hover-color: #d8ffe5;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-control,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-select,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .input-group-text {
+        background-color: rgba(2, 12, 7, .94);
+        color: var(--pt-ink);
+    }
+
+    .matrix-ambient-toggle {
+        display: none;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle {
+        align-items: center;
+        background: rgba(2, 14, 7, .94);
+        border: 1px solid #21874a;
+        border-radius: .15rem;
+        bottom: 1.25rem;
+        box-shadow: 0 0 0 1px rgba(41, 255, 117, .08), 0 0 18px rgba(41, 255, 117, .16);
+        color: #8effb5;
+        display: inline-flex;
+        height: 3rem;
+        justify-content: center;
+        overflow: hidden;
+        position: fixed;
+        right: 1.25rem;
+        width: 3rem;
+        z-index: 1060;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle::after {
+        animation: matrix-toggle-scan 2.4s linear infinite;
+        background: linear-gradient(90deg, transparent, rgba(139, 255, 179, .88), transparent);
+        content: "";
+        height: 1px;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle:hover,
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle:focus-visible,
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle[aria-pressed="true"] {
+        background: rgba(6, 36, 17, .98);
+        border-color: #68ff9c;
+        box-shadow: 0 0 0 2px rgba(41, 255, 117, .16), 0 0 24px rgba(41, 255, 117, .34);
+        color: #d8ffe5;
+    }
+
+    .matrix-ambient-toggle > i {
+        font-size: .82rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .matrix-ambient-toggle-code {
+        animation: matrix-toggle-code 2.8s linear infinite;
+        display: grid;
+        font-family: "Cascadia Mono", Consolas, monospace;
+        font-size: .56rem;
+        inset: -.55rem .2rem;
+        line-height: 1;
+        opacity: .34;
+        position: absolute;
+    }
+
+    .matrix-ambient-toggle-code > span:last-child {
+        justify-self: end;
+    }
+
+    @keyframes matrix-toggle-code {
+        from { transform: translateY(-20%); }
+        to { transform: translateY(34%); }
+    }
+
+    @keyframes matrix-toggle-scan {
+        from { transform: translateY(0); }
+        to { transform: translateY(3rem); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        :root[data-app-theme="matrix"] .matrix-ambient-toggle::after,
+        :root[data-app-theme="matrix"] .matrix-ambient-toggle-code {
+            animation: none;
+        }
+    }

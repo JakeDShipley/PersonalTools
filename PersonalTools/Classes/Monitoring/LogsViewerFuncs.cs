@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Mapster;
+using Microsoft.Extensions.Logging;
 using PersonalTools.Data.Monitoring;
 using PersonalTools.Entities.Monitoring;
 
@@ -6,61 +7,68 @@ namespace PersonalTools.Classes.Monitoring;
 
 public interface ILogsViewerFuncs
 {
-    ApplicationLogResult GetLogs(long afterId = 0, string minimumLevel = "Information", string? search = null, int take = 200);
+    Task<ApplicationLogResult> GetLogs(
+        int page = 1,
+        int pageSize = 25,
+        string minimumLevel = "Information",
+        string? search = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class LogsViewerFuncs : ILogsViewerFuncs
 {
-    private readonly IApplicationLogStore _store;
+    private static readonly int[] AllowedPageSizes = [10, 25, 50, 100];
+    private readonly IApplicationLogsData _data;
 
-    public LogsViewerFuncs(IApplicationLogStore store)
+    public LogsViewerFuncs(IApplicationLogsData data)
     {
-        _store = store;
+        _data = data;
     }
 
-    public ApplicationLogResult GetLogs(long afterId = 0, string minimumLevel = "Information", string? search = null, int take = 200)
+    /// <summary>
+    /// Keeps filtering and paging in MariaDB so the browser receives only the rows it can show.
+    /// The entries and summary are independent queries and can run together on separate connections.
+    /// </summary>
+    public async Task<ApplicationLogResult> GetLogs(
+        int page = 1,
+        int pageSize = 25,
+        string minimumLevel = "Information",
+        string? search = null,
+        CancellationToken cancellationToken = default)
     {
+        int safePage = Math.Max(1, page);
+        int safePageSize = AllowedPageSizes.Contains(pageSize) ? pageSize : 25;
+        string safeSearch = (search ?? string.Empty).Trim();
         LogLevel level = ParseMinimumLevel(minimumLevel);
-        int resultLimit = Math.Clamp(take, 1, 250);
+        ApplicationLogQuery query = new(level, safeSearch, safePage, safePageSize);
 
-        ApplicationLogStoreSnapshot snapshot = _store.Read(
-            Math.Max(0, afterId),
-            level,
-            search,
-            resultLimit);
+        Task<List<ApplicationLogReading>> entriesTask = _data.GetLogs(query, cancellationToken);
+        Task<ApplicationLogSummaryModel> summaryTask = _data.GetSummary(query, cancellationToken);
+        await Task.WhenAll(entriesTask, summaryTask);
+
+        ApplicationLogSummaryModel summary = await summaryTask;
+        int pageCount = Math.Max(1, (int)Math.Ceiling(summary.FilteredCount / (double)safePageSize));
 
         return new ApplicationLogResult
         {
             CapturedUtc = DateTime.UtcNow,
-            CaptureStartedUtc = snapshot.CaptureStartedUtc,
-            LatestId = snapshot.LatestId,
-            RetainedCount = snapshot.RetainedCount,
-            WarningCount = snapshot.WarningCount,
-            ErrorCount = snapshot.ErrorCount,
-            CriticalCount = snapshot.CriticalCount,
-            Entries = snapshot.Entries
-                .Select(entry => new ApplicationLogEntry
-                {
-                    Id = entry.Id,
-                    CapturedUtc = entry.CapturedUtc,
-                    Level = entry.Level.ToString(),
-                    EventId = entry.EventId,
-                    EventName = entry.EventName,
-                    Category = entry.Category,
-                    Message = entry.Message,
-                    Exception = entry.Exception
-                })
-                .ToList()
+            CaptureStartedUtc = summary.CaptureStartedUtc,
+            Page = safePage,
+            PageSize = safePageSize,
+            PageCount = pageCount,
+            FilteredCount = summary.FilteredCount,
+            RetainedCount = summary.RetainedCount,
+            WarningCount = summary.WarningCount,
+            ErrorCount = summary.ErrorCount,
+            CriticalCount = summary.CriticalCount,
+            Entries = (await entriesTask).Adapt<List<ApplicationLogEntry>>()
         };
     }
 
     private static LogLevel ParseMinimumLevel(string minimumLevel)
     {
-        if (Enum.TryParse(minimumLevel, true, out LogLevel level) && level != LogLevel.None)
-        {
-            return level;
-        }
-
-        return LogLevel.Information;
+        return Enum.TryParse(minimumLevel, true, out LogLevel level) && level != LogLevel.None
+            ? level
+            : LogLevel.Information;
     }
 }
