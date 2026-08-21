@@ -5,17 +5,25 @@
     ViewData["Title"] = "Media Extractor";
 }
 
-<div class="container px-3 px-lg-4">
+<div class="container px-3 px-lg-4 media-extractor-page">
 
     <div class="row align-items-start gy-3 section-spacing">
         <div class="col-12 col-lg">
+            <p class="eyebrow">Collect media</p>
             <h1 class="page-title">Media Extractor</h1>
 
             <p class="page-subtitle">
-                Paste page source and extract images and videos.
+                Paste a public page URL or its HTML source. Extracted media can be previewed, opened, or downloaded.
             </p>
         </div>
     </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Paste a public page URL or the page's HTML source.",
+        "Parse it, then preview the useful images, video and audio found.",
+        "Select individual files or download several results together."
+    })
 
     <div class="card shadow-sm border-0 section-spacing">
         <div class="card-body p-4">
@@ -24,19 +32,19 @@
 
                 <div class="mb-3">
 
-                    <label class="form-label">Page Source</label>
+                    <label class="form-label fw-semibold">Page URL or source</label>
 
                     <textarea asp-for="SourceCode"
                               id="sourceCodeBox"
                               class="form-control"
                               rows="12"
-                              placeholder="Paste page source here..."></textarea>
+                              placeholder="https://example.com/page  — or paste the page's HTML source"></textarea>
 
                     <div class="mt-2">
                     </div>
 
                 </div>
-                <div class="justify-content-between">
+                <div class="d-flex justify-content-between gap-2">
 
                     <button type="button"
                             class="btn btn-outline-secondary"
@@ -56,7 +64,7 @@
 
     @if (Model.MediaItems?.Any() == true)
     {
-        <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
 
             <div class="d-flex align-items-center">
                 <h2 class="h5 mb-0">Results</h2>
@@ -66,7 +74,7 @@
                 </span>
             </div>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex flex-wrap gap-2">
 
                 <button type="button" class="btn btn-outline-primary btnSelectAll">
                     Select All
@@ -92,11 +100,11 @@
 
         @foreach (var item in Model.MediaItems)
         {
-            <div class="card tool-card shadow-sm mb-3 media-card position-relative">
+            <div class="card tool-card shadow-sm mb-3 media-card position-relative media-result-card">
 
                 <div class="card-body p-4">
 
-                    <div class="form-check position-absolute" style="top:10px;right:10px;">
+                    <div class="form-check position-absolute top-0 end-0 m-3">
                         <input class="form-check-input media-check"
                                type="checkbox"
                                data-id="@item.Id"
@@ -110,7 +118,7 @@
 
                             @if (item.Type == "Image")
                             {
-                                <img src="@item.Url"
+                                <img src="@item.Url" alt="@item.Name"
                                      loading="lazy"
                                      class="rounded border media-thumb"
                                      style="width:150px;height:100px;object-fit:cover;">
@@ -153,9 +161,8 @@
 
 
                                 <!-- direct download button -->
-                                <a href="?handler=DownloadFile&url=@Uri.EscapeDataString(item.Url)"
-                                   class="btn btn-success">
-                                    Download
+                                <a href="?handler=DownloadFile&url=@Uri.EscapeDataString(item.Url)" class="btn btn-primary">
+                                    <i class="fa-solid fa-download me-1"></i>Download
                                 </a>
 
                                 <!-- preview -->
@@ -163,7 +170,7 @@
                                         class="btn btn-outline-secondary btnView"
                                         data-url="@item.Url"
                                         data-type="@item.Type">
-                                    Preview
+                                    <i class="fa-solid fa-eye me-1"></i><span>Preview</span>
                                 </button>
 
                                 <!-- open original -->
@@ -208,6 +215,7 @@
 
             function closeAllViewers() {
                 $(".media-viewer").slideUp().html("");
+                $('.btnView').removeClass('is-previewing').find('span').text('Preview');
 
                 if (activeViewer && typeof activeViewer.destroy === "function")
                     activeViewer.destroy();
@@ -247,12 +255,13 @@
                 let url = $(this).data("url");
                 let type = $(this).data("type");
 
-                closeAllViewers();
-
                 if (viewer.is(":visible")) {
-                    viewer.slideUp().html("");
+                    closeAllViewers();
                     return;
                 }
+
+                closeAllViewers();
+                $(this).addClass('is-previewing').find('span').text('Close preview');
 
                 if (type === "Image") {
 
@@ -264,7 +273,7 @@
                         </div>
                     `);
 
-                    viewer.slideDown(() => {
+                    viewer.stop(true, true).slideDown(180, () => {
 
                         let image = viewer.find("img")[0];
 
@@ -298,7 +307,7 @@
                         </video>
                     `);
 
-                    viewer.slideDown(() => {
+                    viewer.stop(true, true).slideDown(180, () => {
 
                         let video = document.getElementById(videoId);
 
@@ -363,23 +372,33 @@
                 let urls = getSelectedItems().map(x => x.url);
 
                 if (!urls.length) {
-                    alert("No items selected");
+                    window.personalToolsToast.warning("Select at least one media item to create an archive.");
                     return;
                 }
 
-                fetch("?handler=DownloadZip", {
+                const downloadRequest = fetch("?handler=DownloadZip", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(urls)
                 })
-                .then(r => r.blob())
+                .then(r => {
+                    if (!r.ok) throw new Error("The archive could not be prepared.");
+                    return r.blob();
+                })
                 .then(blob => {
 
                     let link = document.createElement("a");
                     link.href = URL.createObjectURL(blob);
                     link.download = "media.zip";
                     link.click();
+                    URL.revokeObjectURL(link.href);
 
+                })
+                .catch(error => window.personalToolsToast.error(error.message));
+
+                window.personalToolsLoader.wrap(downloadRequest, {
+                    title: "Preparing download",
+                    message: "Collecting the selected media into one archive…"
                 });
 
             });

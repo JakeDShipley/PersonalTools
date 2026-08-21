@@ -1,0 +1,119 @@
+@page
+@model PersonalTools.Pages.CSStats.IndexModel
+@{
+    ViewData["Title"] = "CS2 Player Stats";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-cs-stats.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 cs-stats-page" data-linked-steam-id="@Model.LinkedSteamId">
+    @Html.AntiForgeryToken()
+    <div class="row align-items-end gy-3 section-spacing">
+        <div class="col-12 col-xl">
+            <p class="eyebrow">Counter-Strike 2</p>
+            <h1 class="page-title">Player stats</h1>
+            <p class="page-subtitle">Ranks, match record and performance signals in one focused profile view.</p>
+        </div>
+        <div class="col-12 col-xl-auto">
+            <a class="cs-stats-attribution" href="https://leetify.com" target="_blank" rel="noopener" aria-label="Data provided by Leetify">
+                <img class="cs-leetify-badge-dark" src="~/images/cs-stats/brand/leetify-dark.png" alt="Data provided by Leetify" />
+                <img class="cs-leetify-badge-light" src="~/images/cs-stats/brand/leetify-light.png" alt="Data provided by Leetify" />
+            </a>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Search a Steam profile; every new player opens in their own tab.",
+        "Switch between tabs, or use the × on a tab to remove that player.",
+        "Open two to five players, compare them side by side, or flag a profile you genuinely believe is suspicious."
+    })
+
+    <section class="card cs-stats-search-card border-0 shadow-sm section-spacing" aria-labelledby="csStatsSearchTitle">
+        <div class="card-body p-3 p-lg-4">
+            <form id="csStatsSearchForm">
+                <label class="form-label fw-semibold" id="csStatsSearchTitle" for="csStatsProfile">Find a CS2 player</label>
+                <div class="cs-stats-search-controls">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text" aria-hidden="true"><i class="fa-brands fa-steam"></i></span>
+                        <input class="form-control" id="csStatsProfile" value="@Model.Profile" placeholder="Steam profile URL, custom name, or SteamID64" maxlength="200" autocomplete="off" required />
+                    </div>
+                    <button class="btn btn-primary btn-lg" type="submit"><i class="fa-solid fa-chart-simple me-2"></i>View stats</button>
+                    @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                    {
+                        <button class="btn steam-account-button" id="loadLinkedStats" type="button" data-steam-id="@Model.LinkedSteamId">
+                            <i class="fa-brands fa-steam"></i><span>My stats</span>
+                        </button>
+                    }
+                </div>
+                <p class="form-text mb-0 mt-2">Profiles must be available through Leetify. Add up to five players and switch between them below.</p>
+            </form>
+        </div>
+    </section>
+
+    <div class="alert alert-danger d-none" id="csStatsError" role="alert"></div>
+
+    <section class="cs-stats-empty" id="csStatsEmptyState">
+        <span class="cs-stats-empty-icon" aria-hidden="true"><i class="fa-solid fa-crosshairs"></i></span>
+        <h2 class="h5 fw-semibold">No player loaded yet</h2>
+        <p class="small-muted mb-0">Search above to open a stats tab. Linked Steam accounts load automatically.</p>
+    </section>
+
+    <section class="d-none" id="csStatsWorkspace" aria-live="polite">
+        <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-3">
+            <div>
+                <p class="eyebrow mb-1">Open profiles</p>
+                <h2 class="h5 mb-0">Player workspace</h2>
+            </div>
+            <button class="btn btn-outline-primary" id="comparePlayersButton" type="button" disabled>
+                <i class="fa-solid fa-code-compare me-2"></i><span>Compare players</span>
+            </button>
+        </div>
+        <ul class="nav nav-tabs cs-player-tabs" id="csStatsTabs" role="tablist"></ul>
+        <div class="tab-content cs-player-tab-content" id="csStatsTabContent"></div>
+    </section>
+</div>
+
+<div class="modal fade" id="reportPlayerModal" tabindex="-1" aria-labelledby="reportPlayerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow cs-report-modal">
+            <div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-1">Community note</p><h2 class="modal-title h5" id="reportPlayerModalLabel">Report suspicious player</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body pt-3"><p class="mb-2">Flag <strong id="reportPlayerName"></strong> as suspicious?</p><p class="small-muted mb-0">This saves one private report from your account. It is a personal signal only—not a verdict, ban, or Valve Trust Factor.</p></div>
+            <div class="modal-footer border-0"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger" id="confirmPlayerReport" type="button"><i class="fa-solid fa-flag me-2"></i>Confirm report</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="comparePlayersModal" tabindex="-1" aria-labelledby="comparePlayersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable cs-compare-dialog">
+        <div class="modal-content border-0 shadow cs-compare-modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="cs-compare-modal-icon" aria-hidden="true"><i class="fa-solid fa-code-compare"></i></span>
+                    <div><p class="eyebrow mb-1">Side by side</p><h2 class="modal-title h5" id="comparePlayersModalLabel">Player comparison</h2></div>
+                </div>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="cs-compare-explainer d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+                    <p class="small-muted mb-0">Each row highlights the strongest available result. Lower-is-better metrics are marked clearly.</p>
+                    <span class="cs-compare-best-key"><i class="fa-solid fa-crown" aria-hidden="true"></i> Strongest result</span>
+                </div>
+                <div class="table-responsive" id="csCompareTableWrap">
+                    <table class="table table-hover align-middle cs-compare-table mb-0" id="csCompareTable">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="cs-compare-mobile" id="csCompareCards" aria-live="polite"></div>
+                <p class="small-muted mt-3 mb-0"><i class="fa-solid fa-circle-info me-1"></i>Results reflect the data currently available for each Leetify profile.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pages/page-cs-stats.js" asp-append-version="true"></script>
+}

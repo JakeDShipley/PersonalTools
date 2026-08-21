@@ -1,0 +1,758 @@
+/*
+   Personal Tools theme tokens.
+   New themes belong here: each theme defines the same semantic variables for its
+   light and dark modes, while page layout continues to use Bootstrap utilities.
+*/
+
+:root {
+    --pt-sidebar-width: 17.5rem;
+    --pt-sidebar-compact-width: 5.25rem;
+    --pt-focus-ring: color-mix(in srgb, var(--pt-mint) 55%, transparent);
+    /* Layout tokens deliberately sit beside colour tokens.  Components consume
+       these rather than carrying a second set of theme-specific dimensions. */
+    --pt-page-space: 3.5rem;
+    --pt-section-space: 2rem;
+    --pt-panel-space: 1.1rem;
+    --pt-card-space: 1rem;
+    --pt-control-radius: .65rem;
+    --pt-card-radius: 1rem;
+    --pt-panel-radius: .9rem;
+    --pt-small-radius: .55rem;
+    --pt-pill-radius: 999px;
+    --pt-card-shadow: none;
+    --pt-card-hover-shadow: 0 .5rem 1.25rem rgba(20, 29, 48, .06);
+    --pt-card-hover-border: var(--pt-mint);
+    --pt-display-font: inherit;
+}
+
+    :root[data-app-theme="personal"][data-theme="light"] {
+        --pt-ink: #182033;
+        --pt-ink-soft: #586178;
+        --pt-canvas: #f7f7f4;
+        --pt-surface: #ffffff;
+        --pt-line: #e4e6eb;
+        --pt-coral: #e76f51;
+        --pt-mint: #8fd0c2;
+        --bs-primary: #182033;
+        --bs-primary-rgb: 24, 32, 51;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        color-scheme: light;
+    }
+
+    :root[data-app-theme="personal"][data-theme="dark"] {
+        --pt-ink: #edf0f7;
+        --pt-ink-soft: #aeb7c9;
+        --pt-canvas: #111726;
+        --pt-surface: #1a2234;
+        --pt-line: #2e3a52;
+        --pt-coral: #ff9a7e;
+        --pt-mint: #8fd0c2;
+        --bs-primary: #e9edf6;
+        --bs-primary-rgb: 233, 237, 246;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        color-scheme: dark;
+    }
+
+    :root[data-app-theme="tactical"][data-theme="light"] {
+        --pt-ink: #111317;
+        --pt-ink-soft: #69707a;
+        --pt-canvas: #efeee9;
+        --pt-surface: #fbfaf6;
+        --pt-line: #d9d7d0;
+        --pt-coral: #d68a0b;
+        --pt-mint: #d69a24;
+        --bs-primary: #15171b;
+        --bs-primary-rgb: 21, 23, 27;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.25rem;
+        --pt-section-space: 1.35rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .8rem;
+        --pt-control-radius: 0;
+        --pt-card-radius: .2rem;
+        --pt-panel-radius: .3rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .12rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+        --pt-card-hover-border: var(--pt-coral);
+        --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        color-scheme: light;
+    }
+
+    :root[data-app-theme="tactical"][data-theme="dark"] {
+        --pt-ink: #f2f0e8;
+        --pt-ink-soft: #a8afb9;
+        --pt-canvas: #0c0d0f;
+        --pt-surface: #15171b;
+        --pt-line: #2a2e34;
+        --pt-coral: #f0aa1d;
+        --pt-mint: #e5a222;
+        --bs-primary: #f0aa1d;
+        --bs-primary-rgb: 240, 170, 29;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.25rem;
+        --pt-section-space: 1.35rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .8rem;
+        --pt-control-radius: 0;
+        --pt-card-radius: .2rem;
+        --pt-panel-radius: .3rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .12rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-coral);
+        --pt-card-hover-border: var(--pt-coral);
+        --pt-display-font: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        color-scheme: dark;
+    }
+
+    /* Tactical is deliberately a visual layer only: layout remains Bootstrap-led. */
+    :root[data-app-theme="tactical"] .page-title,
+    :root[data-app-theme="tactical"] .csm-page h1,
+    :root[data-app-theme="tactical"] .settings-hero h2 {
+        font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        font-stretch: condensed;
+        letter-spacing: .015em;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="tactical"] .eyebrow,
+    :root[data-app-theme="tactical"] .app-nav-heading {
+        color: var(--pt-coral);
+        font-weight: 800;
+    }
+
+    /* Tactical is intentionally compact and squared-off. It does not change the
+   Personal theme because every override is scoped to the selected theme. */
+    :root[data-app-theme="tactical"] .app-main {
+        padding-block: var(--pt-page-space);
+    }
+
+    :root[data-app-theme="tactical"] .page-title,
+    :root[data-app-theme="tactical"] .section-title,
+    :root[data-app-theme="tactical"] .csm-stat-value,
+    :root[data-app-theme="tactical"] .csm-score,
+    :root[data-app-theme="tactical"] .csm-card-score {
+        font-family: var(--pt-display-font);
+        letter-spacing: .025em;
+    }
+
+    :root[data-app-theme="tactical"] .tool-card,
+    :root[data-app-theme="tactical"] .settings-group,
+    :root[data-app-theme="tactical"] .settings-hero,
+    :root[data-app-theme="tactical"] .modal-content,
+    :root[data-app-theme="tactical"] .monitor-status,
+    :root[data-app-theme="tactical"] .monitor-panel,
+    :root[data-app-theme="tactical"] .monitor-metric-card {
+        border-radius: var(--pt-card-radius) !important;
+        box-shadow: none !important;
+    }
+
+    :root[data-app-theme="tactical"] .btn-primary {
+        --bs-btn-bg: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-color: #101114;
+        --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+        --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 86%, #ffffff);
+        --bs-btn-hover-color: #101114;
+        border-radius: var(--pt-control-radius);
+        font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="tactical"] .btn-outline-primary {
+        --bs-btn-color: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-hover-bg: var(--pt-coral);
+        --bs-btn-hover-border-color: var(--pt-coral);
+        --bs-btn-hover-color: #101114;
+        border-radius: var(--pt-control-radius);
+    }
+
+    :root[data-app-theme="tactical"] .app-sidebar,
+    :root[data-app-theme="tactical"] .app-mobile-header {
+        background: color-mix(in srgb, var(--pt-surface) 98%, #000000);
+    }
+
+    :root[data-app-theme="tactical"] .app-sidebar-link.active,
+    :root[data-app-theme="tactical"] .app-sidebar-link:hover {
+        border-color: color-mix(in srgb, var(--pt-coral) 58%, var(--pt-line));
+    }
+
+    :root[data-app-theme="tactical"] .brand-wordmark span,
+    :root[data-app-theme="tactical"] .tool-card-link i {
+        color: var(--pt-coral);
+    }
+
+    :root[data-app-theme="tactical"] .brand-mark {
+        border-radius: var(--pt-card-radius);
+    }
+
+    :root[data-app-theme="tactical"] .settings-hero {
+        background: linear-gradient(115deg, color-mix(in srgb, var(--pt-coral) 12%, var(--pt-surface)), var(--pt-surface));
+    }
+
+    :root[data-app-theme="tactical"] .form-control:focus,
+    :root[data-app-theme="tactical"] .form-select:focus {
+        border-color: var(--pt-coral);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
+    }
+
+    :root[data-app-theme="tactical"] .tooltip {
+        --bs-tooltip-bg: var(--pt-ink);
+        --bs-tooltip-color: var(--pt-surface);
+    }
+
+    :root[data-app-theme="tactical"] .app-sidebar-link,
+    :root[data-app-theme="tactical"] .app-utility-link,
+    :root[data-app-theme="tactical"] .app-nav-soon,
+    :root[data-app-theme="tactical"] .tool-card-icon,
+    :root[data-app-theme="tactical"] .view-switcher,
+    :root[data-app-theme="tactical"] .view-switcher-button,
+    :root[data-app-theme="tactical"] .form-control,
+    :root[data-app-theme="tactical"] .form-select,
+    :root[data-app-theme="tactical"] .input-group > .btn,
+    :root[data-app-theme="tactical"] .pagination .page-link {
+        border-radius: var(--pt-control-radius) !important;
+    }
+
+    /* Tactical owns the complete geometry, not just the colour palette. Bootstrap cards, result
+   containers and modals all become deliberately square so mixed rounded edges cannot leak in. */
+    :root[data-app-theme="tactical"] .card,
+    :root[data-app-theme="tactical"] .card-header,
+    :root[data-app-theme="tactical"] .card-footer,
+    :root[data-app-theme="tactical"] .table-responsive,
+    :root[data-app-theme="tactical"] .accordion-item,
+    :root[data-app-theme="tactical"] .list-group,
+    :root[data-app-theme="tactical"] .list-group-item,
+    :root[data-app-theme="tactical"] .alert,
+    :root[data-app-theme="tactical"] .offcanvas,
+    :root[data-app-theme="tactical"] .dropdown-menu,
+    :root[data-app-theme="tactical"] .toast,
+    :root[data-app-theme="tactical"] .cs-stats-empty,
+    :root[data-app-theme="tactical"] .cs-stats-search-card,
+    :root[data-app-theme="tactical"] .cs-stats-section-card,
+    :root[data-app-theme="tactical"] .cs-rank-panel {
+        border-radius: 0 !important;
+    }
+
+        :root[data-app-theme="tactical"] .card > :first-child,
+        :root[data-app-theme="tactical"] .card > :last-child,
+        :root[data-app-theme="tactical"] .table-responsive > :first-child,
+        :root[data-app-theme="tactical"] .table-responsive > :last-child {
+            border-radius: 0 !important;
+        }
+
+    :root[data-app-theme="tactical"] .app-sidebar-link.active {
+        box-shadow: inset 3px 0 0 var(--pt-coral);
+    }
+
+    :root[data-app-theme="tactical"] .blits-sidebar-link::before,
+    :root[data-app-theme="tactical"] .blits-sidebar-link::after {
+        border-radius: 0;
+    }
+
+    :root[data-app-theme="tactical"] .tool-card {
+        background: var(--pt-surface);
+    }
+
+        :root[data-app-theme="tactical"] .tool-card:hover {
+            border-color: var(--pt-card-hover-border);
+            box-shadow: var(--pt-card-hover-shadow) !important;
+        }
+
+    /* CS Match Tracker adopts the dense workshop layout shown by this theme. */
+    :root[data-app-theme="tactical"] .csm-tabs {
+        border-bottom: 0;
+        gap: .2rem;
+        padding: 0;
+    }
+
+        :root[data-app-theme="tactical"] .csm-tabs .nav-link {
+            border-radius: 0;
+            font-family: var(--pt-display-font);
+            font-size: .82rem;
+            letter-spacing: .035em;
+            min-height: 2.35rem;
+            padding: .45rem 1.65rem .45rem .7rem;
+            text-transform: uppercase;
+        }
+
+            :root[data-app-theme="tactical"] .csm-tabs .nav-link.active {
+                border-top: 2px solid var(--pt-coral);
+            }
+
+    :root[data-app-theme="tactical"] .csm-tab-add,
+    :root[data-app-theme="tactical"] .csm-tab-close,
+    :root[data-app-theme="tactical"] .csm-tab-avatar,
+    :root[data-app-theme="tactical"] .csm-chip,
+    :root[data-app-theme="tactical"] .csm-ot-chip,
+    :root[data-app-theme="tactical"] .csm-already-badge,
+    :root[data-app-theme="tactical"] .csm-gt-pill,
+    :root[data-app-theme="tactical"] .csm-icon-btn,
+    :root[data-app-theme="tactical"] .csm-side-toggle-btn,
+    :root[data-app-theme="tactical"] .csm-map-preview img {
+        border-radius: var(--pt-small-radius);
+    }
+
+    :root[data-app-theme="tactical"] .csm-tabs-panel {
+        background: transparent;
+        border-radius: 0;
+        border-top: 1px solid var(--pt-line);
+        padding: var(--pt-panel-space) 0 0;
+    }
+
+    :root[data-app-theme="tactical"] .csm-stats {
+        gap: .55rem;
+    }
+
+    :root[data-app-theme="tactical"] .csm-stat {
+        background: var(--pt-surface);
+        border-radius: 0;
+        border-top: 2px solid var(--pt-coral);
+        padding: .75rem .85rem;
+    }
+
+    :root[data-app-theme="tactical"] .csm-stat-label,
+    :root[data-app-theme="tactical"] .csm-panel-head-label {
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="tactical"] .csm-view-toggle,
+    :root[data-app-theme="tactical"] .csm-table-wrap,
+    :root[data-app-theme="tactical"] .csm-empty,
+    :root[data-app-theme="tactical"] .csm-match-card,
+    :root[data-app-theme="tactical"] .csm-toggle-cell {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+        :root[data-app-theme="tactical"] .csm-view-toggle button {
+            border-radius: 0;
+            padding: .45rem .7rem;
+        }
+
+    :root[data-app-theme="tactical"] .csm-match-table thead th {
+        padding: .55rem .75rem;
+    }
+
+    :root[data-app-theme="tactical"] .csm-match-table td {
+        background: var(--pt-surface);
+        border-bottom: .5rem solid var(--pt-canvas);
+        padding: .65rem .75rem;
+    }
+
+    :root[data-app-theme="tactical"] .csm-match-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    :root[data-app-theme="tactical"] .csm-matches-cards {
+        gap: .65rem;
+    }
+
+    :root[data-app-theme="tactical"] .csm-match-card {
+        border-top-width: 3px;
+    }
+
+        :root[data-app-theme="tactical"] .csm-match-card .csm-card-body {
+            gap: .45rem;
+            padding: .75rem .85rem .85rem;
+        }
+
+    :root[data-app-theme="tactical"] .csm-gt-pill {
+        font-family: var(--pt-display-font);
+        letter-spacing: .03em;
+        padding: .3rem .65rem;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="tactical"] .modal-header,
+    :root[data-app-theme="tactical"] .modal-footer {
+        border-color: var(--pt-line);
+    }
+
+    /* Matrix is an original terminal-inspired theme: phosphor green, deep black and deliberate
+       flat geometry. It uses system monospace fonts rather than a copied film/typeface asset. */
+    :root[data-app-theme="matrix"][data-theme="light"] {
+        --pt-ink: #082b18;
+        --pt-ink-soft: #397a51;
+        --pt-canvas: #e7f2e8;
+        --pt-surface: #f5fbf5;
+        --pt-line: #a9d7b4;
+        --pt-coral: #087c3e;
+        --pt-mint: #16a65a;
+        --bs-primary: #087c3e;
+        --bs-primary-rgb: 8, 124, 62;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.7rem;
+        --pt-section-space: 1.45rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .85rem;
+        --pt-control-radius: .12rem;
+        --pt-card-radius: .15rem;
+        --pt-panel-radius: .15rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .1rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-mint);
+        --pt-card-hover-border: var(--pt-mint);
+        --pt-display-font: "Cascadia Mono", Consolas, "Courier New", monospace;
+        color-scheme: light;
+    }
+
+    :root[data-app-theme="matrix"][data-theme="dark"] {
+        --pt-ink: #a9ffc7;
+        --pt-ink-soft: #63bd83;
+        --pt-canvas: #010604;
+        --pt-surface: #06100a;
+        --pt-line: #1d5e36;
+        --pt-coral: #28e878;
+        --pt-mint: #0dbd57;
+        --bs-primary: #18cc64;
+        --bs-primary-rgb: 24, 204, 100;
+        --bs-body-bg: var(--pt-canvas);
+        --bs-body-color: var(--pt-ink);
+        --bs-border-color: var(--pt-line);
+        --app-muted: var(--pt-ink-soft);
+        --pt-page-space: 2.7rem;
+        --pt-section-space: 1.45rem;
+        --pt-panel-space: .9rem;
+        --pt-card-space: .85rem;
+        --pt-control-radius: .12rem;
+        --pt-card-radius: .15rem;
+        --pt-panel-radius: .15rem;
+        --pt-small-radius: 0;
+        --pt-pill-radius: .1rem;
+        --pt-card-shadow: none;
+        --pt-card-hover-shadow: inset 3px 0 0 var(--pt-mint);
+        --pt-card-hover-border: var(--pt-mint);
+        --pt-display-font: "Cascadia Mono", Consolas, "Courier New", monospace;
+        color-scheme: dark;
+    }
+
+    :root[data-app-theme="matrix"] body {
+        background-image: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--pt-mint) 12%, transparent), transparent 42%);
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    }
+
+    :root[data-app-theme="matrix"] .page-title,
+    :root[data-app-theme="matrix"] .section-title,
+    :root[data-app-theme="matrix"] .settings-hero h2,
+    :root[data-app-theme="matrix"] .csm-page h1,
+    :root[data-app-theme="matrix"] .csm-stat-value,
+    :root[data-app-theme="matrix"] .csm-score,
+    :root[data-app-theme="matrix"] .csm-card-score {
+        font-family: var(--pt-display-font);
+        font-weight: 800;
+        letter-spacing: -.035em;
+    }
+
+    :root[data-app-theme="matrix"] .eyebrow,
+    :root[data-app-theme="matrix"] .app-nav-heading {
+        color: var(--pt-coral);
+        font-weight: 800;
+        letter-spacing: .1em;
+    }
+
+    :root[data-app-theme="matrix"] .app-sidebar,
+    :root[data-app-theme="matrix"] .app-mobile-header {
+        background: color-mix(in srgb, var(--pt-surface) 97%, #000000);
+    }
+
+    :root[data-app-theme="matrix"] .card,
+    :root[data-app-theme="matrix"] .card-header,
+    :root[data-app-theme="matrix"] .card-footer,
+    :root[data-app-theme="matrix"] .modal-content,
+    :root[data-app-theme="matrix"] .table-responsive,
+    :root[data-app-theme="matrix"] .accordion-item,
+    :root[data-app-theme="matrix"] .list-group,
+    :root[data-app-theme="matrix"] .list-group-item,
+    :root[data-app-theme="matrix"] .alert,
+    :root[data-app-theme="matrix"] .offcanvas,
+    :root[data-app-theme="matrix"] .dropdown-menu,
+    :root[data-app-theme="matrix"] .toast,
+    :root[data-app-theme="matrix"] .form-control,
+    :root[data-app-theme="matrix"] .form-select,
+    :root[data-app-theme="matrix"] .input-group > .btn,
+    :root[data-app-theme="matrix"] .app-sidebar-link,
+    :root[data-app-theme="matrix"] .app-utility-link {
+        border-radius: var(--pt-control-radius) !important;
+    }
+
+    :root[data-app-theme="matrix"] .card,
+    :root[data-app-theme="matrix"] .modal-content,
+    :root[data-app-theme="matrix"] .settings-group,
+    :root[data-app-theme="matrix"] .settings-hero {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--pt-line) 74%, transparent) !important;
+    }
+
+    :root[data-app-theme="matrix"] .btn-primary {
+        --bs-btn-bg: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-color: #010604;
+        --bs-btn-hover-bg: color-mix(in srgb, var(--pt-coral) 82%, #d7ffe7);
+        --bs-btn-hover-border-color: color-mix(in srgb, var(--pt-coral) 82%, #d7ffe7);
+        --bs-btn-hover-color: #010604;
+        border-radius: var(--pt-control-radius);
+        font-family: var(--pt-display-font);
+        font-weight: 700;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+    }
+
+    :root[data-app-theme="matrix"] .btn-outline-primary {
+        --bs-btn-color: var(--pt-coral);
+        --bs-btn-border-color: var(--pt-coral);
+        --bs-btn-hover-bg: var(--pt-coral);
+        --bs-btn-hover-border-color: var(--pt-coral);
+        --bs-btn-hover-color: #010604;
+        border-radius: var(--pt-control-radius);
+    }
+
+    :root[data-app-theme="matrix"] .form-control:focus,
+    :root[data-app-theme="matrix"] .form-select:focus {
+        border-color: var(--pt-coral);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--pt-coral) 22%, transparent);
+    }
+
+    :root[data-app-theme="matrix"] .app-sidebar-link.active {
+        box-shadow: inset 3px 0 0 var(--pt-coral), 0 0 12px color-mix(in srgb, var(--pt-coral) 18%, transparent);
+    }
+
+    :root[data-app-theme="matrix"] .brand-wordmark span,
+    :root[data-app-theme="matrix"] .tool-card-link i {
+        color: var(--pt-coral);
+    }
+
+    :root[data-app-theme="matrix"] .tooltip {
+        --bs-tooltip-bg: #031009;
+        --bs-tooltip-color: #b5ffd0;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-overlay {
+        background: rgba(1, 6, 4, .18);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-launch {
+        color: #b5ffd0;
+        isolation: isolate;
+        z-index: 2;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-wordmark {
+        color: #79ffac;
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+        font-size: clamp(1.75rem, 5vw, 4.4rem);
+        font-style: normal;
+        letter-spacing: .06em;
+        text-shadow: 0 0 16px color-mix(in srgb, #2cff75 55%, transparent);
+        transform: none;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-copy > span,
+    :root[data-app-theme="matrix"] .app-loader-copy strong {
+        color: #83efa7;
+        font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-scan {
+        background: linear-gradient(90deg, transparent, #37ff7f, transparent);
+        box-shadow: 0 0 12px #37ff7f;
+    }
+
+    .app-matrix-rain-canvas {
+        display: none;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active > .app-matrix-rain-canvas,
+    :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
+        display: block;
+        height: 100%;
+        inset: 0;
+        pointer-events: none;
+        position: fixed;
+        width: 100%;
+        z-index: 0;
+    }
+
+    :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
+        z-index: 2099;
+    }
+
+    :root[data-app-theme="matrix"] .app-loader-launch::before {
+        background: radial-gradient(ellipse at center, rgba(1, 6, 4, .96) 0%, rgba(1, 6, 4, .74) 48%, transparent 76%);
+        content: "";
+        inset: -4rem -8rem;
+        pointer-events: none;
+        position: absolute;
+        z-index: -1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        :root[data-app-theme="matrix"] .app-matrix-rain-canvas {
+            opacity: .62;
+        }
+    }
+
+    /* Ambient Matrix mode keeps the rain behind the application while shifting every shared
+       surface onto translucent dark glass. This also keeps Matrix light mode readable. */
+    :root[data-app-theme="matrix"] body.matrix-ambient-active {
+        --pt-canvas: #010604;
+        --pt-surface: #06100a;
+        --pt-ink: #b7ffcf;
+        --pt-ink-soft: #78c993;
+        --pt-line: #246b3e;
+        --bs-body-bg: #010604;
+        --bs-body-color: #b7ffcf;
+        background-color: #010604;
+        background-image: none;
+        color: var(--pt-ink);
+        color-scheme: dark;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-content-shell,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-main,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-footer {
+        background: transparent;
+        position: relative;
+        z-index: 1;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-sidebar,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-mobile-header {
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        background: rgba(2, 13, 7, .91);
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .card,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .modal-content,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-group,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-hero,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .table-responsive,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .accordion-item,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .list-group-item,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .alert,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .dropdown-menu,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .toast,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .offcanvas {
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        background-color: rgba(4, 17, 10, .9) !important;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .table {
+        --bs-table-bg: rgba(4, 17, 10, .88);
+        --bs-table-striped-bg: rgba(17, 61, 34, .42);
+        --bs-table-hover-bg: rgba(27, 105, 54, .46);
+        --bs-table-color: var(--pt-ink);
+        --bs-table-striped-color: var(--pt-ink);
+        --bs-table-hover-color: #d8ffe5;
+    }
+
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-control,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-select,
+    :root[data-app-theme="matrix"] body.matrix-ambient-active .input-group-text {
+        background-color: rgba(2, 12, 7, .94);
+        color: var(--pt-ink);
+    }
+
+    .matrix-ambient-toggle {
+        display: none;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle {
+        align-items: center;
+        background: rgba(2, 14, 7, .94);
+        border: 1px solid #21874a;
+        border-radius: .15rem;
+        bottom: 1.25rem;
+        box-shadow: 0 0 0 1px rgba(41, 255, 117, .08), 0 0 18px rgba(41, 255, 117, .16);
+        color: #8effb5;
+        display: inline-flex;
+        height: 3rem;
+        justify-content: center;
+        overflow: hidden;
+        position: fixed;
+        right: 1.25rem;
+        width: 3rem;
+        z-index: 1060;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle::after {
+        animation: matrix-toggle-scan 2.4s linear infinite;
+        background: linear-gradient(90deg, transparent, rgba(139, 255, 179, .88), transparent);
+        content: "";
+        height: 1px;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle:hover,
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle:focus-visible,
+    :root[data-app-theme="matrix"] .matrix-ambient-toggle[aria-pressed="true"] {
+        background: rgba(6, 36, 17, .98);
+        border-color: #68ff9c;
+        box-shadow: 0 0 0 2px rgba(41, 255, 117, .16), 0 0 24px rgba(41, 255, 117, .34);
+        color: #d8ffe5;
+    }
+
+    .matrix-ambient-toggle > i {
+        font-size: .82rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .matrix-ambient-toggle-code {
+        animation: matrix-toggle-code 2.8s linear infinite;
+        display: grid;
+        font-family: "Cascadia Mono", Consolas, monospace;
+        font-size: .56rem;
+        inset: -.55rem .2rem;
+        line-height: 1;
+        opacity: .34;
+        position: absolute;
+    }
+
+    .matrix-ambient-toggle-code > span:last-child {
+        justify-self: end;
+    }
+
+    @keyframes matrix-toggle-code {
+        from { transform: translateY(-20%); }
+        to { transform: translateY(34%); }
+    }
+
+    @keyframes matrix-toggle-scan {
+        from { transform: translateY(0); }
+        to { transform: translateY(3rem); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        :root[data-app-theme="matrix"] .matrix-ambient-toggle::after,
+        :root[data-app-theme="matrix"] .matrix-ambient-toggle-code {
+            animation: none;
+        }
+    }

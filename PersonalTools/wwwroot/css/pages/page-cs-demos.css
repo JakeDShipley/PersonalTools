@@ -1,0 +1,128 @@
+.cs-demos-page {
+    --cs-demo-accent: #d96b35;
+    --cs-demo-accent-bright: #ffad58;
+    --cs-demo-win: #25ae73;
+    --cs-demo-loss: #db5963;
+}
+
+[data-theme="dark"] .cs-demos-page {
+    --cs-demo-accent: #ff9650;
+    --cs-demo-accent-bright: #ffd166;
+}
+
+.cs-demos-attribution img { height: 24px; max-width: 150px; object-fit: contain; }
+.cs-demos-attribution .cs-leetify-badge-light,
+[data-theme="dark"] .cs-demos-attribution .cs-leetify-badge-dark { display: none; }
+[data-theme="dark"] .cs-demos-attribution .cs-leetify-badge-light { display: block; }
+
+.cs-demos-search-card { border: 1px solid color-mix(in srgb, var(--cs-demo-accent) 22%, var(--pt-line)) !important; }
+
+.cs-demos-search-controls {
+    align-items: stretch;
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.cs-demos-empty,
+.cs-demos-unavailable {
+    background: color-mix(in srgb, var(--pt-surface) 94%, var(--cs-demo-accent));
+    border: 1px dashed color-mix(in srgb, var(--cs-demo-accent) 42%, var(--pt-line)) !important;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+}
+
+.cs-demos-empty-icon,
+.cs-demo-replay-icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--cs-demo-accent) 14%, var(--pt-surface));
+    border: 1px solid color-mix(in srgb, var(--cs-demo-accent) 36%, var(--pt-line));
+    color: var(--cs-demo-accent);
+    display: inline-flex;
+    height: 2.75rem;
+    justify-content: center;
+    width: 2.75rem;
+}
+
+.cs-demos-player-summary {
+    border-left: 3px solid var(--cs-demo-accent) !important;
+    overflow: hidden;
+    position: relative;
+}
+
+.cs-demos-player-summary::after {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cs-demo-accent) 10%, transparent), transparent);
+    content: "";
+    height: 100%;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 36%;
+}
+
+.cs-demos-player-summary .card-body { position: relative; z-index: 1; }
+
+.cs-demos-avatar {
+    align-items: center;
+    background: color-mix(in srgb, var(--cs-demo-accent) 16%, var(--pt-surface));
+    border: 2px solid color-mix(in srgb, var(--cs-demo-accent) 58%, var(--pt-line));
+    border-radius: 50%;
+    color: var(--pt-ink);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: .84rem;
+    font-weight: 800;
+    height: 3.3rem;
+    justify-content: center;
+    overflow: hidden;
+    width: 3.3rem;
+}
+
+.cs-demos-avatar img { height: 100%; object-fit: cover; width: 100%; }
+
+.cs-demos-direct-badge {
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--cs-demo-accent) 44%, var(--pt-line));
+    color: var(--pt-ink-soft);
+    display: inline-flex;
+    font-size: .75rem;
+    font-weight: 700;
+    gap: .4rem;
+    letter-spacing: .03em;
+    padding: .4rem .55rem;
+    text-transform: uppercase;
+}
+
+.cs-demos-list { display: grid; gap: .7rem; }
+
+.cs-demo-card {
+    border-left: 3px solid var(--cs-demo-loss) !important;
+    overflow: hidden;
+}
+
+.cs-demo-card.is-win { border-left-color: var(--cs-demo-win) !important; }
+.cs-demo-card:hover { border-color: color-mix(in srgb, var(--cs-demo-accent) 38%, var(--pt-line)); }
+
+.cs-demo-card .card-body {
+    align-items: center;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(13rem, 1fr) auto auto;
+}
+
+.cs-demo-card-main { align-items: center; display: flex; gap: .85rem; min-width: 0; }
+.cs-demo-card-main h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-demo-card-result { display: grid; min-width: 4rem; text-align: center; }
+.cs-demos-score { font-size: 1.2rem; letter-spacing: -.04em; }
+.cs-demos-score.is-win { color: var(--cs-demo-win); }
+.cs-demos-score.is-loss { color: var(--cs-demo-loss); }
+.cs-demo-card-result span { color: var(--pt-ink-soft); font-size: .72rem; text-transform: uppercase; }
+.cs-demo-card-actions { display: flex; flex-wrap: wrap; gap: .45rem; justify-content: end; }
+
+@media (max-width: 767.98px) {
+    .cs-demos-search-controls { grid-template-columns: 1fr; }
+    .cs-demo-card .card-body { align-items: start; grid-template-columns: 1fr auto; }
+    .cs-demo-card-actions { grid-column: 1 / -1; justify-content: stretch; }
+    .cs-demo-card-actions .btn { flex: 1 1 8rem; }
+}

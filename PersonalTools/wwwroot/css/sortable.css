@@ -1,0 +1,30 @@
+[data-sortable-id] {
+    cursor: grab
+}
+
+    .sortable-chosen, [data-sortable-id]:active {
+        cursor: grabbing !important
+    }
+
+.sortable-ghost {
+    opacity: .3
+}
+
+.sortable-chosen .tool-card, .sortable-chosen .dashboard-widget, .sortable-chosen .quick-link-card {
+    border-color: var(--pt-mint) !important;
+    box-shadow: 0 0 0 .2rem color-mix(in srgb,var(--pt-mint) 22%,transparent) !important
+}
+
+.sortable-drag {
+    opacity: .92
+}
+
+.is-dragging [data-sortable-id] {
+    user-select: none
+}
+
+@media(prefers-reduced-motion:reduce) {
+    .sortable-chosen .tool-card, .sortable-chosen .dashboard-widget, .sortable-chosen .quick-link-card {
+        box-shadow: none !important
+    }
+}

@@ -1,0 +1,5 @@
+-- Superseded by PersonalTools.DatabaseUpgrade.sql.
+--
+-- The original PR version used numeric UserId columns, whereas PersonalTools
+-- now uses GUIDs throughout. Run PersonalTools.DatabaseUpgrade.sql in HeidiSQL
+-- for the executable, non-destructive migration.

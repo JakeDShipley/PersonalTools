@@ -1,0 +1,137 @@
+.settings-hero {
+    background: linear-gradient(120deg, color-mix(in srgb, var(--pt-mint) 13%, var(--pt-surface)), var(--pt-surface));
+    border: 1px solid var(--pt-line) !important;
+    border-radius: 1rem;
+}
+
+.settings-group {
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line) !important;
+    border-radius: 1rem;
+}
+
+.settings-item {
+    align-items: center;
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    border-radius: .8rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 22rem);
+    padding: 1rem;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+    .settings-item.is-saved {
+        border-color: var(--pt-mint);
+        box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--pt-mint) 16%, transparent);
+    }
+
+.settings-control {
+    min-width: 0;
+}
+
+.theme-setting-preview {
+    display: flex;
+    gap: .4rem;
+    margin-top: .55rem;
+}
+
+    .theme-setting-preview span {
+        border: 1px solid var(--pt-line);
+        border-radius: .4rem;
+        display: block;
+        height: .55rem;
+        overflow: hidden;
+        width: 2.5rem;
+    }
+
+.theme-setting-personal {
+    background: linear-gradient(90deg, #182033 0 40%, #8fd0c2 40% 68%, #e76f51 68%);
+}
+
+.theme-setting-tactical {
+    background: linear-gradient(90deg, #101114 0 54%, #f0aa1d 54%);
+}
+
+.theme-setting-matrix {
+    background: linear-gradient(90deg, #010604 0 48%, #00d95f 48% 58%, #7affac 58% 66%, #010604 66%);
+}
+
+.settings-control .form-check {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.settings-control .form-check-input {
+    cursor: pointer;
+}
+
+.active-duty-map-tile {
+    background: #10151c;
+    border: 1px solid var(--pt-line);
+    border-radius: .8rem;
+    min-height: 8.8rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.active-duty-map-image {
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    opacity: .7;
+    position: absolute;
+    width: 100%;
+}
+
+.active-duty-map-shade {
+    background: linear-gradient(90deg, rgba(9, 14, 20, .88), rgba(9, 14, 20, .28));
+    inset: 0;
+    position: absolute;
+}
+
+.active-duty-map-content {
+    align-items: center;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    left: 0;
+    padding: .85rem;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.active-duty-map-name {
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 800;
+    letter-spacing: .015em;
+    text-shadow: 0 1px 2px #000;
+}
+
+.active-duty-map-tile:has(.pt-switch:checked) {
+    border-color: #22a06b;
+    box-shadow: 0 0 0 .16rem rgba(34, 160, 107, .15);
+}
+
+    .active-duty-map-tile:has(.pt-switch:checked) .active-duty-map-shade {
+        background: linear-gradient(90deg, rgba(7, 60, 40, .88), rgba(8, 26, 21, .25));
+    }
+
+@media (max-width: 767.98px) {
+    .settings-item {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-control .form-check {
+        justify-content: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-item, .form-check-input.pt-switch {
+        transition: none;
+    }
+}

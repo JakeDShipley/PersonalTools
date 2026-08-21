@@ -1,20 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace PersonalTools.Pages
-{
-    public class PrivacyModel : PageModel
-    {
-        private readonly ILogger<PrivacyModel> _logger;
+namespace PersonalTools.Pages;
 
-        public PrivacyModel(ILogger<PrivacyModel> logger)
-        {
-            _logger = logger;
-        }
-
-        public void OnGet()
-        {
-        }
-    }
-
-}
+[AllowAnonymous]
+public class PrivacyModel : PageModel { public void OnGet() { } }

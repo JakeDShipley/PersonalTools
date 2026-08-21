@@ -3,31 +3,44 @@
 @{
     ViewData["Title"] = "Notes";
 
-    string successMessage = TempData["SuccessMessage"]?.ToString() ?? Model.SuccessMessage;
 }
 
 <div class="container px-3 px-lg-4">
     <div class="row align-items-start gy-3 section-spacing">
         <div class="col-12 col-lg">
+            <p class="eyebrow">A clear head</p>
             <h1 class="page-title">Notes</h1>
             <p class="page-subtitle">
-                Add simple blog-style notes and store them locally in a JSON file.
+                Capture the things worth holding on to.
             </p>
         </div>
 
-        <div class="col-12 col-lg-auto">
+        <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2">
+            <div class="notes-sort-control">
+                <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+                <select id="notesSort" class="form-select form-select-sm" aria-label="Sort notes">
+                    <option value="custom">Custom order</option>
+                    <option value="updated">Last updated</option>
+                    <option value="name-asc">Name, A to Z</option>
+                    <option value="name-desc">Name, Z to A</option>
+                </select>
+            </div>
+            <div class="view-switcher" role="group" aria-label="Note layout">
+                <button class="view-switcher-button active" type="button" data-notes-view="grid" aria-label="Card view" title="Card view"><i class="fa-solid fa-grip"></i></button>
+                <button class="view-switcher-button" type="button" data-notes-view="list" aria-label="List view" title="List view"><i class="fa-solid fa-list"></i></button>
+            </div>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addNoteModal">
                 <i class="fa-solid fa-plus me-1"></i>Add note
             </button>
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(successMessage))
+    @await Html.PartialAsync("_ToolGuide", new[]
     {
-        <div class="alert alert-success shadow-sm border-0 section-spacing">
-            @successMessage
-        </div>
-    }
+        "Add a note, then choose card or list view to suit the task.",
+        "Select Custom order, then press and hold a note before dragging it into place.",
+        "Open a note to edit it, or hold its delete control to remove it safely."
+    })
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
@@ -36,16 +49,14 @@
         </div>
     }
 
-    @if (Model.Notes.Any())
-    {
-        <div class="row g-3 g-lg-4">
+    <div class="row g-3 g-lg-4 notes-collection @(Model.Notes.Any() ? string.Empty : "d-none")" data-sortable data-sortable-api="/api/notes/order" data-sortable-payload="noteIds">
             @foreach (var note in Model.Notes)
             {
-                <div class="col-12 col-md-6 col-xl-4">
+                <div class="col-12 col-md-6 col-xl-4 note-sortable-item" data-sortable-id="@note.NoteId" data-note-title="@note.Title" data-note-updated="@note.Updated.Ticks">
                     <div class="card tool-card h-100 shadow-sm">
                         <div class="card-body p-4 d-flex flex-column">
                             <div class="d-flex justify-content-between gap-3 align-items-start mb-2">
-                                <h2 class="h5 fw-semibold mb-0">@note.Title</h2>
+                                <div class="note-title-wrap"><h2 class="h5 fw-semibold mb-0">@note.Title</h2></div>
 
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-primary js-edit-note"
@@ -80,25 +91,23 @@
                     </div>
                 </div>
             }
+    </div>
+
+    @* The empty state stays in the DOM so the AJAX refresh can switch views without a full page reload. *@
+    <div class="card shadow-sm border-0 @(Model.Notes.Any() ? "d-none" : string.Empty)" id="notesEmptyState">
+        <div class="card-body p-4">
+            <p class="mb-0 small-muted">
+                No notes yet. Click <strong>Add note</strong> to create your first one.
+            </p>
         </div>
-    }
-    else
-    {
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <p class="mb-0 small-muted">
-                    No notes yet. Click <strong>Add note</strong> to create your first one.
-                </p>
-            </div>
-        </div>
-    }
+    </div>
 </div>
 
 @* Add Modal *@
 <div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Create">
+            <form method="post" asp-page-handler="Create" id="addNoteForm">
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="addNoteModalLabel">Add note</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -134,7 +143,7 @@
 <div class="modal fade" id="editNoteModal" tabindex="-1" aria-labelledby="editNoteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Edit">
+            <form method="post" asp-page-handler="Edit" id="editNoteForm">
                 <input type="hidden" asp-for="NoteId" id="editNoteId" />
 
                 <div class="modal-header">
@@ -172,7 +181,7 @@
 <div class="modal fade" id="deleteNoteModal" tabindex="-1" aria-labelledby="deleteNoteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form method="post" asp-page-handler="Delete">
+            <form method="post" asp-page-handler="Delete" id="deleteNoteForm">
                 <input type="hidden" name="noteId" id="deleteNoteId" />
 
                 <div class="modal-header">
@@ -202,24 +211,10 @@
 </div>
 
 
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-notes.css" asp-append-version="true" />
+}
+
 @section Scripts {
-    <script>
-        $(document).on('click', '.js-edit-note', function () {
-            const noteId = $(this).data('note-id');
-            const noteTitle = $(this).data('note-title');
-            const noteBody = $(this).data('note-body');
-
-            $('#editNoteId').val(noteId);
-            $('#editTitle').val(noteTitle);
-            $('#editBody').val(noteBody);
-        });
-
-        $(document).on('click', '.js-delete-note', function () {
-            const noteId = $(this).data('note-id');
-            const noteTitle = $(this).data('note-title');
-
-            $('#deleteNoteId').val(noteId);
-            $('#deleteNoteTitle').text(noteTitle);
-        });
-    </script>
+    <script src="~/js/pages/page-notes.js" asp-append-version="true"></script>
 }

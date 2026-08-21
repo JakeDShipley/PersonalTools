@@ -1,0 +1,486 @@
+/* Bug/Feature Tracker - Personal Tools Native theme, reusing the app's own --pt-* tokens. */
+
+/* Defined globally (not scoped to .trk-page) because the Add/Edit modal partial is shared across
+   pages and rendered as a sibling of .trk-page, not a descendant - matches how the app's own
+   --pt-* tokens are defined on :root rather than scoped to any one container.
+   Tags use a soft-tint background + a deepened/lightened emphasis text colour in each theme, never
+   a solid saturated fill with fixed white text - the exact pattern that caused the bright-on-bright
+   and coral-badge contrast bugs elsewhere in this app. */
+:root {
+    --trk-feature-bg: color-mix(in srgb, var(--pt-mint) 22%, var(--pt-surface));
+    --trk-feature-text: #1c6f5a;
+    --trk-feature-border: color-mix(in srgb, var(--pt-mint) 45%, var(--pt-line));
+    --trk-bug-bg: color-mix(in srgb, var(--pt-coral) 16%, var(--pt-surface));
+    --trk-bug-text: #a8391c;
+    --trk-bug-border: color-mix(in srgb, var(--pt-coral) 38%, var(--pt-line));
+}
+
+[data-theme="dark"] {
+    --trk-feature-text: #8fd0c2;
+    --trk-bug-text: #ff9a7e;
+}
+
+/* ---------- dashboard mini-view ---------- */
+.trk-dashboard-section {
+    border-top: 1px solid var(--pt-line);
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+}
+
+.trk-dashboard-head {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.trk-dashboard-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-left: auto;
+}
+
+.trk-scope-toggle {
+    display: inline-flex;
+    border: 1px solid var(--pt-line);
+    border-radius: 0.65rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.trk-scope-btn {
+    border: none;
+    background: var(--pt-surface);
+    color: var(--pt-ink-soft);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .trk-scope-btn + .trk-scope-btn {
+        border-left: 1px solid var(--pt-line);
+    }
+
+    .trk-scope-btn.active {
+        background: var(--pt-ink);
+        color: var(--pt-canvas);
+    }
+
+/* ---------- filters ---------- */
+.trk-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+}
+
+.trk-filter-area {
+    flex: 1 1 16rem;
+    max-width: 24rem;
+}
+
+    .trk-filter-area .select2-container {
+        width: 100% !important;
+    }
+
+.trk-search-input {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--pt-line);
+    background: var(--pt-surface);
+    color: var(--pt-ink);
+    flex: 1 1 12rem;
+    max-width: 16rem;
+    margin-left: auto;
+}
+
+/* ---------- board + columns ---------- */
+.trk-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+}
+
+.trk-col {
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.9rem;
+    padding: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 90px;
+}
+
+.trk-col-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0.3rem 0.4rem;
+}
+
+.trk-col-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+    .trk-col-dot.status-open {
+        background: #8b93a1;
+    }
+
+    .trk-col-dot.status-inprogress {
+        background: #d98a2b;
+    }
+
+    .trk-col-dot.status-resolved {
+        background: #2f9e6e;
+    }
+
+[data-theme="dark"] .trk-col-dot.status-resolved {
+    background: #4ade9b;
+}
+
+.trk-col-dot.status-wontfix {
+    background: #9599a3;
+}
+
+.trk-col-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.trk-col-count {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--pt-ink-soft);
+    background: var(--pt-canvas);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+}
+
+.trk-col-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-height: 40px;
+}
+
+.trk-col-empty {
+    font-size: 0.76rem;
+    color: var(--pt-ink-soft);
+    text-align: center;
+    padding: 0.75rem 0;
+}
+
+.trk-board-full .trk-col {
+    min-height: 420px;
+}
+
+.trk-board-full .trk-card {
+    padding: 0.8rem 0.9rem;
+}
+
+@media (max-width: 992px) {
+    .trk-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .trk-board {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- item card ---------- */
+.trk-card {
+    background: var(--pt-canvas);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.7rem;
+    padding: 0.65rem 0.75rem;
+    cursor: pointer;
+    position: relative;
+    /* Without these, a press-and-hold on the card's text can be hijacked by native text
+       selection before Sortable's delay-based drag arms, silently killing the drag - same
+       reason .hold-delete-btn elsewhere in the app sets them for its own press-and-hold gesture. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+    .trk-card:hover {
+        border-color: var(--pt-mint);
+    }
+
+.trk-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.trk-card-title {
+    font-size: 0.83rem;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.trk-card-desc {
+    font-size: 0.76rem;
+    color: var(--pt-ink-soft);
+    line-height: 1.4;
+    margin: 0 0 0.55rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.trk-card-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.trk-tag {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+}
+
+.trk-tag-feature {
+    background: var(--trk-feature-bg);
+    color: var(--trk-feature-text);
+    border-color: var(--trk-feature-border);
+}
+
+.trk-tag-bug {
+    background: var(--trk-bug-bg);
+    color: var(--trk-bug-text);
+    border-color: var(--trk-bug-border);
+}
+
+.trk-area-chip {
+    font-size: 0.68rem;
+    color: var(--pt-ink-soft);
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+}
+
+.trk-assignee-chip {
+    font-size: 0.68rem;
+    color: var(--pt-ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+}
+
+.trk-view-all {
+    font-size: 0.8rem;
+    color: var(--pt-ink-soft);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* SortableJS drag state on the full board */
+.trk-col-body.is-drag-over {
+    background: var(--pt-canvas);
+    border-radius: 0.6rem;
+}
+
+.trk-sortable-ghost {
+    opacity: 0.4;
+}
+
+.trk-sortable-chosen .trk-card {
+    border-color: var(--pt-mint);
+}
+
+/* body.trk-dragging is toggled on Sortable's onStart/onEnd (see tracker.js) - forceFallback's
+   emulated drag has no native cursor of its own, so this is set explicitly for the whole page
+   rather than just the card, since the fallback ghost tracks the pointer everywhere. */
+body.trk-dragging, body.trk-dragging * {
+    cursor: grabbing !important;
+}
+
+/* ---------- closed items: paginated list, styled like CS Match Tracker's list view ---------- */
+.trk-closed-section {
+    border-top: 1px solid var(--pt-line);
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+}
+
+.trk-table-wrap {
+    border: 1px solid var(--pt-line);
+    border-radius: 0.85rem;
+    background: var(--pt-surface);
+}
+
+.trk-table {
+    margin-bottom: 0;
+}
+
+    .trk-table thead th {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+        color: var(--pt-ink-soft);
+        border-bottom: 1px solid var(--pt-line);
+        padding: 0.7rem 0.9rem;
+    }
+
+    .trk-table td {
+        padding: 0.65rem 0.9rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--pt-line);
+    }
+
+    .trk-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+.trk-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.85rem;
+}
+
+.trk-table-page-size {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--pt-ink-soft);
+}
+
+    .trk-table-page-size select {
+        width: auto;
+    }
+
+.trk-table-page-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+.trk-table-page-summary {
+    font-size: 0.8rem;
+    color: var(--pt-ink-soft);
+    white-space: nowrap;
+}
+/* Bootstrap's pagination isn't remapped by the app's dark-mode override elsewhere - fix it here,
+   scoped to this page, same gap the table/badge components had. */
+.trk-page .pagination .page-link {
+    background: var(--pt-surface);
+    border-color: var(--pt-line);
+    color: var(--pt-ink);
+}
+
+    .trk-page .pagination .page-link:hover {
+        background: var(--pt-canvas);
+        border-color: var(--pt-line);
+        color: var(--pt-ink);
+    }
+
+.trk-page .pagination .page-item.active .page-link {
+    background: var(--pt-ink);
+    border-color: var(--pt-ink);
+    color: var(--pt-canvas);
+}
+
+.trk-page .pagination .page-item.disabled .page-link {
+    background: var(--pt-canvas);
+    border-color: var(--pt-line);
+    color: var(--pt-ink-soft);
+    opacity: 0.6;
+}
+
+.trk-empty {
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-line);
+    border-radius: 0.85rem;
+    padding: 1.75rem;
+    text-align: center;
+    color: var(--pt-ink-soft);
+    font-size: 0.9rem;
+}
+
+/* Bootstrap's float-based .form-check layout leaves an inconsistent gap/vertical alignment once a
+   label sits next to a switch (every other switch in the app is unlabeled) - flex gives precise
+   control over both instead. */
+.trk-dashboard-toggle.form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.trk-dashboard-toggle .form-check-input {
+    float: none;
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+.trk-dashboard-toggle .form-check-label {
+    margin-bottom: 0;
+}
+
+/* ---------- Add/Edit modal ---------- */
+.trk-type-toggle {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.trk-type-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--pt-line);
+    background: var(--pt-canvas);
+    color: var(--pt-ink-soft);
+    font-weight: 650;
+    font-size: 0.85rem;
+}
+
+    .trk-type-toggle-btn.active.bug {
+        border-color: var(--trk-bug-text);
+        background: var(--trk-bug-bg);
+        color: var(--trk-bug-text);
+    }
+
+    .trk-type-toggle-btn.active.feature {
+        border-color: var(--trk-feature-text);
+        background: var(--trk-feature-bg);
+        color: var(--trk-feature-text);
+    }

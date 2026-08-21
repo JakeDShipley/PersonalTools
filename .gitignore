@@ -361,3 +361,24 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Claude Code
+.claude/
+
+# Local coding-agent project memory (never commit)
+AGENTS.md
+PersonalTools/PersonalTools.SeedUsers.sql
+PersonalTools/App_Data/DataProtection-Keys/
+
+# Personal Tools secrets and host-specific configuration. Keep the tracked
+# appsettings files as safe templates only; use User Secrets locally and the
+# systemd environment file in production.
+PersonalTools/appsettings.Local.json
+PersonalTools/appsettings.Production.json
+PersonalTools/.env
+PersonalTools/.env.*
+PersonalTools/secrets/
+*.pem
+*.key
+*.ppk
+*.p12

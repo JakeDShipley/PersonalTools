@@ -1,21 +1,150 @@
-﻿@page
+@page
+@model PersonalTools.Pages.Inventory.IndexModel
 @{
-    ViewData["Title"] = "Steam Inventory Lookup";
+    ViewData["Title"] = "Steam Inventory";
 }
 
-<div class="container px-3 px-lg-4">
+@section Head {
+    <link rel="stylesheet" href="~/lib/datatables/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/css/pages/page-inventory.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 inventory-page">
     <div class="section-spacing">
-        <h1 class="page-title">Steam Inventory Lookup</h1>
-        <p class="page-subtitle">
-            This page will eventually look up Steam inventory items.
-        </p>
+        <p class="eyebrow">Counter-Strike 2</p>
+        <h1 class="page-title">Steam inventory</h1>
+        <p class="page-subtitle">A focused view of a public CS2 inventory, directly from Steam.</p>
     </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-            <p class="mb-0 small-muted">
-                Coming soon: Steam ID input, inventory lookup, item cards and filtering.
-            </p>
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Load your linked Steam account or paste any public Steam profile.",
+        "Browse the CS2 items in cards or a sortable, paginated list.",
+        "Open an item for its full details and Steam actions."
+    })
+
+    <div class="inventory-steam-account section-spacing">
+        <div class="inventory-steam-account-copy">
+            <span class="inventory-steam-mark" aria-hidden="true"><i class="fa-brands fa-steam"></i></span>
+            <span>
+        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+        {
+                    <strong>Steam account connected</strong>
+                    <small>Load the CS2 inventory linked to your Personal Tools account.</small>
+        }
+        else
+        {
+                    <strong>Connect your Steam account</strong>
+                    <small>Link Steam once to load your own public inventory instantly.</small>
+        }
+            </span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+        {
+            <button class="btn steam-account-button" id="viewLinkedInventory" type="button" data-steam-id="@Model.LinkedSteamId">
+                <i class="fa-brands fa-steam"></i><span>View my inventory</span>
+            </button>
+        }
+        else
+        {
+            <a class="btn steam-account-button" href="/Settings?steamRequired=true">
+                <i class="fa-brands fa-steam"></i><span>Manage Steam connection</span>
+            </a>
+        }
+    </div>
+
+    <div class="card inventory-search-card border-0 shadow-sm section-spacing">
+        <div class="card-body p-3 p-lg-4">
+            <form id="inventorySearchForm" novalidate>
+                <label for="inventoryProfile" class="form-label fw-semibold">Look up a public inventory</label>
+                <div class="inventory-search-controls">
+                    <div class="input-group input-group-lg inventory-profile-input">
+                        <span class="input-group-text" aria-hidden="true"><i class="fa-solid fa-link"></i></span>
+                        <input id="inventoryProfile" name="profile" value="@Model.Profile" class="form-control" placeholder="Steam profile URL, custom name, or SteamID64" autocomplete="off" required />
+                    </div>
+                    <button class="btn steam-search-button btn-lg" id="loadInventoryButton" type="submit">
+                        <i class="fa-brands fa-steam"></i><span>Load inventory</span>
+                    </button>
+                </div>
+                <div class="form-text mt-2">The Steam profile and CS2 inventory must be public. Results are cached briefly to reduce requests to Steam.</div>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-danger border-0 shadow-sm d-none" id="inventoryError" role="alert"></div>
+
+    <section id="inventoryResults" class="d-none" aria-live="polite">
+        <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1 fw-semibold">Inventory</h2>
+                <a id="inventoryProfileLink" class="small-muted" target="_blank" rel="noopener">
+                    <span id="inventorySteamId"></span>
+                    <i class="fa-solid fa-arrow-up-right-from-square ms-1"></i>
+                </a>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="inventory-count" id="inventoryCount"></span>
+                <div class="inventory-view-switcher" role="group" aria-label="Inventory view">
+                    <button class="inventory-view-button active" type="button" data-inventory-view="list" aria-pressed="true" title="List view">
+                        <i class="fa-solid fa-list" aria-hidden="true"></i><span>List</span>
+                    </button>
+                    <button class="inventory-view-button" type="button" data-inventory-view="cards" aria-pressed="false" title="Card view">
+                        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Cards</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card inventory-table-card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="inventory-data-region">
+                    <table id="inventoryTable" class="table table-hover align-middle mb-0 w-100">
+                        <thead>
+                            <tr>
+                                <th scope="col">Item</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Rarity</th>
+                                <th scope="col">Quantity</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="text-end">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div id="inventoryCardGrid" class="row g-3 inventory-card-grid d-none" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="inventoryItemModal" tabindex="-1" aria-labelledby="inventoryItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="inventoryItemModalLabel"></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img id="inventoryModalImage" alt="" class="inventory-modal-image mb-3" />
+                <dl class="row small mb-0">
+                    <dt class="col-5">Type</dt><dd class="col-7" id="inventoryModalType"></dd>
+                    <dt class="col-5">Rarity</dt><dd class="col-7" id="inventoryModalRarity"></dd>
+                    <dt class="col-5">Quantity</dt><dd class="col-7" id="inventoryModalAmount"></dd>
+                    <dt class="col-5">Tradable</dt><dd class="col-7" id="inventoryModalTradable"></dd>
+                    <dt class="col-5">Marketable</dt><dd class="col-7" id="inventoryModalMarketable"></dd>
+                </dl>
+                <div id="inventoryModalDetails"></div>
+            </div>
+            <div class="modal-footer d-none" id="inventoryModalFooter">
+                <a class="btn btn-primary" id="inventoryInspectLink" href="#">Inspect in game</a>
+            </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/lib/datatables/dataTables.min.js"></script>
+    <script src="~/lib/datatables/dataTables.bootstrap5.min.js"></script>
+    <script src="~/js/pages/page-inventory.js" asp-append-version="true"></script>
+}

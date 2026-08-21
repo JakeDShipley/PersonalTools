@@ -4,38 +4,105 @@
     ViewData["Title"] = "Dashboard";
 }
 
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-dashboard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/page-dashboard-calendar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tracker.css" asp-append-version="true" />
+}
+
 <div class="container px-3 px-lg-4">
-    <div class="row align-items-start gy-3 section-spacing">
-        <div class="col-12 col-lg">
-            <h1 class="page-title">Dashboard</h1>
-            <p class="page-subtitle">
-                A small personal tools app for Steam inventory lookups, CS2 skin tracking and notes.
-            </p>
+    @Html.AntiForgeryToken()
+    <div class="d-flex align-items-center justify-content-between section-spacing">
+        <div>
+            <p class="eyebrow mb-1">Dashboard</p>
+            <h1 class="h3 mb-0 fw-semibold">Your tools</h1>
         </div>
+        <span class="tool-count">@Model.Tools.Count tools</span>
     </div>
-
-    <div class="row g-3 g-lg-4">
-        @foreach (var tool in Model.Tools)
+    <div class="dashboard-tool-groups" id="dashboardToolGroups">
+        @foreach (var group in Model.Tools.GroupBy(tool => tool.Category))
         {
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card tool-card h-100 shadow-sm">
-                    <div class="card-body p-4 d-flex flex-column">
-                        <div class="tool-card-icon mb-3">
-                            <i class="@tool.IconClass"></i>
-                        </div>
-
-                        <h2 class="h5 fw-semibold mb-2">@tool.Title</h2>
-
-                        <p class="small-muted flex-grow-1">
-                            @tool.Description
-                        </p>
-
-                        <a href="@tool.PageUrl" class="btn btn-primary mt-3">
-                            @tool.ButtonText
-                        </a>
-                    </div>
+            string groupIcon = group.Key switch { "Media" => "fa-photo-film", "Blits" => "fa-crosshairs", "System" => "fa-server", _ => "fa-table-cells-large" };
+            <section class="dashboard-tool-group" aria-labelledby="dashboard-group-@group.Key.ToLowerInvariant()">
+                <div class="dashboard-tool-group-heading">
+                    <span class="dashboard-tool-group-icon"><i class="fa-solid @groupIcon" aria-hidden="true"></i></span>
+                    <h2 class="h6 mb-0" id="dashboard-group-@group.Key.ToLowerInvariant()">@group.Key</h2>
+                    <span class="badge rounded-pill text-bg-light">@group.Count()</span>
                 </div>
-            </div>
+                <div class="row g-3">
+                    @foreach (var tool in group)
+                    {
+                        <div class="col-12 col-lg-6 col-xxl-4">
+                            <a href="@tool.PageUrl" class="card tool-card dashboard-tool-card h-100 tool-card-action text-decoration-none">
+                                <div class="card-body p-3">
+                                    <span class="tool-card-icon"><i class="@tool.IconClass"></i></span>
+                                    <span class="dashboard-tool-copy">
+                                        <strong>@tool.Title</strong>
+                                        <small>@tool.Description</small>
+                                    </span>
+                                    <span class="dashboard-tool-action" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </section>
         }
     </div>
+
+    <section class="trk-page trk-dashboard-section" aria-labelledby="trackerDashboardTitle">
+        <div class="trk-dashboard-head">
+            <span class="dashboard-tool-group-icon"><i class="fa-solid fa-bug" aria-hidden="true"></i></span>
+            <h2 class="h6 mb-0" id="trackerDashboardTitle">Bug/Feature Tracker</h2>
+            <span class="badge rounded-pill text-bg-light" id="trackerDashboardCount">0</span>
+            <div class="trk-dashboard-actions">
+                <div class="trk-scope-toggle" role="group" aria-label="Show">
+                    <button type="button" class="trk-scope-btn js-dashboard-scope" data-scope="all">All</button>
+                    <button type="button" class="trk-scope-btn js-dashboard-scope" data-scope="mine">Assigned to me</button>
+                </div>
+                <a class="trk-view-all" asp-page="/Tracker/Index">View all<i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#trackerItemModal">
+                    <i class="fa-solid fa-plus me-1"></i>Add item
+                </button>
+            </div>
+        </div>
+        <div class="trk-board" id="trackerDashboardBoard"></div>
+    </section>
+
+    <aside class="quick-links-float" aria-label="Quick links">
+        <div class="collapse collapse-horizontal quick-links-panel-collapse" id="quickLinksPanel">
+            <section class="quick-links-panel card border-0 shadow-sm">
+                <div class="card-body p-3 p-lg-4">
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                        <div><p class="eyebrow mb-1">Your shortcuts</p><h2 class="h5 mb-0">Quick links</h2></div>
+                        <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#quickLinkModal"><i class="fa-solid fa-plus me-1"></i>Add link</button>
+                    </div>
+                    <p class="small-muted mb-3">Press and hold a link to rearrange it. A normal click still opens it.</p>
+                    <div id="quickLinksGrid" class="row g-2" aria-live="polite" data-sortable data-sortable-api="/api/quick-links/order" data-sortable-payload="quickLinkIds" data-sortable-deferred="true" data-sortable-link-items="true"><div class="small-muted">Loading your links…</div></div>
+                </div>
+            </section>
+        </div>
+        <button class="quick-links-launcher" type="button" data-bs-toggle="collapse" data-bs-target="#quickLinksPanel" aria-expanded="false" aria-controls="quickLinksPanel"><i class="fa-solid fa-link"></i><span>Quick links</span><i class="fa-solid fa-chevron-left quick-links-chevron"></i></button>
+    </aside>
+
+    <section class="dashboard-widgets mt-5 pt-2" aria-labelledby="dashboardWidgetsTitle">
+        <div class="d-flex align-items-center justify-content-between mb-3"><div><p class="eyebrow mb-1">At a glance</p><h2 class="h4 mb-0" id="dashboardWidgetsTitle">Your space</h2></div><span class="small-muted">Press and hold a widget to arrange it</span></div>
+        <div class="row g-3 dashboard-widget-grid" data-sortable data-sortable-api="/api/dashboard/widget-order" data-sortable-payload="widgetKeys" data-sortable-deferred="true">
+            <div class="col-12 col-lg-4 note-sortable-item" data-sortable-id="weather"><article class="card dashboard-widget h-100"><div class="card-body p-3 p-xl-4"><div class="widget-heading"><span>Weather</span><button class="btn btn-sm btn-outline-primary ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#weatherLocationEditor" aria-expanded="false"><i class="fa-solid fa-plus me-1"></i>Location</button></div><div class="collapse" id="weatherLocationEditor"><form id="weatherLocationForm" class="weather-location-form"><label class="visually-hidden" for="weatherLocation">Add weather location</label><div class="input-group input-group-sm"><input id="weatherLocation" class="form-control" placeholder="Town or city" autocomplete="off" maxlength="100" /><button class="btn btn-primary" type="submit">Add</button></div><p id="weatherLocationFeedback" class="small-muted mb-0 mt-2">Saved locations are private to your account.</p></form></div><div id="weatherWidget" class="weather-widget-content" aria-live="polite"><span class="small-muted">Loading saved locations&hellip;</span></div></div></article></div>
+            <div class="col-12 col-lg-5 note-sortable-item" data-sortable-id="calendar"><article class="card dashboard-widget h-100"><div class="card-body p-3 p-xl-4"><div class="widget-heading"><span>Calendar</span><div class="ms-auto d-flex align-items-center gap-2"><select id="dashboardCalendarView" class="form-select form-select-sm calendar-view-select" aria-label="Calendar view"><option value="dayGridMonth">Month</option><option value="dayGridWeek">Week</option><option value="dayGridDay">Day</option></select><button class="btn btn-sm btn-outline-primary" type="button" id="expandCalendar" aria-label="Expand calendar"><i class="fa-solid fa-expand"></i></button></div></div><div id="dashboardCalendar" aria-label="Dashboard calendar"></div></div></article></div>
+            <div class="col-12 col-lg-3 note-sortable-item" data-sortable-id="recent-notes"><article class="card dashboard-widget h-100"><div class="card-body p-4"><div class="widget-heading"><span>Recent notes</span><a asp-page="/Notes/Index" class="ms-auto widget-link">Open</a></div><div id="recentNotesWidget" class="recent-notes-widget" aria-live="polite"><i class="fa-solid fa-circle-notch fa-spin"></i></div></div></article></div>
+        </div>
+    </section>
 </div>
+
+<div class="modal fade" id="dashboardCalendarModal" tabindex="-1" aria-labelledby="dashboardCalendarModalTitle" aria-hidden="true"><div class="modal-dialog modal-fullscreen-lg-down modal-xl"><div class="modal-content border-0 shadow calendar-modal-content"><div class="modal-header"><div><p class="eyebrow mb-1">Match history</p><h2 class="modal-title h5" id="dashboardCalendarModalTitle">Calendar</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body p-3 p-lg-4"><div class="row g-4 align-items-start"><div class="col-12 col-lg-8"><div id="expandedDashboardCalendar" aria-label="Expanded match calendar"></div></div><aside class="col-12 col-lg-4"><div class="calendar-day-panel"><p class="eyebrow mb-1">Selected day</p><h3 class="h6 mb-2" id="calendarSelectedDay">Choose a day</h3><div id="calendarDayDetails" class="small-muted">Select a match or day to view the saved results.</div></div></aside></div></div></div></div></div>
+
+<div class="modal fade" id="quickLinkModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><form id="quickLinkForm"><div class="modal-header"><h2 class="modal-title h5" id="quickLinkModalTitle">Add quick link</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input id="quickLinkId" type="hidden" /><div class="mb-3"><label class="form-label" for="quickLinkTitle">Title</label><input id="quickLinkTitle" class="form-control" maxlength="100" required /></div><div class="mb-3"><label class="form-label" for="quickLinkUrl">Website address</label><input id="quickLinkUrl" class="form-control" placeholder="https://example.com" required /></div><div><label class="form-label" for="quickLinkIcon">Font Awesome icon <span class="small-muted">(optional)</span></label><input id="quickLinkIcon" class="form-control" placeholder="fa-solid fa-star" maxlength="100" /></div><div id="quickLinkError" class="alert alert-danger d-none mt-3 mb-0"></div></div><div class="modal-footer"><button id="deleteQuickLink" class="btn btn-outline-danger me-auto d-none" type="button">Remove</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save link</button></div></form></div></div></div>
+
+@await Html.PartialAsync("_TrackerModals")
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+    <script src="~/js/pages/page-dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/tracker.js" asp-append-version="true"></script>
+}

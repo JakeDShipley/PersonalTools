@@ -1,0 +1,24 @@
+.fc .fc-event.cs-match-event-win, .fc .fc-event.cs-match-event-loss {
+    border: 0;
+    border-radius: .3rem;
+    color: #fff;
+    font-size: .6rem;
+    font-weight: 700;
+    padding: .08rem .2rem
+}
+
+.fc .fc-event.cs-match-event-win {
+    background: #1f8b62
+}
+
+.fc .fc-event.cs-match-event-loss {
+    background: #bc4c5d
+}
+
+[data-theme="dark"] .fc .fc-event.cs-match-event-win {
+    background: #2a9d73
+}
+
+[data-theme="dark"] .fc .fc-event.cs-match-event-loss {
+    background: #d36273
+}

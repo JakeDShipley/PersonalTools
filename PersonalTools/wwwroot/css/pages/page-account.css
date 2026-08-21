@@ -1,0 +1,108 @@
+.account-page {
+    max-width: 1280px;
+}
+
+.account-summary-card {
+    overflow: hidden;
+    position: relative;
+}
+
+    .account-summary-card::after {
+        background: radial-gradient(circle, color-mix(in srgb, var(--pt-mint) 34%, transparent) 0, transparent 68%);
+        content: "";
+        height: 15rem;
+        pointer-events: none;
+        position: absolute;
+        right: -6rem;
+        top: -7rem;
+        width: 15rem;
+    }
+
+.account-avatar, .account-section-icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--pt-mint) 28%, var(--pt-surface));
+    border: 1px solid color-mix(in srgb, var(--pt-mint) 54%, var(--pt-line));
+    color: var(--pt-ink);
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
+}
+
+.account-avatar {
+    border-radius: 1rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    height: 3.5rem;
+    letter-spacing: .04em;
+    width: 3.5rem;
+}
+
+.account-section-icon {
+    border-radius: .8rem;
+    height: 2.8rem;
+    width: 2.8rem;
+}
+
+.account-details {
+    display: grid;
+    gap: .85rem;
+}
+
+    .account-details > div {
+        background: color-mix(in srgb, var(--pt-canvas) 64%, transparent);
+        border: 1px solid var(--pt-line);
+        border-radius: .8rem;
+        padding: .85rem 1rem;
+    }
+
+    .account-details dt {
+        align-items: center;
+        color: var(--pt-ink-soft);
+        display: flex;
+        font-size: .72rem;
+        font-weight: 750;
+        gap: .5rem;
+        letter-spacing: .08em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+    }
+
+    .account-details dd {
+        color: var(--pt-ink);
+        font-size: .92rem;
+        font-weight: 650;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+.password-input-group .form-control:focus {
+    position: relative;
+    z-index: 3;
+}
+
+.password-visibility-toggle {
+    min-width: 3rem;
+}
+
+.account-password-guidance {
+    align-items: flex-start;
+    background: color-mix(in srgb, var(--bs-info) 8%, var(--pt-surface));
+    border: 1px solid color-mix(in srgb, var(--bs-info) 22%, var(--pt-line));
+    border-radius: .8rem;
+    color: var(--pt-ink-soft);
+    display: flex;
+    font-size: .82rem;
+    gap: .65rem;
+    padding: .85rem 1rem;
+}
+
+    .account-password-guidance i {
+        color: var(--bs-info);
+        margin-top: .15rem;
+    }
+
+@media (prefers-reduced-motion: reduce) {
+    .password-visibility-toggle {
+        transition: none;
+    }
+}

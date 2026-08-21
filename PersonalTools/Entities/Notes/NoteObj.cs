@@ -2,9 +2,10 @@
 {
     public class NoteObj
     {
-        public string NoteId { get; set; } = string.Empty;
+        public Guid NoteId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
         public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
     }

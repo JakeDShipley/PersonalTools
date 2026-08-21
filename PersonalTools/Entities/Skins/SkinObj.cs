@@ -2,7 +2,7 @@
 {
     public class SkinObj
     {
-        public string SkinId { get; set; } = string.Empty;
+        public Guid SkinId { get; set; }
 
         public string Name { get; set; } = string.Empty;
         public string Weapon { get; set; } = string.Empty;

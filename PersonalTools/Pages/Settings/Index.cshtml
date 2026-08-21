@@ -1,138 +1,221 @@
 @page
 @model PersonalTools.Pages.Settings.IndexModel
+@using PersonalTools.Entities
 @{
     ViewData["Title"] = "Settings";
-
-    string successMessage = TempData["SuccessMessage"]?.ToString() ?? string.Empty;
+    var settingGroups = Model.Settings.GroupBy(setting => setting.Definition.Group).ToList();
 }
 
-<div class="card shadow-sm border-0">
-    <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <h2 class="h5 fw-semibold mb-2">Data</h2>
-            <p class="small-muted mb-0">
-                Permanently delete all locally stored data, including your CS2 skins list.
-            </p>
+@section Head { <link rel="stylesheet" href="~/css/pages/page-settings.css" asp-append-version="true" /> }
+
+<div class="container px-3 px-lg-4">
+    <div class="section-spacing">
+        <p class="eyebrow">Personal Tools</p>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage connected accounts and shared tool preferences.</p>
+    </div>
+
+    @if (Model.SteamRequired && string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+    {
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2" role="alert">
+            <i class="fa-brands fa-steam" aria-hidden="true"></i>
+            <span>Connect Steam below to view your inventory or import matches from Leetify.</span>
+        </div>
+    }
+
+    <div class="row g-3">
+        <div class="col-12">
+            <section class="settings-hero card border-0 shadow-sm">
+                <div class="card-body p-4 p-lg-5"><p class="eyebrow mb-2">Control centre</p><h2 class="h4 mb-2">Set the app up around how you use it.</h2><p class="small-muted mb-0">Changes save instantly. Sensitive fields are intentionally blank after saving, so a key is never sent back to the browser.</p></div>
+            </section>
+        </div>
+        @foreach (var group in settingGroups)
+        {
+            <div class="col-12"><section class="card settings-group border-0 shadow-sm"><div class="card-body p-4"><div class="mb-3"><p class="eyebrow mb-1">@group.Key</p><h2 class="h5 mb-0">@group.Key settings</h2></div><div class="vstack gap-3">
+                @foreach (var setting in group)
+                {
+                    <article class="settings-item" data-setting-key="@setting.Definition.Key" data-secret="@setting.Definition.IsServerSecret.ToString().ToLowerInvariant()"><div><h3 class="h6 mb-1">@setting.Definition.Name</h3><p class="small-muted mb-0">@setting.Definition.Description</p></div><div class="settings-control">
+                    @if (setting.Definition.InputType == AppSettingInputType.Select)
+                    {
+                        <select class="form-select" aria-label="@setting.Definition.Name">@foreach (var option in setting.Definition.Options!) { <option value="@option.Value" selected="@(setting.Value == option.Value)">@option.Label</option> }</select>
+                        @if (setting.Definition.Key == AppSettingKey.AppearanceTheme)
+                        {
+                            <div class="theme-setting-preview" aria-hidden="true"><span class="theme-setting-personal"></span><span class="theme-setting-tactical"></span><span class="theme-setting-matrix"></span></div>
+                        }
+                    }
+                    else if (setting.Definition.InputType == AppSettingInputType.Switch)
+                    { <div class="form-check form-switch"><input class="form-check-input pt-switch" type="checkbox" role="switch" checked="@(setting.Value == "true")" aria-label="@setting.Definition.Name" /></div> }
+                    else
+                    { <div class="input-group"><input class="form-control" type="password" autocomplete="new-password" placeholder="@(setting.IsConfigured ? "Key saved — enter a new one to replace it" : "Paste Steam Web API key")" /><button class="btn btn-outline-primary" type="button">Save key</button></div><small class="text-success-emphasis @(setting.IsConfigured ? "" : "d-none")"><i class="fa-solid fa-lock me-1"></i>Protected key saved</small> }
+                </div></article>
+                }
+            </div></div></section></div>
+        }
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-brands fa-steam"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Steam account</h2>
+                            @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                            {
+                                <p class="small-muted mb-0">
+                                    Connected as SteamID64 <strong class="text-body">@Model.LinkedSteamId</strong>. This account is used by Steam Inventory and Leetify match import.
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="small-muted mb-0">Connect Steam once to use your public CS2 inventory and Leetify match history.</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                    {
+                        <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#unlinkSteamModal">
+                            <i class="fa-solid fa-link-slash me-1"></i>Unlink Steam
+                        </button>
+                    }
+                    else
+                    {
+                        <a class="btn steam-account-button flex-shrink-0" href="/auth/steam/link">
+                            <i class="fa-brands fa-steam"></i><span>Connect Steam</span>
+                        </a>
+                    }
+                </div>
+                @if (string.IsNullOrWhiteSpace(Model.LinkedSteamId))
+                {
+                    <div class="card-body border-top pt-3">
+                        <div class="mb-3">
+                            <h3 class="h6 mb-1">Link a public profile manually</h3>
+                            <p class="small-muted mb-0">Search using a SteamID64, profile URL, custom URL or display name. Check the matched account, then link it to Personal Tools.</p>
+                        </div>
+                        <form id="settingsSteamLinkForm" class="d-flex flex-column flex-sm-row gap-2 align-items-sm-start">
+                            @Html.AntiForgeryToken()
+                            <div class="js-steam-lookup flex-grow-1">
+                                <div class="input-group">
+                                    <input id="settingsManualSteamId" class="form-control js-steam-lookup-input" placeholder="SteamID64, profile URL, custom URL or name" autocomplete="off" required />
+                                    <button class="btn btn-outline-secondary js-steam-lookup-btn" type="button" title="Search for this Steam profile" aria-label="Search for this Steam profile"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                </div>
+                                <div class="js-steam-lookup-result d-none mt-2 small" aria-live="polite"></div>
+                            </div>
+                            <button class="btn btn-outline-primary flex-shrink-0" type="submit"><i class="fa-solid fa-link me-1"></i>Link account</button>
+                        </form>
+                    </div>
+                }
+            </section>
         </div>
 
-        <button class="btn btn-outline-danger flex-shrink-0" type="button" data-bs-toggle="modal" data-bs-target="#deleteAllDataModal">
-            <i class="fa-solid fa-trash me-1"></i>Delete all data
-        </button>
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-map"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Active Duty map pool</h2>
+                            <p class="small-muted mb-0">Controls the Active Duty filter in CS Match Tracker. Changes are always reviewed and applied manually.</p>
+                        </div>
+                    </div>
+
+                    @if (Model.PendingMapPoolSuggestion is { Count: > 0 })
+                    {
+                        <div class="alert alert-info border-0 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3" id="mapPoolSuggestionBanner">
+                            <span>
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Public map-pool information suggests <strong>@string.Join(", ", Model.PendingMapPoolSuggestion)</strong>. Confirm it before applying.
+                            </span>
+                            <span class="d-flex gap-2 flex-shrink-0">
+                                <form method="post" asp-page-handler="UpdateActiveDutyPool">
+                                    @foreach (string map in Model.PendingMapPoolSuggestion)
+                                    {
+                                        <input type="hidden" name="SelectedActiveDutyMaps" value="@map" />
+                                    }
+                                    <button class="btn btn-sm btn-primary" type="submit">Apply suggestion</button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-dismiss="alert" data-bs-target="#mapPoolSuggestionBanner">Dismiss</button>
+                            </span>
+                        </div>
+                    }
+
+                    <form method="post" asp-page-handler="UpdateActiveDutyPool">
+                        <div class="row g-3 mb-3 active-duty-map-grid">
+                            @foreach (var map in Model.AllMaps)
+                            {
+                                <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                                    <div class="active-duty-map-tile h-100">
+                                        <img src="@map.ImagePath" alt="" class="active-duty-map-image" loading="lazy" />
+                                        <div class="active-duty-map-shade"></div>
+                                        <div class="active-duty-map-content">
+                                            <span class="active-duty-map-name">@map.Name</span>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input pt-switch" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
+                                                <label class="visually-hidden" for="activeDuty-@map.Name">Include @map.Name in Active Duty</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button class="btn btn-outline-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save map pool</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-bug"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Bug/Feature Tracker</h2>
+                            <p class="small-muted mb-0">Resolved items are automatically closed and removed from the board once they've been resolved for this many days.</p>
+                        </div>
+                    </div>
+                    <div class="input-group flex-shrink-0" style="max-width: 12rem;">
+                        <input type="number" class="form-control" id="trackerAutoCloseDays" min="1" max="365" value="@Model.TrackerAutoCloseAfterDays" aria-label="Auto-close after days" />
+                        <span class="input-group-text">days</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-database"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Data storage</h2>
+                            <p class="small-muted mb-0">Notes, tracked skins and CS Match Tracker data are stored privately per account in MariaDB.</p>
+                        </div>
+                    </div>
+                    <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis px-3 py-2">Account scoped</span>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
+@section Scripts { <script src="~/js/pages/page-settings.js" asp-append-version="true"></script> }
 
-@* Delete All Data Modal *@
-<div class="modal fade" id="deleteAllDataModal" tabindex="-1" aria-labelledby="deleteAllDataModalLabel" aria-hidden="true">
+<div class="modal fade" id="unlinkSteamModal" tabindex="-1" aria-labelledby="unlinkSteamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header">
-                <h2 class="modal-title h5" id="deleteAllDataModalLabel">Delete all data</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <p class="mb-3">
-                    This will permanently delete all locally stored data. This action cannot be undone.
-                </p>
-
-                <form method="post" asp-page-handler="DeleteAllData" id="deleteAllDataForm">
-                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" id="holdDeleteBtn">
-                        <span class="hold-delete-fill" id="holdDeleteFill"></span>
-                        <span class="hold-delete-label position-relative">Hold to delete all data</span>
-                    </button>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-            </div>
+            <form method="post" asp-page-handler="UnlinkSteam">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="unlinkSteamModalLabel">Unlink Steam account</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Steam Inventory and Leetify import will be unavailable until you connect Steam again. Your saved Personal Tools data will not be removed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="submit"><i class="fa-solid fa-link-slash me-1"></i>Unlink Steam</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-
-@section Head {
-    <style>
-        .hold-delete-btn {
-            user-select: none;
-            -webkit-user-select: none;
-        }
-
-        .hold-delete-fill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 0%;
-            background-color: #dc3545;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .hold-delete-label {
-            z-index: 1;
-        }
-
-        .hold-delete-btn.is-holding .hold-delete-label {
-            color: #fff;
-        }
-    </style>
-}
-
-@section Scripts {
-    <script>
-        $(function () {
-            const holdDurationMs = 5000;
-            let holdStart = null;
-            let holdFrame = null;
-
-            const $btn = $('#holdDeleteBtn');
-            const $fill = $('#holdDeleteFill');
-            const $form = $('#deleteAllDataForm');
-
-            function startHold(e) {
-                e.preventDefault();
-
-                if (holdStart) {
-                    return;
-                }
-
-                holdStart = Date.now();
-                $btn.addClass('is-holding');
-                holdFrame = requestAnimationFrame(tick);
-            }
-
-            function tick() {
-                const elapsed = Date.now() - holdStart;
-                const percent = Math.min((elapsed / holdDurationMs) * 100, 100);
-
-                $fill.css('width', percent + '%');
-
-                if (percent >= 100) {
-                    holdStart = null;
-                    $form.trigger('submit');
-                    return;
-                }
-
-                holdFrame = requestAnimationFrame(tick);
-            }
-
-            function cancelHold() {
-                if (holdFrame) {
-                    cancelAnimationFrame(holdFrame);
-                    holdFrame = null;
-                }
-
-                holdStart = null;
-                $btn.removeClass('is-holding');
-                $fill.css('width', '0%');
-            }
-
-            $btn.on('mousedown touchstart', startHold);
-            $btn.on('mouseup mouseleave touchend touchcancel', cancelHold);
-            $('#deleteAllDataModal').on('hidden.bs.modal', cancelHold);
-        });
-    </script>
-}
