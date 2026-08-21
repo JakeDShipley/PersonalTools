@@ -1,7 +1,6 @@
 using PersonalTools.Classes.CSMatches;
 using PersonalTools.Classes;
 using PersonalTools.Classes.Dashboard;
-using PersonalTools.Classes.GrandExchange;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Classes.Notes;
 using PersonalTools.Classes.Skins;
@@ -13,7 +12,6 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using PersonalTools.Data.CSMatches;
-using PersonalTools.Data.GrandExchange;
 using PersonalTools.Data.Skins;
 using PersonalTools.Data;
 using PersonalTools.Classes.Monitoring;
@@ -77,10 +75,6 @@ builder.Services.AddScoped<IDashboardWeatherData, DashboardWeatherData>();
 builder.Services.AddScoped<IDashboardWeatherFuncs, DashboardWeatherFuncs>();
 builder.Services.AddScoped<INotesData, NotesData>();
 builder.Services.AddScoped<ITrackedSkinsData, TrackedSkinsData>();
-builder.Services.AddSingleton<IServerMonitorData, ServerMonitorData>();
-builder.Services.AddScoped<IServerMonitorFuncs, ServerMonitorFuncs>();
-builder.Services.AddScoped<IDatabaseMonitorData, DatabaseMonitorData>();
-builder.Services.AddScoped<IDatabaseMonitorFuncs, DatabaseMonitorFuncs>();
 builder.Services.AddScoped<IApplicationLogsData, ApplicationLogsData>();
 builder.Services.AddScoped<ILogsViewerFuncs, LogsViewerFuncs>();
 builder.Services.AddHostedService<ApplicationLogPersistenceService>();
@@ -124,9 +118,6 @@ builder.Services.AddScoped<ISkinFuncs, SkinFuncs>();
 // Notes
 builder.Services.AddScoped<INoteFuncs, NoteFuncs>();
 
-// Grand Exchange
-string? osrsWikiUserAgent = builder.Configuration["OsrsWikiPrices:UserAgent"];
-
 builder.Services.AddScoped<ISteamInventoryFuncs, SteamInventoryFuncs>();
 builder.Services.AddHttpClient<ISteamInventoryData, SteamInventoryData>(client =>
 {
@@ -134,19 +125,6 @@ builder.Services.AddHttpClient<ISteamInventoryData, SteamInventoryData>(client =
     client.Timeout = TimeSpan.FromSeconds(25);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
 });
-
-if (string.IsNullOrWhiteSpace(osrsWikiUserAgent))
-    throw new InvalidOperationException("The OsrsWikiPrices:UserAgent app setting is required.");
-
-builder.Services.AddMemoryCache();
-
-builder.Services.AddHttpClient<IGrandExchangeData, GrandExchangeData>(client =>
-{
-    client.BaseAddress = new Uri("https://prices.runescape.wiki/");
-    client.DefaultRequestHeaders.UserAgent.ParseAdd(osrsWikiUserAgent);
-});
-
-builder.Services.AddScoped<IGrandExchangeFuncs, GrandExchangeFuncs>();
 
 // Media Extractor
 builder.Services.AddHttpClient<IMediaExtractorFuncs, MediaExtractorFuncs>(client =>

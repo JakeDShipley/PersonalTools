@@ -11,35 +11,12 @@ namespace PersonalTools.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class MonitoringController : ControllerBase
 {
-    private readonly IServerMonitorFuncs _server;
-    private readonly IDatabaseMonitorFuncs _database;
     private readonly ILogsViewerFuncs _logs;
 
-    public MonitoringController(IServerMonitorFuncs server, IDatabaseMonitorFuncs database, ILogsViewerFuncs logs)
+    public MonitoringController(ILogsViewerFuncs logs)
     {
-        _server = server;
-        _database = database;
         _logs = logs;
     }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="forceRefresh"></param>
-    /// <returns></returns>
-    [HttpGet("server")]
-    public async Task<ActionResult<ServerMonitorSnapshot>> GetServer([FromQuery] bool forceRefresh = false) =>
-        Ok(await _server.GetSnapshot(forceRefresh));
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="forceRefresh"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    [HttpGet("database")]
-    public async Task<ActionResult<DatabaseMonitorSnapshot>> GetDatabase([FromQuery] bool forceRefresh = false, CancellationToken cancellationToken = default) =>
-        Ok(await _database.GetSnapshot(forceRefresh, cancellationToken));
 
     /// <summary>
     /// 

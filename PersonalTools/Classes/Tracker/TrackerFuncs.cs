@@ -23,8 +23,8 @@ namespace PersonalTools.Classes.Tracker
         // Mirrors the nav's actual sections so filtering by area stays meaningful.
         public static readonly string[] Areas =
         {
-            "Dashboard", "Steam Inventory", "CS2 Player Stats", "CS2 Skin Tracker", "Notes", "Grand Exchange",
-            "Media Extractor", "Audio Studio", "CS Match Tracker", "Server Monitor", "Database Monitor",
+            "Dashboard", "Steam Inventory", "CS2 Player Stats", "CS2 Skin Tracker", "Notes",
+            "Media Extractor", "Audio Studio", "CS Match Tracker",
             "Account", "Settings", "General"
         };
 

@@ -30,6 +30,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] | Personal Tools</title>
     <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <script src="~/js/appearance-storage.js" asp-append-version="true"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
@@ -42,7 +43,7 @@
     @await RenderSectionAsync("Head", required: false)
     <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
 </head>
-<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell") @(matrixAmbientBackground ? "matrix-ambient-active" : string.Empty)" data-display-name="@(User.Identity?.Name ?? string.Empty)" data-user-id="@(showNavigation ? User.FindFirstValue(ClaimTypes.NameIdentifier) : string.Empty)">
+<body class="@(showNavigation ? "has-app-sidebar" : "auth-shell")" data-display-name="@(User.Identity?.Name ?? string.Empty)" data-user-id="@(showNavigation ? User.FindFirstValue(ClaimTypes.NameIdentifier) : string.Empty)">
     @if (showNavigation)
     {
         <div class="d-none" aria-hidden="true">@Html.AntiForgeryToken()</div>
@@ -125,9 +126,6 @@
                         <a class="app-sidebar-link sidebar-feature-link notes-sidebar-link @ActivePage("/Notes")" asp-page="/Notes/Index" title="Notes" data-sidebar-motion="notes">
                             <span class="app-nav-icon"><i class="fa-solid fa-note-sticky"></i></span><span class="sidebar-label">Notes</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
-                        <a class="app-sidebar-link sidebar-feature-link exchange-sidebar-link @ActivePage("/GrandExchange")" asp-page="/GrandExchange/Index" title="Grand Exchange" data-sidebar-motion="exchange">
-                            <span class="app-nav-icon"><i class="fa-solid fa-coins"></i></span><span class="sidebar-label">Grand Exchange</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
-                        </a>
                     </div>
 
                     <div class="app-nav-group">
@@ -149,28 +147,6 @@
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">System</span>
-
-                        <a class="app-sidebar-link system-feature-sidebar-link server-monitor-sidebar-link @ActivePage("/Monitoring/Server")"
-                           asp-page="/Monitoring/Server/Index"
-                           title="Server Monitor"
-                           data-sidebar-system-motion="server">
-                            <span class="app-nav-icon">
-                                <i class="fa-solid fa-server"></i>
-                            </span>
-                            <span class="sidebar-label">Server Monitor</span>
-                            <span class="system-nav-signal server-monitor-nav-signal" aria-hidden="true"></span>
-                        </a>
-
-                        <a class="app-sidebar-link system-feature-sidebar-link database-monitor-sidebar-link @ActivePage("/Monitoring/Database")"
-                           asp-page="/Monitoring/Database/Index"
-                           title="Database Monitor"
-                           data-sidebar-system-motion="database">
-                            <span class="app-nav-icon">
-                                <i class="fa-solid fa-database"></i>
-                            </span>
-                            <span class="sidebar-label">Database Monitor</span>
-                            <span class="system-nav-signal database-monitor-nav-signal" aria-hidden="true"></span>
-                        </a>
 
                         <a class="app-sidebar-link sidebar-feature-link tracker-sidebar-link @ActivePage("/Tracker")"
                            asp-page="/Tracker/Index"
@@ -232,7 +208,6 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <script src="~/lib/animejs/anime.umd.min.js" asp-append-version="true"></script>
     <script src="~/js/motion.js" asp-append-version="true"></script>

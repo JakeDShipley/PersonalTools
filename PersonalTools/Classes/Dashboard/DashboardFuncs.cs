@@ -78,39 +78,12 @@ namespace PersonalTools.Classes.Dashboard
                 },
                 new DashboardToolObj
                 {
-                    Title = "Grand Exchange Price Checker",
-                    Description = "Search realtime OSRS Grand Exchange prices.",
-                    IconClass = "fa-solid fa-coins",
-                    PageUrl = "/GrandExchange",
-                    ButtonText = "Open",
-                    Category = "Workspace"
-                },
-                new DashboardToolObj
-                {
                     Title = "CS Match Tracker",
                     Description = "Track your CS2 match results and stats.",
                     IconClass = "fa-solid fa-crosshairs",
                     PageUrl = "/CSMatches",
                     ButtonText = "Open",
                     Category = "Blits"
-                },
-                new DashboardToolObj
-                {
-                    Title = "Server Monitor",
-                    Description = "Review live server health and resource usage without exposing sensitive system details.",
-                    IconClass = "fa-solid fa-server",
-                    PageUrl = "/Monitoring/Server",
-                    ButtonText = "View health",
-                    Category = "System"
-                },
-                new DashboardToolObj
-                {
-                    Title = "Database Monitor",
-                    Description = "Inspect safe MariaDB availability, workload and capacity indicators.",
-                    IconClass = "fa-solid fa-database",
-                    PageUrl = "/Monitoring/Database",
-                    ButtonText = "View health",
-                    Category = "System"
                 },
             };
         }

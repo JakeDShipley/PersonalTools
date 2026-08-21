@@ -890,15 +890,6 @@ body {
 
 .notes-sidebar-link .sidebar-feature-signal { border-radius: 0 0 3px 3px; height: .6rem; transform: translateY(-50%) rotate(35deg); width: 2px; }
 
-.exchange-sidebar-link {
-    --sidebar-feature: #c68226;
-    --sidebar-feature-bright: #ffe28c;
-    --sidebar-feature-pattern: radial-gradient(circle at 15% 50%, color-mix(in srgb, var(--sidebar-feature-bright) 66%, transparent) 0 1px, transparent 2px), radial-gradient(circle at 31% 34%, color-mix(in srgb, var(--sidebar-feature) 54%, transparent) 0 2px, transparent 3px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 23%, transparent), transparent);
-    --sidebar-feature-size: 30% 100%, 30% 100%, 40% 100%;
-}
-
-.exchange-sidebar-link .sidebar-feature-signal { border-radius: 50%; }
-
 .extractor-sidebar-link {
     --sidebar-feature: #2a9f9a;
     --sidebar-feature-bright: #9dfff1;
@@ -1364,8 +1355,8 @@ body {
     }
 }
 
-/* System monitoring tools keep the normal sidebar shape but gain a small
-   monitoring-specific signal when deliberately hovered, focused or opened. */
+/* The logs tool keeps the normal sidebar shape but gains a small activity
+   signal when deliberately hovered, focused or opened. */
 .system-feature-sidebar-link {
     --system-feature: #4c82d4;
     --system-feature-bright: #83aef1;
@@ -1376,29 +1367,9 @@ body {
     position: relative;
 }
 
-.server-monitor-sidebar-link {
-    --system-feature: #3182ce;
-    --system-feature-bright: #79c8ff;
-}
-
-.database-monitor-sidebar-link {
-    --system-feature: #7564d8;
-    --system-feature-bright: #b6a9ff;
-}
-
 .logs-viewer-sidebar-link {
     --system-feature: #d7922b;
     --system-feature-bright: #ffd47a;
-}
-
-[data-theme="dark"] .server-monitor-sidebar-link {
-    --system-feature: #69b9ed;
-    --system-feature-bright: #b5e3ff;
-}
-
-[data-theme="dark"] .database-monitor-sidebar-link {
-    --system-feature: #a99aff;
-    --system-feature-bright: #d8d0ff;
 }
 
 [data-theme="dark"] .logs-viewer-sidebar-link {
@@ -1438,19 +1409,6 @@ body {
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-}
-
-.server-monitor-sidebar-link::before {
-    animation: server-monitor-nav-flow 1.25s linear infinite paused;
-    background-image: repeating-linear-gradient( 90deg, transparent 0 11px, color-mix(in srgb, var(--system-feature) 12%, transparent) 12px 13px, transparent 14px 24px), linear-gradient( 90deg, transparent, color-mix(in srgb, var(--system-feature-bright) 19%, transparent), transparent);
-    background-position: 0 0, -100% 0;
-    background-size: auto, 42% 100%;
-}
-
-.database-monitor-sidebar-link::before {
-    animation: database-monitor-nav-flow 1.5s linear infinite paused;
-    background-image: radial-gradient( circle at 18% 50%, color-mix(in srgb, var(--system-feature-bright) 38%, transparent) 0 2px, transparent 2.5px), repeating-linear-gradient( 90deg, transparent 0 13px, color-mix(in srgb, var(--system-feature) 10%, transparent) 14px 15px, transparent 16px 28px);
-    background-position: -20px 50%, 0 0;
 }
 
 .logs-viewer-sidebar-link::before {
@@ -1503,20 +1461,6 @@ body {
     z-index: 4;
 }
 
-.server-monitor-nav-signal {
-    background: var(--system-feature-bright);
-    clip-path: polygon( 0 45%, 18% 45%, 27% 8%, 39% 90%, 51% 28%, 62% 45%, 100% 45%, 100% 58%, 64% 58%, 52% 45%, 39% 100%, 25% 28%, 21% 58%, 0 58%);
-    height: .8rem;
-    width: 1.3rem;
-}
-
-.database-monitor-nav-signal {
-    border: 1px solid var(--system-feature-bright);
-    border-radius: 50%;
-    height: .9rem;
-    width: .9rem;
-}
-
 .logs-viewer-nav-signal {
     background: linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 50% / 68% 1px no-repeat, linear-gradient(var(--system-feature-bright), var(--system-feature-bright)) 0 100% / 86% 1px no-repeat;
     height: .75rem;
@@ -1532,18 +1476,6 @@ body {
 @keyframes system-feature-edge-trace {
     to {
         --system-feature-edge-angle: 360deg;
-    }
-}
-
-@keyframes server-monitor-nav-flow {
-    to {
-        background-position: 24px 0, 160% 0;
-    }
-}
-
-@keyframes database-monitor-nav-flow {
-    to {
-        background-position: calc(100% + 20px) 50%, 28px 0;
     }
 }
 

@@ -15,7 +15,6 @@ DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_cs_active_duty_maps_get$$
 DROP PROCEDURE IF EXISTS sp_cs_active_duty_maps_set$$
-DROP PROCEDURE IF EXISTS sp_monitor_database_snapshot$$
 
 CREATE PROCEDURE sp_cs_active_duty_maps_get()
 BEGIN
@@ -36,25 +35,6 @@ BEGIN
     ) AS selected
     WHERE selected.MapName IS NOT NULL
       AND CHAR_LENGTH(TRIM(selected.MapName)) > 0;
-END$$
-
-CREATE PROCEDURE sp_monitor_database_snapshot()
-BEGIN
-    SELECT
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'UPTIME'), 0) AS UNSIGNED) AS UptimeSeconds,
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'THREADS_CONNECTED'), 0) AS UNSIGNED) AS ThreadsConnected,
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'THREADS_RUNNING'), 0) AS UNSIGNED) AS ThreadsRunning,
-        CAST(@@max_connections AS UNSIGNED) AS MaxConnections,
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'QUESTIONS'), 0) AS UNSIGNED) AS Questions,
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'SLOW_QUERIES'), 0) AS UNSIGNED) AS SlowQueries,
-        CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'ABORTED_CONNECTS'), 0) AS UNSIGNED) AS AbortedConnects,
-        (
-            SELECT COUNT(*)
-            FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME IN ('Users', 'UserSessions', 'QuickLinks', 'Notes', 'TrackedSkins', 'DashboardWidgetOrders', 'DashboardWeatherLocations', 'CSMatches', 'CSMatchProfiles', 'CSPlayerReports', 'AppSettings', 'CSActiveDutyMaps')
-        ) AS RequiredStructuresAvailable,
-        12 AS RequiredStructuresTotal;
 END$$
 
 DELIMITER ;

@@ -113,7 +113,6 @@ DROP PROCEDURE IF EXISTS sp_tracker_items_get_closed$$
 DROP PROCEDURE IF EXISTS sp_tracker_assignees_get$$
 DROP PROCEDURE IF EXISTS sp_tracker_settings_get$$
 DROP PROCEDURE IF EXISTS sp_tracker_settings_set$$
-DROP PROCEDURE IF EXISTS sp_monitor_database_snapshot$$
 
 CREATE PROCEDURE sp_cs_match_profiles_get(IN p_user_id CHAR(36))
 SELECT ProfileId, Name, SteamId, AvatarUrl, CreatedUtc FROM CSMatchProfiles WHERE UserId = p_user_id ORDER BY CreatedUtc$$
@@ -222,18 +221,5 @@ CREATE PROCEDURE sp_tracker_settings_get()
 SELECT AutoCloseAfterDays FROM TrackerSettings WHERE Id = 1$$
 CREATE PROCEDURE sp_tracker_settings_set(IN p_auto_close_after_days INT)
 UPDATE TrackerSettings SET AutoCloseAfterDays = p_auto_close_after_days, UpdatedUtc = UTC_TIMESTAMP() WHERE Id = 1$$
-
-CREATE PROCEDURE sp_monitor_database_snapshot()
-BEGIN
-    SELECT CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='UPTIME'), 0) AS UNSIGNED) AS UptimeSeconds,
-           CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='THREADS_CONNECTED'), 0) AS UNSIGNED) AS ThreadsConnected,
-           CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='THREADS_RUNNING'), 0) AS UNSIGNED) AS ThreadsRunning,
-           CAST(@@max_connections AS UNSIGNED) AS MaxConnections,
-           CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='QUESTIONS'), 0) AS UNSIGNED) AS Questions,
-           CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='SLOW_QUERIES'), 0) AS UNSIGNED) AS SlowQueries,
-           CAST(COALESCE((SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='ABORTED_CONNECTS'), 0) AS UNSIGNED) AS AbortedConnects,
-           (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('Users','UserSessions','QuickLinks','Notes','TrackedSkins','DashboardWidgetOrders','DashboardWeatherLocations','CSMatches','CSMatchProfiles','CSPlayerReports','AppSettings','CSActiveDutyMaps','TrackerItems','TrackerSettings')) AS RequiredStructuresAvailable,
-           14 AS RequiredStructuresTotal;
-END$$
 
 DELIMITER ;

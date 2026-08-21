@@ -584,7 +584,7 @@
         display: none;
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active > .app-matrix-rain-canvas,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body > .app-matrix-rain-canvas,
     :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
         display: block;
         height: 100%;
@@ -616,7 +616,7 @@
 
     /* Ambient Matrix mode keeps the rain behind the application while shifting every shared
        surface onto translucent dark glass. This also keeps Matrix light mode readable. */
-    :root[data-app-theme="matrix"] body.matrix-ambient-active {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body {
         --pt-canvas: #010604;
         --pt-surface: #06100a;
         --pt-ink: #b7ffcf;
@@ -630,38 +630,38 @@
         color-scheme: dark;
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-content-shell,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-main,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-footer {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-content-shell,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-main,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-footer {
         background: transparent;
         position: relative;
         z-index: 1;
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-sidebar,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .app-mobile-header {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-sidebar,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-mobile-header {
         -webkit-backdrop-filter: blur(14px);
         backdrop-filter: blur(14px);
         background: rgba(2, 13, 7, .91);
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .card,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .modal-content,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-group,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .settings-hero,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .table-responsive,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .accordion-item,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .list-group-item,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .alert,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .dropdown-menu,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .toast,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .offcanvas {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .card,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .modal-content,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .settings-group,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .settings-hero,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .table-responsive,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .accordion-item,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .list-group-item,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .alert,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .dropdown-menu,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .toast,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .offcanvas {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         background-color: rgba(4, 17, 10, .9) !important;
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .table {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .table {
         --bs-table-bg: rgba(4, 17, 10, .88);
         --bs-table-striped-bg: rgba(17, 61, 34, .42);
         --bs-table-hover-bg: rgba(27, 105, 54, .46);
@@ -670,9 +670,9 @@
         --bs-table-hover-color: #d8ffe5;
     }
 
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-control,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .form-select,
-    :root[data-app-theme="matrix"] body.matrix-ambient-active .input-group-text {
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .form-control,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .form-select,
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .input-group-text {
         background-color: rgba(2, 12, 7, .94);
         color: var(--pt-ink);
     }

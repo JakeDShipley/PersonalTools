@@ -11,15 +11,24 @@
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const glyphs = Array.from('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:;+-*/<>[]{}アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン');
+    const userSignalText = `USER // ${(canvas.dataset.userLabel || 'GUEST').toUpperCase()}`;
     const signalText = [
-        `USER // ${canvas.dataset.userLabel || 'GUEST'}`,
+        userSignalText,
+        userSignalText,
+        userSignalText,
+        userSignalText,
+        userSignalText,
+        userSignalText,
+        userSignalText,
         'SKIN // AK-47 | VULCAN',
         'MAP // MIRAGE | 13-9',
         'MATCH // INFERNO | 16-14'
     ];
 
     let columns = [];
-    let signal = null;
+    let signals = [];
+    let signalSpawnElapsed = 0;
+    let nextSignalDelay = .4;
     let animationFrame = 0;
     let running = false;
     let lastFrame = 0;
@@ -74,6 +83,9 @@
 
         const columnCount = Math.ceil(width / fontSize) + 1;
         columns = Array.from({ length: columnCount }, (_, index) => makeColumn(index, true));
+        signals = [];
+        signalSpawnElapsed = 0;
+        nextSignalDelay = .25;
         clear();
     }
 
@@ -123,43 +135,66 @@
         }
     }
 
-    function updateSignal(elapsedSeconds) {
-        if (!signal) {
-            signal = {
-                text: signalText[Math.floor(Math.random() * signalText.length)],
-                x: random(width * .08, width * .68),
-                y: random(-height * .1, height * .35),
-                speed: random(28, 48),
-                life: random(1.2, 2.1),
-                age: 0,
-                delay: random(1.2, 3.4)
-            };
-        }
+    function makeSignal() {
+        const text = signalText[Math.floor(Math.random() * signalText.length)];
+        const columnCount = Math.max(1, Math.floor(width / fontSize));
 
-        signal.age += elapsedSeconds;
+        return {
+            characters: Array.from(text),
+            isUser: text === userSignalText,
+            row: -text.length - random(1, 10),
+            speed: random(4.8, 6.1),
+            x: Math.floor(random(1, Math.max(2, columnCount - 1))) * fontSize
+        };
+    }
 
-        if (signal.age < signal.delay) {
-            return;
-        }
-
-        const visibleAge = signal.age - signal.delay;
-
-        if (visibleAge > signal.life) {
-            signal = null;
-            return;
-        }
-
-        signal.y += signal.speed * elapsedSeconds;
-        const fade = Math.sin((visibleAge / signal.life) * Math.PI);
-
+    function drawSignal(signal) {
         context.save();
-        context.font = `700 ${Math.max(11, fontSize - 3)}px "Cascadia Mono", Consolas, monospace`;
-        context.textAlign = 'left';
-        context.shadowBlur = 12;
-        context.shadowColor = 'rgba(80, 255, 145, .9)';
-        context.fillStyle = `rgba(182, 255, 207, ${fade * .9})`;
-        context.fillText(signal.text, signal.x, signal.y);
+        context.font = `700 ${fontSize}px "Cascadia Mono", Consolas, monospace`;
+        context.textAlign = 'center';
+        context.shadowBlur = signal.isUser ? 13 : 9;
+        context.shadowColor = signal.isUser ? 'rgba(118, 255, 169, .95)' : 'rgba(62, 238, 127, .78)';
+
+        signal.characters.forEach(function (character, index) {
+            if (character === ' ') {
+                return;
+            }
+
+            const y = (signal.row + index) * fontSize;
+
+            if (y < -fontSize || y > height + fontSize) {
+                return;
+            }
+
+            const tailFade = 1 - ((index / Math.max(1, signal.characters.length - 1)) * .28);
+            context.fillStyle = signal.isUser
+                ? `rgba(190, 255, 213, ${tailFade})`
+                : `rgba(112, 244, 158, ${tailFade * .88})`;
+            context.fillText(character, signal.x, y);
+        });
+
         context.restore();
+    }
+
+    function updateSignals(elapsedSeconds) {
+        signalSpawnElapsed += elapsedSeconds;
+
+        // Several lightweight highlighted streams may coexist. Weighting the source list heavily
+        // toward the user means their name remains a recurring detail without filling every column.
+        if (signalSpawnElapsed >= nextSignalDelay && signals.length < 6) {
+            signalSpawnElapsed = 0;
+            nextSignalDelay = random(1.1, 2.2);
+            signals.push(makeSignal());
+        }
+
+        signals.forEach(function (signal) {
+            signal.row += signal.speed * elapsedSeconds;
+            drawSignal(signal);
+        });
+
+        signals = signals.filter(function (signal) {
+            return signal.row * fontSize <= height + fontSize;
+        });
     }
 
     function draw(timestamp) {
@@ -183,7 +218,7 @@
             drawColumn(column);
         });
 
-        updateSignal(elapsedSeconds);
+        updateSignals(elapsedSeconds);
         animationFrame = window.requestAnimationFrame(draw);
     }
 
@@ -213,7 +248,8 @@
         running = false;
         window.cancelAnimationFrame(animationFrame);
         animationFrame = 0;
-        signal = null;
+        signals = [];
+        signalSpawnElapsed = 0;
         clear();
     }
 
@@ -240,7 +276,6 @@
     function setAmbient(enabled) {
         ambientEnabled = Boolean(enabled);
         document.documentElement.dataset.matrixAmbient = ambientEnabled ? 'true' : 'false';
-        document.body.classList.toggle('matrix-ambient-active', ambientEnabled);
 
         const button = document.getElementById('matrixAmbientToggle');
         button?.setAttribute('aria-pressed', ambientEnabled ? 'true' : 'false');

@@ -17,17 +17,9 @@ public sealed class MonitoringPulseService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
-        int pulse = 0;
-
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            pulse++;
-
-            await _hub.Clients.All.SendAsync("monitoringPulse", "server", stoppingToken);
             await _hub.Clients.All.SendAsync("monitoringPulse", "logs", stoppingToken);
-
-            if (pulse % 3 == 0)
-                await _hub.Clients.All.SendAsync("monitoringPulse", "database", stoppingToken);
         }
     }
 }

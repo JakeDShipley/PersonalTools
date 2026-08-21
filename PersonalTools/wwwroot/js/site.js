@@ -451,7 +451,12 @@
         const safeMode = mode === 'dark' ? 'dark' : 'light';
         document.documentElement.dataset.appTheme = safeTheme;
         document.documentElement.dataset.theme = safeMode;
-        window.personalToolsMatrixRain?.sync();
+        window.personalToolsAppearanceStorage?.set('AppearanceTheme', safeTheme);
+        window.personalToolsAppearanceStorage?.set('AppearanceMode', safeMode);
+
+        // Reapply the browser-owned ambient flag whenever the surrounding theme changes. This
+        // keeps the canvas, button and readable glass surfaces in one state after mode switches.
+        window.personalToolsMatrixRain?.setAmbient(document.documentElement.dataset.matrixAmbient === 'true');
         document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
             const dark = safeMode === 'dark';
             const icon = button.querySelector('i');
@@ -473,11 +478,12 @@
             theme: ['personal', 'tactical', 'matrix'].includes(document.documentElement.dataset.appTheme)
                 ? document.documentElement.dataset.appTheme
                 : 'personal',
-            mode: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+            mode: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+            matrixAmbient: document.documentElement.dataset.matrixAmbient === 'true'
         };
     }
 
-    function saveAppearanceMode(mode, previous) {
+    function saveAppearanceMode(mode) {
         return $.ajax({
             url: '/api/settings',
             method: 'PUT',
@@ -487,8 +493,9 @@
             showLoader: false,
             showToast: false
         }).fail(() => {
-            setAppearance(previous.theme, previous.mode);
-            window.personalToolsToast?.error('Your colour mode could not be saved.');
+            // The browser preference remains authoritative. A database failure only prevents the
+            // preference following this account to another browser; it must not break this one.
+            window.personalToolsToast?.error('Your colour mode is saved in this browser but could not be synced to your account.');
         });
     }
 
@@ -500,17 +507,17 @@
         setAppearance(previous.theme, nextMode);
         window.personalToolsMotion?.pop(button, { fromScale: .78, fromOpacity: .45, duration: 300 });
         spawnKillfeedRow(switchingToLight ? FLASHBANG_ICON_SVG : HEADSHOT_ICON_SVG);
-        saveAppearanceMode(nextMode, previous);
+        saveAppearanceMode(nextMode);
     }));
 
     const matrixAmbientToggle = document.getElementById('matrixAmbientToggle');
 
-    // The ambient canvas is deliberately a user setting rather than a browser preference. This
-    // keeps the choice consistent with the rest of the appearance settings on every signed-in device.
+    // The browser is the immediate source of truth for the canvas. The database request below is
+    // retained as a cross-device fallback and cannot roll a working local animation back.
     matrixAmbientToggle?.addEventListener('click', () => {
-        const previous = document.documentElement.dataset.matrixAmbient === 'true';
-        const enabled = !previous;
+        const enabled = document.documentElement.dataset.matrixAmbient !== 'true';
 
+        window.personalToolsAppearanceStorage?.set('MatrixAmbientBackground', enabled ? 'true' : 'false');
         window.personalToolsMatrixRain?.setAmbient(enabled);
         window.personalToolsMotion?.pop(matrixAmbientToggle, {
             fromScale: .82,
@@ -531,11 +538,7 @@
             },
             showLoader: false,
             successToast: enabled ? 'Matrix background enabled.' : 'Matrix background disabled.',
-            errorToast: 'The Matrix background setting could not be saved.'
-        }).fail(() => {
-            // Restore the database-backed state if the request fails so the screen never suggests
-            // that an unsaved preference will still be active after the next page navigation.
-            window.personalToolsMatrixRain?.setAmbient(previous);
+            errorToast: 'The Matrix background is saved in this browser but could not be synced to your account.'
         });
     });
 
@@ -544,7 +547,10 @@
             const current = currentAppearance();
             if (key === 'AppearanceTheme') setAppearance(value, current.mode);
             if (key === 'AppearanceMode') setAppearance(current.theme, value);
-            if (key === 'MatrixAmbientBackground') window.personalToolsMatrixRain?.setAmbient(value === 'true');
+            if (key === 'MatrixAmbientBackground') {
+                window.personalToolsAppearanceStorage?.set(key, value);
+                window.personalToolsMatrixRain?.setAmbient(value === 'true');
+            }
         },
         current: currentAppearance
     };
@@ -586,7 +592,6 @@
             inventory: 12,
             skins: -14,
             notes: 8,
-            exchange: -10,
             extractor: 14,
             audio: -7,
             tracker: 11
@@ -660,11 +665,7 @@
         const icon = link.querySelector('.app-nav-icon i');
         const signal = link.querySelector('.system-nav-signal');
 
-        const iconRotation = {
-            server: -10,
-            database: 8,
-            logs: -6
-        };
+        const iconRotation = { logs: -6 };
 
         if (icon) {
             animate(icon, {
@@ -678,32 +679,9 @@
 
         if (!signal) return;
 
-        if (kind === 'database') {
-            animate(signal, {
-                opacity: [0, .9, 0],
-                width: ['.5rem', '1.55rem'],
-                height: ['.5rem', '1.55rem'],
-                duration: 520,
-                ease: 'out(3)'
-            });
-
-            return;
-        }
-
-        if (kind === 'logs') {
-            animate(signal, {
-                opacity: [0, .95, 0],
-                width: ['.45rem', '1.25rem'],
-                duration: 500,
-                ease: 'out(4)'
-            });
-
-            return;
-        }
-
         animate(signal, {
             opacity: [0, .95, 0],
-            width: ['.45rem', '1.3rem'],
+            width: ['.45rem', '1.25rem'],
             duration: 500,
             ease: 'out(4)'
         });

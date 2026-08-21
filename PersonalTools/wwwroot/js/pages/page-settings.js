@@ -2,9 +2,21 @@
     'use strict';
 
     const antiForgeryToken = () => $('input[name="__RequestVerificationToken"]').first().val();
+    const appearanceKeys = ['AppearanceTheme', 'AppearanceMode', 'MatrixAmbientBackground'];
+
+    function applyBrowserAppearance(key, value) {
+        if (appearanceKeys.includes(key)) {
+            window.personalToolsAppearance?.applySetting(key, value);
+        }
+    }
 
     function save($item, value) {
         const key = $item.data('setting-key');
+
+        // Appearance changes are local and immediate. The authenticated request which follows
+        // synchronises the preference to the account without holding the live interface hostage.
+        applyBrowserAppearance(key, value);
+
         $.ajax({
             url: '/api/settings',
             method: 'PUT',
@@ -17,11 +29,20 @@
             loaderMessage: 'Applying your preference…'
         })
             .done(function () {
-                window.personalToolsAppearance?.applySetting(key, value);
                 $item.addClass('is-saved');
                 window.setTimeout(() => $item.removeClass('is-saved'), 650);
             });
     }
+
+    const browserAppearance = window.personalToolsAppearance?.current();
+
+    if (browserAppearance) {
+        $('.settings-item[data-setting-key="AppearanceTheme"] select').val(browserAppearance.theme);
+        $('.settings-item[data-setting-key="AppearanceMode"] select').val(browserAppearance.mode);
+        $('.settings-item[data-setting-key="MatrixAmbientBackground"] input[type="checkbox"]')
+            .prop('checked', browserAppearance.matrixAmbient);
+    }
+
     $('.settings-item select').on('change', function () { save($(this).closest('.settings-item'), $(this).val()); });
     $('.settings-item input[type="checkbox"]').on('change', function () { save($(this).closest('.settings-item'), this.checked ? 'true' : 'false'); });
     $('.settings-item[data-secret="true"] button').on('click', function () { const $item = $(this).closest('.settings-item'); const $input = $item.find('input'); const value = String($input.val() || ''); if (!value) { window.personalToolsToast.info('Enter a new key only when you want to replace the saved one.'); return; } save($item, value); $input.val(''); $item.find('small').removeClass('d-none'); });
