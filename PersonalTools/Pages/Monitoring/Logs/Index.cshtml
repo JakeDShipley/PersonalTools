@@ -1,0 +1,265 @@
+﻿@page
+@model PersonalTools.Pages.Monitoring.Logs.IndexModel
+@{
+    ViewData["Title"] = "Logs Viewer";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-monitoring.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 monitor-page"
+     data-monitor-scope="logs"
+     data-logs-endpoint="/api/monitoring/logs">
+
+    <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 section-spacing">
+        <div>
+            <p class="eyebrow">System</p>
+            <h1 class="page-title">Logs viewer</h1>
+            <p class="page-subtitle mb-0">Persistent application logging with fast database-backed filtering, paging and full entry inspection.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span class="monitor-live-state" id="logsConnectionState">
+                <span class="monitor-live-dot"></span>
+                <span>Connecting</span>
+            </span>
+
+            <button class="btn btn-outline-primary monitor-refresh-button" id="btnRefreshLogs" type="button">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Use the level and search filters to narrow the saved application log history.",
+        "Select a message or Details to inspect the complete event and exception information.",
+        "Leave Auto refresh enabled to keep the current result page up to date."
+    })
+
+    <div class="row g-3 mb-3" data-monitor-reveal="summary">
+        <div class="col-6 col-xl-3">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm" data-log-summary-card="retained">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                        </span>
+                        <span>Retained</span>
+                    </div>
+
+                    <div class="monitor-metric-value" id="logsRetainedCount">—</div>
+                    <div class="monitor-metric-caption">saved in the last 30 days</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm" data-log-summary-card="warning">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        </span>
+                        <span>Warnings</span>
+                    </div>
+
+                    <div class="monitor-metric-value" id="logsWarningCount">—</div>
+                    <div class="monitor-metric-caption">retained warning events</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm" data-log-summary-card="error">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                        </span>
+                        <span>Errors</span>
+                    </div>
+
+                    <div class="monitor-metric-value" id="logsErrorCount">—</div>
+                    <div class="monitor-metric-caption">retained error events</div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <article class="card monitor-metric-card h-100 border-0 shadow-sm" data-log-summary-card="critical">
+                <div class="card-body p-4">
+                    <div class="monitor-metric-heading">
+                        <span class="monitor-metric-icon">
+                            <i class="fa-solid fa-radiation" aria-hidden="true"></i>
+                        </span>
+                        <span>Critical</span>
+                    </div>
+
+                    <div class="monitor-metric-value" id="logsCriticalCount">—</div>
+                    <div class="monitor-metric-caption">retained critical events</div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="alert alert-warning border-0 shadow-sm d-none" id="logsUnavailable" role="status">
+        <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>
+        The live log stream could not be loaded.
+    </div>
+
+    <section class="card monitor-panel border-0 shadow-sm mb-3" data-monitor-reveal="filters">
+        <div class="card-body p-3 p-lg-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-6">
+                    <label class="form-label" for="logsSearch">Search logs</label>
+
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        </span>
+                        <input class="form-control"
+                               id="logsSearch"
+                               type="search"
+                               autocomplete="off"
+                               placeholder="Message, source or exception..." />
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label" for="logsMinimumLevel">Minimum level</label>
+                    <select class="form-select" id="logsMinimumLevel">
+                        <option value="Information" selected>Information</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Error">Error</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="d-flex align-items-center justify-content-sm-end min-vh-0 pb-2">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input pt-switch" id="logsAutoRefresh" type="checkbox" role="switch" checked />
+                            <label class="form-check-label" for="logsAutoRefresh">Auto refresh</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card monitor-panel border-0 shadow-sm" data-monitor-reveal="table">
+        <div class="card-body p-0">
+            <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 p-3 p-lg-4 border-bottom">
+                <div>
+                    <h2 class="h5 mb-1">Application events</h2>
+                    <p class="small-muted mb-0">Newest entries appear first. Search, filtering and paging run on the server.</p>
+                </div>
+
+                <span class="badge rounded-pill text-bg-light border align-self-start">
+                    Database backed
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 logs-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Time</th>
+                            <th scope="col">Level</th>
+                            <th scope="col">Source</th>
+                            <th scope="col">Message</th>
+                            <th scope="col" class="text-end">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 border-top px-3 px-lg-4 py-3" id="logsPaginationBar">
+                <div class="d-flex align-items-center gap-2 small-muted">
+                    <label for="logsPageSize">Rows per page</label>
+                    <select class="form-select form-select-sm w-auto" id="logsPageSize">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span id="logsResultCount">0 results</span>
+                </div>
+
+                <nav aria-label="Application log pagination">
+                    <ul class="pagination pagination-sm mb-0" id="logsPagination"></ul>
+                </nav>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between gap-2 border-top px-3 px-lg-4 py-3 small-muted">
+                <span>Oldest retained <strong id="logsCaptureStarted">—</strong></span>
+                <span>Updated <strong id="logsUpdated">—</strong></span>
+            </div>
+        </div>
+    </section>
+
+    <div class="monitor-privacy-note mt-3">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        <span>Logs can contain internal technical information and exception details. This authenticated viewer retains 30 days in MariaDB and does not expose them outside Personal Tools.</span>
+    </div>
+</div>
+
+<div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <h2 class="modal-title h5 mb-0" id="logDetailsTitle">Log entry</h2>
+                        <span class="badge rounded-pill" id="logDetailsLevel">—</span>
+                    </div>
+                    <span class="small-muted" id="logDetailsTime">—</span>
+                </div>
+
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-lg-8">
+                        <span class="small-muted d-block mb-1">Source</span>
+                        <strong class="font-monospace text-break" id="logDetailsSource">—</strong>
+                    </div>
+
+                    <div class="col-12 col-lg-4">
+                        <span class="small-muted d-block mb-1">Event</span>
+                        <strong class="font-monospace" id="logDetailsEvent">—</strong>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <span class="small-muted d-block mb-2">Message</span>
+                    <div class="logs-detail-message" id="logDetailsMessage">—</div>
+                </div>
+
+                <div class="d-none" id="logExceptionSection">
+                    <span class="small-muted d-block mb-2">Exception</span>
+                    <pre class="logs-detail-pre mb-0" id="logDetailsException"></pre>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" id="btnCopyLog" type="button">
+                    <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>
+                    Copy entry
+                </button>
+
+                <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="~/js/pages/page-logs-viewer.js" asp-append-version="true"></script>
+}
