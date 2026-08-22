@@ -68,6 +68,24 @@
         });
     });
 
+    $('#pasteBinMaximumUploadSizeMb').on('change', function () {
+        const size = parseInt($(this).val(), 10);
+        if (!size || size < 1 || size > 50) {
+            window.personalToolsToast.error('Enter a Paste Bin upload limit between 1 and 50 MB.');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/paste-bin/settings',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ maximumUploadSizeMb: size }),
+            headers: { RequestVerificationToken: antiForgeryToken() },
+            successToast: 'Paste Bin upload limit saved.',
+            loaderTitle: 'Saving upload limit'
+        });
+    });
+
     $('#settingsSteamLinkForm').on('submit', function (event) {
         event.preventDefault();
         const $form = $(this);

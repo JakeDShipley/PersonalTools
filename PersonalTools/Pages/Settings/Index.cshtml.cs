@@ -6,6 +6,7 @@ using PersonalTools.Entities;
 using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
 using PersonalTools.Classes.Tracker;
+using PersonalTools.Classes.PasteBin;
 
 namespace PersonalTools.Pages.Settings;
 
@@ -16,19 +17,22 @@ public sealed class IndexModel : PageModel
     private readonly IMapPoolSuggestionFuncs _mapPoolSuggestion;
     private readonly IAppSettingsFuncs _settings;
     private readonly ITrackerFuncs _tracker;
+    private readonly IPasteBinFuncs _pasteBin;
 
     public IndexModel(
         IAuthFuncs auth,
         ICSMatchReferenceData referenceData,
         IMapPoolSuggestionFuncs mapPoolSuggestion,
         IAppSettingsFuncs settings,
-        ITrackerFuncs tracker)
+        ITrackerFuncs tracker,
+        IPasteBinFuncs pasteBin)
     {
         _auth = auth;
         _referenceData = referenceData;
         _mapPoolSuggestion = mapPoolSuggestion;
         _settings = settings;
         _tracker = tracker;
+        _pasteBin = pasteBin;
     }
 
     public string? LinkedSteamId { get; private set; }
@@ -37,6 +41,7 @@ public sealed class IndexModel : PageModel
     public List<string>? PendingMapPoolSuggestion { get; private set; }
     public List<AppSettingView> Settings { get; private set; } = [];
     public int TrackerAutoCloseAfterDays { get; private set; }
+    public int PasteBinMaximumUploadSizeMb { get; private set; } = 50;
 
     [BindProperty(SupportsGet = true)]
     public bool SteamRequired { get; set; }
@@ -54,6 +59,7 @@ public sealed class IndexModel : PageModel
         PendingMapPoolSuggestion = await _mapPoolSuggestion.GetPendingSuggestion();
         Settings = await _settings.Get(UserId);
         TrackerAutoCloseAfterDays = (await _tracker.GetSettings()).AutoCloseAfterDays;
+        PasteBinMaximumUploadSizeMb = (await _pasteBin.GetPasteBinSettings()).MaximumUploadSizeMb;
     }
 
     public async Task<IActionResult> OnPostUnlinkSteam()

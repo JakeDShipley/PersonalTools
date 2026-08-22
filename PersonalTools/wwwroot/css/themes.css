@@ -592,7 +592,7 @@
         pointer-events: none;
         position: fixed;
         width: 100%;
-        z-index: 0;
+        z-index: -1;
     }
 
     :root[data-app-theme="matrix"] body.app-loader-active > .app-matrix-rain-canvas {
@@ -616,6 +616,10 @@
 
     /* Ambient Matrix mode keeps the rain behind the application while shifting every shared
        surface onto translucent dark glass. This also keeps Matrix light mode readable. */
+    :root[data-app-theme="matrix"][data-matrix-ambient="true"] {
+        background-color: #010604;
+    }
+
     :root[data-app-theme="matrix"][data-matrix-ambient="true"] body {
         --pt-canvas: #010604;
         --pt-surface: #06100a;
@@ -624,18 +628,17 @@
         --pt-line: #246b3e;
         --bs-body-bg: #010604;
         --bs-body-color: #b7ffcf;
-        background-color: #010604;
+        background-color: transparent;
         background-image: none;
         color: var(--pt-ink);
         color-scheme: dark;
+        isolation: isolate;
     }
 
     :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-content-shell,
     :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-main,
     :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-footer {
         background: transparent;
-        position: relative;
-        z-index: 1;
     }
 
     :root[data-app-theme="matrix"][data-matrix-ambient="true"] body .app-sidebar,

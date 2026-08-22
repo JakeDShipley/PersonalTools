@@ -1,0 +1,84 @@
+@page "/PasteBin"
+@model PersonalTools.Pages.PasteBin.IndexModel
+@{
+    ViewData["Title"] = "Paste Bin";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-paste-bin.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 paste-bin-page">
+    @Html.AntiForgeryToken()
+    <div class="row align-items-end gy-3 section-spacing">
+        <div class="col-12 col-lg">
+            <p class="eyebrow">Shared workspace</p>
+            <h1 class="page-title">Paste Bin</h1>
+            <p class="page-subtitle">Share text, code and one useful file with everyone signed in to Personal Tools.</p>
+        </div>
+        <div class="col-12 col-lg-auto">
+            <button class="btn btn-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#createPasteModal">
+                <i class="fa-solid fa-plus me-2" aria-hidden="true"></i>New paste
+            </button>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Create a paste with text, one file, or both, then choose how long it should stay available.",
+        "Open any active paste from the shared list, or send its short Personal Tools link to another signed-in user.",
+        "Add a password when the content needs another layer of protection; only its creator can delete it."
+    })
+
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-start gap-3 section-spacing" role="status">
+        <i class="fa-solid fa-people-group mt-1" aria-hidden="true"></i>
+        <div><strong>Shared with signed-in users</strong><div class="small">Paste metadata is visible across this workspace. Password-protected content and files stay locked until unlocked.</div></div>
+    </div>
+
+    <section class="card border-0 shadow-sm paste-bin-filter-card section-spacing" aria-label="Paste filters">
+        <div class="card-body p-3 p-lg-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-lg-6">
+                    <div class="input-group"><span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span><input class="form-control" id="pasteSearch" type="search" placeholder="Search title, creator or short code" /></div>
+                </div>
+                <div class="col-6 col-lg-3"><select class="form-select" id="pasteLanguageFilter" aria-label="Filter by language"><option value="">All types</option></select></div>
+                <div class="col-6 col-lg-3"><select class="form-select" id="pasteProtectionFilter" aria-label="Filter by protection"><option value="">All access</option><option value="open">Open</option><option value="protected">Password protected</option></select></div>
+            </div>
+            <div class="small-muted mt-3" id="pasteCount" aria-live="polite">Loading pastes…</div>
+        </div>
+    </section>
+
+    <div class="row g-3 paste-bin-skeleton" id="pasteSkeleton" aria-hidden="true">
+        @for (int index = 0; index < 6; index++) { <div class="col-12 col-md-6 col-xl-4"><div class="card border-0 shadow-sm"><div class="card-body p-4"><span></span><span></span><span></span></div></div></div> }
+    </div>
+    <div class="row g-3 d-none" id="pasteGrid" aria-live="polite"></div>
+    <div class="card border-0 shadow-sm d-none" id="pasteEmpty"><div class="card-body p-5 text-center"><span class="paste-empty-icon"><i class="fa-regular fa-paste"></i></span><h2 class="h5 mt-3">Nothing to show</h2><p class="small-muted mb-0">Create the first paste, or clear the current filters.</p></div></div>
+</div>
+
+<div class="modal fade" id="createPasteModal" tabindex="-1" aria-labelledby="createPasteTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form id="createPasteForm" enctype="multipart/form-data">
+                <div class="modal-header"><div><p class="eyebrow mb-1">Shared workspace</p><h2 class="modal-title h4" id="createPasteTitle">Create a new paste</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body p-3 p-lg-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-8"><label class="form-label" for="pasteTitle">Title</label><input class="form-control" id="pasteTitle" name="Title" maxlength="200" required /></div>
+                        <div class="col-6 col-lg-2"><label class="form-label" for="pasteLanguage">Language</label><select class="form-select" id="pasteLanguage" name="Language"><option value="text">Plain text</option><option value="json">JSON</option><option value="sql">SQL</option><option value="csharp">C#</option><option value="javascript">JavaScript</option><option value="html">HTML</option><option value="css">CSS</option><option value="xml">XML</option><option value="bash">Bash</option><option value="powershell">PowerShell</option></select></div>
+                        <div class="col-6 col-lg-2"><label class="form-label" for="pasteExpiry">Expires</label><select class="form-select" id="pasteExpiry" name="Expiry"><option value="hour">1 hour</option><option value="day" selected>1 day</option><option value="week">1 week</option><option value="never">Never</option></select></div>
+                        <div class="col-12"><label class="form-label" for="pasteContent">Text or code <span class="small-muted">(optional with a file)</span></label><textarea class="form-control paste-content-input" id="pasteContent" name="Content" rows="11" maxlength="1000000" spellcheck="false"></textarea></div>
+                        <div class="col-12 col-lg-7">
+                            <label class="paste-drop-zone" id="pasteDropZone" for="pasteAttachment"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i><strong>Drop one file here</strong><span>or choose a file from your device</span><small id="pasteUploadLimit">Maximum size is loading…</small></label>
+                            <input class="visually-hidden" id="pasteAttachment" name="attachment" type="file" />
+                            <div class="paste-selected-file d-none mt-2" id="pasteSelectedFile"><i class="fa-solid fa-paperclip"></i><span class="flex-grow-1 text-truncate"></span><button class="btn btn-sm btn-outline-danger" type="button" id="removePasteFile" aria-label="Remove selected file"><i class="fa-solid fa-xmark"></i></button></div>
+                        </div>
+                        <div class="col-12 col-lg-5"><label class="form-label" for="pastePassword">Password <span class="small-muted">(optional)</span></label><div class="input-group"><input class="form-control" id="pastePassword" name="Password" type="password" minlength="8" maxlength="128" autocomplete="new-password" /><button class="btn btn-outline-secondary" id="togglePastePassword" type="button" aria-label="Show password"><i class="fa-regular fa-eye"></i></button></div><div class="form-text">The password is one-way hashed and is never stored or returned.</div></div>
+                    </div>
+                    <div class="progress paste-upload-progress d-none mt-3" id="pasteUploadProgress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar progress-bar-striped progress-bar-animated"></div></div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit"><i class="fa-solid fa-arrow-up-from-bracket me-2"></i>Create paste</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <script src="~/js/pages/page-paste-bin.js" asp-append-version="true"></script> }

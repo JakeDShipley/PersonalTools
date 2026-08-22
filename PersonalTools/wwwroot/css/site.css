@@ -890,6 +890,20 @@ body {
 
 .notes-sidebar-link .sidebar-feature-signal { border-radius: 0 0 3px 3px; height: .6rem; transform: translateY(-50%) rotate(35deg); width: 2px; }
 
+.paste-bin-sidebar-link {
+    --sidebar-feature: #6d72e8;
+    --sidebar-feature-bright: #c8caff;
+    --sidebar-feature-pattern: linear-gradient(90deg, transparent 0 8%, color-mix(in srgb, var(--sidebar-feature-bright) 42%, transparent) 9% 10%, transparent 11% 23%, color-mix(in srgb, var(--sidebar-feature) 30%, transparent) 24% 25%, transparent 26%), linear-gradient(90deg, transparent, color-mix(in srgb, var(--sidebar-feature) 22%, transparent), transparent);
+    --sidebar-feature-size: 34% 100%, 38% 100%;
+}
+
+.paste-bin-sidebar-link .sidebar-feature-signal {
+    background: transparent;
+    border: 1px solid var(--sidebar-feature-bright);
+    border-radius: 2px;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--sidebar-feature-bright) 55%, transparent);
+}
+
 .extractor-sidebar-link {
     --sidebar-feature: #2a9f9a;
     --sidebar-feature-bright: #9dfff1;
@@ -2104,9 +2118,8 @@ body {
     }
 }
 
-/* CS2-style killfeed easter egg - fired from the theme toggle in site.js when switching to light
-   mode. Styled like the game's own HUD (dark translucent bar, always-white text) rather than the
-   app's own theme, since that's the joke - it should look like it belongs in the game, not the app. */
+/* Shared CS2-style killfeed easter egg used by the theme toggle and CS feature pages. It deliberately
+   follows the game's HUD rather than the active app theme, so every event reads as the same joke. */
 .pt-killfeed {
     /* Offset below the app toast container (also top/end, z-index 2200) rather than stacking on
        top of it - the killfeed sits just under where a toast would land. */
@@ -2313,4 +2326,49 @@ body {
     .motion-flash {
         animation: none;
     }
+}
+
+    .pt-killfeed-row.is-gold {
+        border-left: 3px solid #e4ae39;
+        background: linear-gradient(90deg, rgba(77, 56, 12, .94), rgba(10, 14, 24, .9));
+        box-shadow: 0 4px 18px rgba(228, 174, 57, .28);
+    }
+
+    .pt-killfeed-row.is-gold .pt-killfeed-name:first-child,
+    .pt-killfeed-row.is-gold .pt-killfeed-icon {
+        color: #f6cf62;
+    }
+
+    .pt-killfeed-row.is-gold .pt-killfeed-icon svg * {
+        fill: #f6cf62;
+    }
+
+    .pt-killfeed-row.is-gaben {
+        border-left: 3px solid #eb4b4b;
+        background: linear-gradient(90deg, rgba(83, 22, 25, .94), rgba(10, 14, 24, .9));
+        box-shadow: 0 4px 18px rgba(235, 75, 75, .24);
+    }
+
+    .pt-killfeed-row.is-gaben .pt-killfeed-name:first-child,
+    .pt-killfeed-row.is-gaben .pt-killfeed-icon {
+        color: #ff7676;
+    }
+
+    .pt-killfeed-row.is-gaben .pt-killfeed-icon svg * {
+        fill: #ff7676;
+    }
+
+/* The case entry borrows the shared navigation signal but gives it a compact reel-like sweep. */
+.case-opening-sidebar-link {
+    --sidebar-feature-accent: #e4ae39;
+}
+
+.case-opening-sidebar-link .sidebar-feature-signal {
+    background: linear-gradient(90deg, transparent, #4b69ff, #8847ff, #d32ce6, #eb4b4b, #e4ae39, transparent);
+}
+
+.case-opening-sidebar-link:hover .app-nav-icon,
+.case-opening-sidebar-link.active .app-nav-icon {
+    color: #e4ae39;
+    filter: drop-shadow(0 0 .35rem rgba(228, 174, 57, .55));
 }

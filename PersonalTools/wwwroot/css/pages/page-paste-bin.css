@@ -1,0 +1,34 @@
+.paste-bin-page { --paste-accent: color-mix(in srgb, var(--pt-accent) 78%, #5f8cff); }
+.paste-bin-filter-card { background: color-mix(in srgb, var(--pt-surface) 94%, var(--paste-accent)); }
+.paste-card { border: 1px solid var(--pt-border) !important; overflow: hidden; position: relative; }
+.paste-card::before { background: linear-gradient(90deg, var(--paste-accent), color-mix(in srgb, var(--paste-accent) 20%, transparent)); content: ""; height: 3px; inset: 0 0 auto; position: absolute; }
+.paste-card:hover, .paste-card:focus-visible { border-color: color-mix(in srgb, var(--paste-accent) 52%, var(--pt-border)) !important; box-shadow: 0 .65rem 1.5rem color-mix(in srgb, var(--paste-accent) 12%, transparent) !important; }
+.paste-meta-badge { background: color-mix(in srgb, var(--pt-surface-muted) 82%, var(--paste-accent)); border: 1px solid var(--pt-border); color: var(--pt-text); font-weight: 500; padding: .45rem .6rem; }
+.paste-meta-protected { border-color: color-mix(in srgb, var(--bs-warning) 52%, var(--pt-border)); color: var(--bs-warning-text-emphasis); }
+.paste-card-footer { color: var(--pt-text-muted); display: flex; flex-wrap: wrap; font-size: .78rem; gap: .4rem 1rem; }
+.paste-short-code { color: var(--paste-accent); display: block; font-family: var(--bs-font-monospace); font-size: .8rem; margin-top: 1rem; }
+.paste-empty-icon { align-items: center; background: color-mix(in srgb, var(--paste-accent) 12%, var(--pt-surface)); border: 1px solid color-mix(in srgb, var(--paste-accent) 28%, var(--pt-border)); border-radius: 50%; color: var(--paste-accent); display: inline-flex; font-size: 1.4rem; height: 3.5rem; justify-content: center; width: 3.5rem; }
+.paste-bin-skeleton .card-body span, .paste-detail-loading span { animation: paste-skeleton 1.25s ease-in-out infinite alternate; background: color-mix(in srgb, var(--pt-text-muted) 13%, transparent); border-radius: var(--pt-radius-sm); display: block; height: .8rem; margin-bottom: .8rem; }
+.paste-bin-skeleton .card-body span:first-child { width: 42%; }.paste-bin-skeleton .card-body span:nth-child(2) { height: 1.3rem; width: 72%; }.paste-bin-skeleton .card-body span:last-child { width: 90%; }
+.paste-drop-zone { align-items: center; background: color-mix(in srgb, var(--pt-surface-muted) 82%, transparent); border: 1px dashed color-mix(in srgb, var(--paste-accent) 42%, var(--pt-border)); border-radius: var(--pt-radius); cursor: pointer; display: flex; flex-direction: column; gap: .25rem; justify-content: center; min-height: 9rem; padding: 1.25rem; text-align: center; transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.paste-drop-zone > i { color: var(--paste-accent); font-size: 1.65rem; }.paste-drop-zone span, .paste-drop-zone small { color: var(--pt-text-muted); }.paste-drop-zone:hover, .paste-drop-zone.is-dragging, .paste-drop-zone.has-file { background: color-mix(in srgb, var(--paste-accent) 10%, var(--pt-surface)); border-color: var(--paste-accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paste-accent) 18%, transparent); }
+.paste-selected-file { align-items: center; background: var(--pt-surface-muted); border: 1px solid var(--pt-border); border-radius: var(--pt-radius-sm); display: flex; gap: .65rem; padding: .65rem .75rem; }.paste-selected-file > i { color: var(--paste-accent); }
+.paste-content-input, .paste-code { font-family: var(--bs-font-monospace); }.paste-upload-progress { height: .45rem; }.paste-upload-progress .progress-bar { background-color: var(--paste-accent); }
+.paste-detail-shell { border-top: 3px solid var(--paste-accent) !important; }.paste-detail-loading { min-height: 15rem; padding: 3rem 0; }.paste-detail-loading span:first-child { height: 1.4rem; width: 35%; }.paste-detail-loading span:nth-child(2) { width: 82%; }.paste-detail-loading span:last-child { width: 65%; }
+.paste-lock-panel { align-items: center; background: color-mix(in srgb, var(--bs-warning) 8%, var(--pt-surface)); border: 1px solid color-mix(in srgb, var(--bs-warning) 36%, var(--pt-border)); border-radius: var(--pt-radius); display: flex; gap: 1rem; padding: 1.25rem; }.paste-lock-icon, .paste-file-icon { align-items: center; background: color-mix(in srgb, var(--paste-accent) 13%, var(--pt-surface)); border-radius: 50%; color: var(--paste-accent); display: inline-flex; flex: 0 0 auto; height: 2.75rem; justify-content: center; width: 2.75rem; }
+.paste-code { background: color-mix(in srgb, var(--pt-surface-muted) 88%, #000); border: 1px solid var(--pt-border); border-radius: var(--pt-radius); color: var(--pt-text); max-height: 65vh; overflow: auto; padding: 1.25rem; white-space: pre; }.paste-code code { background: transparent !important; padding: 0 !important; }
+.paste-file-card { align-items: center; background: var(--pt-surface-muted); border: 1px solid var(--pt-border); border-radius: var(--pt-radius); display: flex; gap: .85rem; padding: .85rem 1rem; }.paste-file-preview { background: #080a0d; border: 1px solid var(--pt-border); border-radius: var(--pt-radius); overflow: hidden; padding: .75rem; text-align: center; }.paste-preview-image { max-height: 70vh; }.paste-preview-video { max-height: 70vh; }
+[data-theme="dark"] .hljs { background: transparent; color: var(--pt-text); }[data-theme="dark"] .hljs-keyword,[data-theme="dark"] .hljs-selector-tag { color: #d7a6ff; }[data-theme="dark"] .hljs-string,[data-theme="dark"] .hljs-attribute { color: #9be4b5; }[data-theme="dark"] .hljs-number,[data-theme="dark"] .hljs-literal { color: #f5c879; }
+@keyframes paste-skeleton { to { opacity: .42; } }
+@media (max-width: 575.98px) { .paste-lock-panel, .paste-file-card { align-items: stretch; flex-direction: column; }.paste-file-card .btn { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .paste-bin-skeleton .card-body span, .paste-detail-loading span { animation: none; } }
+
+/* Tactical and Matrix intentionally inherit the module structure while using their own
+   semantic tokens, so a theme change never leaves Paste Bin looking bolted on. */
+:root[data-app-theme="tactical"] .paste-card,
+:root[data-app-theme="tactical"] .paste-drop-zone,
+:root[data-app-theme="tactical"] .paste-lock-panel,
+:root[data-app-theme="tactical"] .paste-code,
+:root[data-app-theme="tactical"] .paste-file-card,
+:root[data-app-theme="tactical"] .paste-file-preview { border-radius: 0; }
+:root[data-app-theme="matrix"] .paste-bin-page { --paste-accent: var(--pt-accent); }

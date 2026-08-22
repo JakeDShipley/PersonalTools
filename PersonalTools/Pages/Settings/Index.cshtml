@@ -109,6 +109,24 @@
 
         <div class="col-12">
             <section class="card tool-card border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="tool-card-icon flex-shrink-0"><i class="fa-regular fa-paste"></i></span>
+                        <div>
+                            <h2 class="h5 fw-semibold mb-2">Paste Bin uploads</h2>
+                            <p class="small-muted mb-0">Set the shared attachment limit. Personal Tools always applies an absolute 50 MB ceiling and checks the bytes received by the server.</p>
+                        </div>
+                    </div>
+                    <div class="input-group flex-shrink-0 settings-number-control">
+                        <input type="number" class="form-control" id="pasteBinMaximumUploadSizeMb" min="1" max="50" value="@Model.PasteBinMaximumUploadSizeMb" aria-label="Maximum Paste Bin upload size" />
+                        <span class="input-group-text">MB</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="card tool-card border-0 shadow-sm">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-start gap-3 mb-3">
                         <span class="tool-card-icon flex-shrink-0"><i class="fa-solid fa-map"></i></span>
@@ -143,17 +161,17 @@
                             @foreach (var map in Model.AllMaps)
                             {
                                 <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-                                    <div class="active-duty-map-tile h-100">
+                                    <label class="active-duty-map-tile h-100" for="activeDuty-@map.Name">
                                         <img src="@map.ImagePath" alt="" class="active-duty-map-image" loading="lazy" />
                                         <div class="active-duty-map-shade"></div>
                                         <div class="active-duty-map-content">
                                             <span class="active-duty-map-name">@map.Name</span>
                                             <div class="form-check form-switch m-0">
                                                 <input class="form-check-input pt-switch" type="checkbox" name="SelectedActiveDutyMaps" value="@map.Name" id="activeDuty-@map.Name" checked="@Model.ActiveDutyPool.Contains(map.Name)" />
-                                                <label class="visually-hidden" for="activeDuty-@map.Name">Include @map.Name in Active Duty</label>
+                                                <span class="visually-hidden">Include @map.Name in Active Duty</span>
                                             </div>
                                         </div>
-                                    </div>
+                                    </label>
                                 </div>
                             }
                         </div>

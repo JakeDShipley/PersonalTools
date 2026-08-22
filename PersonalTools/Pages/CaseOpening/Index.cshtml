@@ -1,0 +1,435 @@
+@page
+@model PersonalTools.Pages.CaseOpening.IndexModel
+@{
+    ViewData["Title"] = "CS2 Case Simulator";
+}
+
+@section Head {
+    <link rel="stylesheet" href="~/css/pages/page-case-opening.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 case-opening-page" data-case-key="dreams-and-nightmares">
+    @Html.AntiForgeryToken()
+
+    <div class="row align-items-end gy-3 section-spacing">
+        <div class="col-12 col-lg">
+            <p class="eyebrow">Counter-Strike 2 simulator</p>
+            <h1 class="page-title">Case opening</h1>
+            <p class="page-subtitle">Open a curated selection of iconic CS cases and capsules without money or real inventory items.</p>
+        </div>
+        <div class="col-12 col-lg-auto">
+            <span class="badge text-bg-warning case-simulation-badge"><i class="fa-solid fa-flask me-2"></i>Simulation only</span>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ToolGuide", new[]
+    {
+        "Press Open case and the server securely selects an item using the displayed rarity odds.",
+        "Watch the reel settle on your result; simulated items have no cash value and are not added to Steam.",
+        "Your results are saved privately below. Hold the clear control if you want to reset the collection."
+    })
+
+    <div class="alert alert-danger d-none" id="caseOpeningError" role="alert"></div>
+
+    <section class="card border-0 shadow-sm case-stage section-spacing" aria-labelledby="caseName">
+        <canvas class="case-effects-canvas" id="caseEffectsCanvas" aria-hidden="true"></canvas>
+        <div class="case-gold-reveal d-none" id="caseGoldReveal" aria-live="polite" aria-atomic="true">
+            <span class="case-gold-ring case-gold-ring-one" aria-hidden="true"></span>
+            <span class="case-gold-ring case-gold-ring-two" aria-hidden="true"></span>
+            <span class="case-gold-slash" aria-hidden="true"></span>
+            <div class="case-gold-content">
+                <p>Rare special item</p>
+                <img id="caseGoldRevealImage" alt="" />
+                <h3 id="caseGoldRevealName"></h3>
+                <span id="caseGoldRevealMeta"></span>
+            </div>
+        </div>
+        <div class="card-body p-3 p-lg-4 p-xl-5">
+            <div class="case-stage-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <p class="eyebrow mb-1" id="caseType">Weapon Case</p>
+                    <h2 class="h3 fw-semibold mb-0" id="caseName">Dreams &amp; Nightmares Case</h2>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm" id="caseSoundMenuButton" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Case opening sound settings">
+                            <i class="fa-solid fa-volume-high me-1" id="caseSoundButtonIcon" aria-hidden="true"></i><span id="caseSoundButtonText">Sound</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end case-sound-menu p-3" aria-labelledby="caseSoundMenuButton">
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                <div>
+                                    <p class="fw-semibold mb-1">Opening sound</p>
+                                    <p class="small-muted mb-0" id="caseSoundStatus">Sound is on</p>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input pt-switch" id="caseSoundEnabled" type="checkbox" role="switch" checked />
+                                    <label class="visually-hidden" for="caseSoundEnabled">Enable case opening sounds</label>
+                                </div>
+                            </div>
+                            <label class="form-label small fw-semibold" for="caseSoundVolume">Volume</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-volume-low small-muted" aria-hidden="true"></i>
+                                <input class="form-range case-sound-range" id="caseSoundVolume" type="range" min="0" max="100" step="1" value="45" />
+                                <output class="small fw-semibold case-sound-output" id="caseSoundVolumeValue" for="caseSoundVolume">45%</output>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-warning btn-sm" id="caseRareItemsButton" type="button" data-bs-toggle="modal" data-bs-target="#caseRareItemsModal" disabled>
+                        <i class="fa-solid fa-gem me-1"></i>Rare items
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" id="chooseCaseButton" type="button" data-bs-toggle="modal" data-bs-target="#caseSelectorModal">
+                        <i class="fa-solid fa-boxes-stacked me-1"></i>Choose case
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="caseOddsButton" type="button" data-bs-toggle="popover" data-bs-placement="bottom" data-bs-html="true" title="Case rarity odds">
+                        <i class="fa-solid fa-circle-info me-1"></i>View odds
+                    </button>
+                </div>
+            </div>
+
+            <div class="case-machine">
+                <div class="case-reel-window" id="caseReelWindow">
+                    <span class="case-reel-marker case-reel-marker-top" aria-hidden="true"></span>
+                    <span class="case-reel-marker case-reel-marker-bottom" aria-hidden="true"></span>
+                    <div class="case-reel" id="caseReel" aria-live="off"></div>
+                    <div class="case-reel-idle" id="caseReelIdle">
+                        <img id="caseImage" alt="Dreams &amp; Nightmares Case" />
+                        <span>Ready to open</span>
+                    </div>
+                </div>
+
+                <div class="case-result d-none" id="caseResult" aria-live="polite">
+                    <p class="eyebrow mb-1">Unboxed</p>
+                    <h3 class="h4 mb-1" id="caseResultName"></h3>
+                    <p class="small-muted mb-0" id="caseResultMeta"></p>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button class="btn btn-warning btn-lg case-open-button" id="openCaseButton" type="button" disabled>
+                        <i class="fa-solid fa-box-open me-2"></i>Open case
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm case-session-summary section-spacing" aria-labelledby="caseSessionTitle">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <p class="eyebrow mb-1">This visit</p>
+                    <h2 class="h4 mb-1" id="caseSessionTitle">Opening session</h2>
+                    <p class="small-muted mb-0">A live summary of cases opened since this page was loaded. Resetting it does not remove saved results.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary-subtle border case-session-time"><i class="fa-regular fa-clock me-1"></i><span id="caseSessionDuration">00:00</span></span>
+                    <button class="btn btn-outline-secondary btn-sm" id="resetCaseSession" type="button" disabled>
+                        <i class="fa-solid fa-arrow-rotate-left me-1"></i>Reset session
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-7">
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="case-session-stat h-100">
+                                <span>Opened</span>
+                                <strong id="caseSessionOpened">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="case-session-stat h-100">
+                                <span>Rare specials</span>
+                                <strong id="caseSessionRares">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="case-session-stat h-100">
+                                <span>StatTrak™</span>
+                                <strong id="caseSessionStatTrak">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="case-session-distribution">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <h3 class="small fw-semibold mb-0">Rarity distribution</h3>
+                            <span class="small-muted" id="caseSessionDistributionSummary">Waiting for the first opening</span>
+                        </div>
+                        <div class="case-session-distribution-bar" id="caseSessionDistributionBar" role="img" aria-label="No items opened in this session"></div>
+                        <div class="case-session-legend mt-2" id="caseSessionLegend"></div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-5">
+                    <article class="case-session-best h-100" id="caseSessionBest">
+                        <div class="case-session-best-empty" id="caseSessionBestEmpty">
+                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                            <div>
+                                <span>Best pull</span>
+                                <strong>Your strongest result will appear here.</strong>
+                            </div>
+                        </div>
+                        <div class="case-session-best-result d-none" id="caseSessionBestResult">
+                            <img id="caseSessionBestImage" alt="" />
+                            <div>
+                                <span id="caseSessionBestRarity">Best pull</span>
+                                <strong id="caseSessionBestName"></strong>
+                                <small id="caseSessionBestCase"></small>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="case-luck-tracker section-spacing" id="caseLuckTracker" aria-labelledby="caseLuckTitle">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <p class="eyebrow mb-1">Probability tracker</p>
+                <h2 class="h4 mb-1" id="caseLuckTitle">Your case luck</h2>
+                <p class="small-muted mb-0" id="caseLuckSubtitle">Statistics for the selected case.</p>
+            </div>
+            <span class="badge text-bg-secondary-subtle border case-odds-unchanged"><i class="fa-solid fa-scale-balanced me-1"></i>Every opening keeps the same odds</span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-xl-3">
+                <article class="card border-0 shadow-sm case-luck-card h-100">
+                    <div class="card-body p-3 p-lg-4">
+                        <span class="case-luck-icon"><i class="fa-solid fa-box-open"></i></span>
+                        <p class="small text-uppercase mb-1">Opened</p>
+                        <strong class="case-luck-value" id="caseLuckTotal">0</strong>
+                        <small id="caseLuckTotalLabel">Selected case</small>
+                    </div>
+                </article>
+            </div>
+            <div class="col-6 col-xl-3">
+                <article class="card border-0 shadow-sm case-luck-card h-100">
+                    <div class="card-body p-3 p-lg-4">
+                        <span class="case-luck-icon"><i class="fa-solid fa-gem"></i></span>
+                        <p class="small text-uppercase mb-1" id="caseLuckTargetLabel">Rare pulls</p>
+                        <strong class="case-luck-value" id="caseLuckTargets">0</strong>
+                        <small id="caseLuckOdds">—</small>
+                    </div>
+                </article>
+            </div>
+            <div class="col-6 col-xl-3">
+                <article class="card border-0 shadow-sm case-luck-card h-100">
+                    <div class="card-body p-3 p-lg-4">
+                        <span class="case-luck-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                        <p class="small text-uppercase mb-1">Current dry streak</p>
+                        <strong class="case-luck-value" id="caseLuckDryStreak">0</strong>
+                        <small id="caseLuckExpected">—</small>
+                    </div>
+                </article>
+            </div>
+            <div class="col-6 col-xl-3">
+                <article class="card border-0 shadow-sm case-luck-card h-100">
+                    <div class="card-body p-3 p-lg-4">
+                        <span class="case-luck-icon"><i class="fa-solid fa-chart-line"></i></span>
+                        <p class="small text-uppercase mb-1">Chance of this streak</p>
+                        <strong class="case-luck-value" id="caseLuckProbability">100%</strong>
+                        <small>Probability of no top-tier pull</small>
+                    </div>
+                </article>
+            </div>
+        </div>
+        <p class="case-luck-explanation small-muted mb-0 mt-3"><i class="fa-solid fa-circle-info me-1"></i>Past openings do not make the next result more likely. This tracker describes your history; it never changes the server-side odds.</p>
+    </section>
+
+    <section class="section-spacing case-history-section" aria-labelledby="caseHistoryTitle">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <p class="eyebrow mb-1">Your collection</p>
+                <h2 class="h4 mb-0" id="caseHistoryTitle">Skins obtained <span class="badge rounded-pill text-bg-secondary ms-1" id="caseHistoryCount">0</span></h2>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" id="openClearHistory" type="button" data-bs-toggle="modal" data-bs-target="#clearCaseHistoryModal" disabled>
+                <i class="fa-solid fa-trash-can me-1"></i>Clear history
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3 case-history-toolbar">
+            <div class="card-body p-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md">
+                        <label class="form-label small fw-semibold" for="caseHistorySearch">Search openings</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                            <input class="form-control" id="caseHistorySearch" type="search" autocomplete="off" placeholder="Skin, case, rarity, finish or wear" />
+                        </div>
+                    </div>
+                    <div class="col-7 col-md-3 col-lg-2">
+                        <label class="form-label small fw-semibold" for="caseHistoryRarity">Rarity</label>
+                        <select class="form-select form-select-sm" id="caseHistoryRarity">
+                            <option value="">All rarities</option>
+                        </select>
+                    </div>
+                    <div class="col-5 col-md-2 col-lg-2">
+                        <label class="form-label small fw-semibold" for="caseHistoryPageSize">Results</label>
+                        <select class="form-select form-select-sm" id="caseHistoryPageSize">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* The API returns the user's complete opening history. JavaScript owns every row/card,
+           filter and page change so this area never needs a Razor reload. *@
+        <div class="table-responsive case-history-table-wrap" id="caseHistoryTableWrap">
+            <table class="table table-hover align-middle mb-0 case-history-table" id="caseHistoryTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Case</th>
+                        <th>Rarity</th>
+                        <th>Finish</th>
+                        <th>Opened</th>
+                        <th class="text-end">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="caseHistoryTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="row g-3 case-history-cards" id="caseHistory"></div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 case-history-pagination d-none" id="caseHistoryPaginationBar">
+            <span class="small-muted" id="caseHistoryPageSummary"></span>
+            <nav aria-label="Case-opening history pages">
+                <ul class="pagination pagination-sm mb-0" id="caseHistoryPagination"></ul>
+            </nav>
+        </div>
+
+        <div class="case-history-empty card border-0 shadow-sm" id="caseHistoryEmpty">
+            <div class="card-body p-4 text-center">
+                <i class="fa-solid fa-box-open mb-3" aria-hidden="true"></i>
+                <h3 class="h6 fw-semibold">No openings yet</h3>
+                <p class="small-muted mb-0">Your simulated case results will collect here.</p>
+            </div>
+        </div>
+        <div class="case-history-empty card border-0 shadow-sm d-none" id="caseHistoryFilteredEmpty">
+            <div class="card-body p-4 text-center">
+                <i class="fa-solid fa-filter-circle-xmark mb-3" aria-hidden="true"></i>
+                <h3 class="h6 fw-semibold">No matching openings</h3>
+                <p class="small-muted mb-0">Try a different search or rarity filter.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="caseInspectModal" tabindex="-1" aria-labelledby="caseInspectTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content case-inspect-modal">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1" id="caseInspectRarity">Inspect item</p>
+                    <h2 class="modal-title fs-5" id="caseInspectTitle">Item details</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <div class="col-12 col-lg-7">
+                        <div class="case-inspect-stage" id="caseInspectStage" tabindex="0" aria-label="Interactive item inspection image. Drag or use arrow keys to change the viewing angle.">
+                            <span class="case-inspect-grid" aria-hidden="true"></span>
+                            <span class="case-inspect-glow" aria-hidden="true"></span>
+                            <img id="caseInspectImage" alt="" draggable="false" />
+                            <span class="case-inspect-hint"><i class="fa-solid fa-arrows-rotate me-1"></i>Drag to inspect</span>
+                            <button class="btn btn-sm btn-dark case-inspect-reset" id="caseInspectReset" type="button"><i class="fa-solid fa-rotate-left me-1"></i>Reset view</button>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <div class="case-inspect-details p-4">
+                            <p class="small-muted" id="caseInspectDescription"></p>
+                            <dl class="case-inspect-specs mb-0">
+                                <div><dt>Weapon</dt><dd id="caseInspectWeapon">—</dd></div>
+                                <div><dt>Finish</dt><dd id="caseInspectPattern">—</dd></div>
+                                <div><dt>Phase</dt><dd id="caseInspectPhase">—</dd></div>
+                                <div><dt>Wear</dt><dd id="caseInspectWear">—</dd></div>
+                                <div><dt>Float</dt><dd id="caseInspectFloat">—</dd></div>
+                                <div><dt>Float range</dt><dd id="caseInspectFloatRange">—</dd></div>
+                                <div><dt>Paint index</dt><dd id="caseInspectPaintIndex">—</dd></div>
+                                <div><dt>Pattern seed</dt><dd id="caseInspectPatternSeed">—</dd></div>
+                                <div><dt>StatTrak™</dt><dd id="caseInspectStatTrak">—</dd></div>
+                                <div><dt>Source</dt><dd id="caseInspectSource">—</dd></div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="caseRareItemsModal" tabindex="-1" aria-labelledby="caseRareItemsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content case-rares-modal">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1" id="caseRareItemsType">Possible special items</p>
+                    <h2 class="modal-title fs-5" id="caseRareItemsTitle">Rare items</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning border-0 d-flex align-items-start gap-2 case-rares-note">
+                    <i class="fa-solid fa-circle-info mt-1" aria-hidden="true"></i>
+                    <span id="caseRareItemsDescription">These are the special items available from the selected case.</span>
+                </div>
+                <div class="row g-3 case-rare-items-grid" id="caseRareItemsGrid"></div>
+                <div class="case-rares-empty d-none text-center py-5" id="caseRareItemsEmpty">
+                    <i class="fa-solid fa-box-open mb-3" aria-hidden="true"></i>
+                    <p class="mb-0">No special-item preview is available for this container.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="caseSelectorModal" tabindex="-1" aria-labelledby="caseSelectorTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1">Curated catalogue</p>
+                    <h2 class="modal-title fs-5" id="caseSelectorTitle">Choose a case or capsule</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small-muted">Select anywhere on a tile. The case contents, image and rarity odds update together.</p>
+                <div class="row g-3 case-selector-grid" id="caseSelectorGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="clearCaseHistoryModal" tabindex="-1" aria-labelledby="clearCaseHistoryTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="clearCaseHistoryTitle">Clear case history?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This removes every simulated item from your case-opening history. It cannot be undone.</p>
+                <form id="caseOpeningClearForm">
+                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="caseOpeningClearForm" data-hold-modal="clearCaseHistoryModal" data-hold-duration-ms="2000">
+                        <span class="hold-delete-fill"></span>
+                        <span class="hold-delete-label position-relative">Hold to clear history</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pages/page-case-opening.js" asp-append-version="true"></script>
+}

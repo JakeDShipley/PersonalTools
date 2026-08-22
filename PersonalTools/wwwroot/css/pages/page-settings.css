@@ -74,6 +74,18 @@
     min-height: 8.8rem;
     overflow: hidden;
     position: relative;
+    cursor: pointer;
+    display: block;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.active-duty-map-tile:hover {
+    border-color: var(--pt-mint);
+}
+
+.active-duty-map-tile:has(.pt-switch:focus-visible) {
+    outline: .2rem solid var(--pt-focus-ring);
+    outline-offset: 2px;
 }
 
 .active-duty-map-image {
@@ -135,3 +147,4 @@
         transition: none;
     }
 }
+.settings-number-control { max-width: 12rem; }

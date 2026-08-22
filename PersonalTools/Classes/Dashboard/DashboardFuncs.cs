@@ -60,6 +60,24 @@ namespace PersonalTools.Classes.Dashboard
                 },
                 new DashboardToolObj
                 {
+                    Title = "CS2 Case Simulator",
+                    Description = "Open a simulated Dreams & Nightmares case and collect the results without spending money.",
+                    IconClass = "fa-solid fa-box-open",
+                    PageUrl = "/CaseOpening",
+                    ButtonText = "Open a case",
+                    Category = "Workspace",
+                },
+                new DashboardToolObj
+                {
+                    Title = "Paste Bin",
+                    Description = "Share text, code and files with signed-in Personal Tools users.",
+                    IconClass = "fa-regular fa-paste",
+                    PageUrl = "/PasteBin",
+                    ButtonText = "Open Paste Bin",
+                    Category = "Workspace",
+                },
+                new DashboardToolObj
+                {
                     Title = "Media Extractor",
                     Description = "Parse page source and extract images and videos.",
                     IconClass = "fa-solid fa-photo-film",

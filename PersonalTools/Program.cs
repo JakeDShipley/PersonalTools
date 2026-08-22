@@ -26,6 +26,11 @@ using PersonalTools.Data.Tracker;
 using System.Net.Http.Headers;
 using PersonalTools.Security;
 using PersonalTools.Logging;
+using PersonalTools.Classes.PasteBin;
+using PersonalTools.Data.PasteBin;
+using Microsoft.AspNetCore.Http.Features;
+using PersonalTools.Classes.CaseOpening;
+using PersonalTools.Data.CaseOpening;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +60,7 @@ builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddMemoryCache();
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 67_108_864);
 builder.Services.AddScoped<IMariaDbDataAccess, MariaDbDataAccess>();
 builder.Services.AddScoped<IAuthData, AuthData>();
 builder.Services.AddScoped<IAuthFuncs, AuthFuncs>();
@@ -179,6 +185,22 @@ builder.Services.AddScoped<IMapPoolSuggestionFuncs, MapPoolSuggestionFuncs>();
 builder.Services.AddScoped<ITrackerItemsData, TrackerItemsData>();
 builder.Services.AddScoped<ITrackerFuncs, TrackerFuncs>();
 builder.Services.AddHostedService<TrackerAutoCloseService>();
+
+// Paste Bin files live outside the web root and are only opened after controller access checks.
+builder.Services.AddScoped<IPasteBinData, PasteBinData>();
+builder.Services.AddSingleton<IPasteBinFileStorage, PasteBinFileStorage>();
+builder.Services.AddScoped<IPasteBinFuncs, PasteBinFuncs>();
+builder.Services.AddHostedService<PasteBinCleanupService>();
+
+// CS2 Case Simulator
+builder.Services.AddScoped<ICaseOpeningData, CaseOpeningData>();
+builder.Services.AddScoped<ICS2ItemPriceData, NullCS2ItemPriceData>();
+builder.Services.AddHttpClient<ICaseOpeningReferenceData, CaseOpeningReferenceData>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalTools/1.0 (+https://jakehutson.me)");
+});
+builder.Services.AddScoped<ICaseOpeningFuncs, CaseOpeningFuncs>();
 
 var app = builder.Build();
 

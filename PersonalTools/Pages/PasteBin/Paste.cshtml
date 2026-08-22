@@ -1,0 +1,32 @@
+@page "/p/{shortCode}"
+@model PersonalTools.Pages.PasteBin.PasteModel
+@{
+    ViewData["Title"] = "Paste";
+}
+
+@section Head {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/github.min.css" />
+    <link rel="stylesheet" href="~/css/pages/page-paste-bin.css" asp-append-version="true" />
+}
+
+<div class="container px-3 px-lg-4 paste-bin-page paste-detail-page" data-short-code="@Model.ShortCode">
+    @Html.AntiForgeryToken()
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 section-spacing">
+        <div><a class="small text-decoration-none" asp-page="/PasteBin/Index"><i class="fa-solid fa-arrow-left me-1"></i>Back to Paste Bin</a><p class="eyebrow mt-3 mb-1">Shared paste</p><h1 class="page-title" id="pasteDetailTitle">Loading paste…</h1><p class="page-subtitle" id="pasteDetailSubtitle">Checking this short link.</p></div>
+        <div class="d-flex flex-wrap gap-2 d-none" id="pasteActions"><button class="btn btn-outline-primary" id="copyPasteLink" type="button"><i class="fa-solid fa-link me-1"></i>Copy link</button><button class="btn btn-outline-primary d-none" id="copyPasteContent" type="button"><i class="fa-regular fa-copy me-1"></i>Copy content</button><button class="btn btn-outline-danger d-none" id="deletePaste" type="button"><i class="fa-solid fa-trash me-1"></i>Delete</button></div>
+    </div>
+
+    <div class="card border-0 shadow-sm paste-detail-shell" id="pasteDetailShell"><div class="card-body p-4 p-lg-5"><div class="paste-detail-loading" id="pasteDetailLoading"><span></span><span></span><span></span></div><div class="alert alert-danger d-none mb-0" id="pasteDetailError"></div><div class="d-none" id="pasteDetailContent">
+        <div class="d-flex flex-wrap gap-2 mb-3" id="pasteMeta"></div>
+        <section class="paste-lock-panel d-none" id="pasteLockPanel"><span class="paste-lock-icon"><i class="fa-solid fa-lock"></i></span><div class="flex-grow-1"><h2 class="h5">This paste is protected</h2><p class="small-muted">Enter its password to reveal the content and attachment for 20 minutes.</p><form class="d-flex flex-column flex-sm-row gap-2" id="unlockPasteForm"><input class="form-control" id="unlockPastePassword" type="password" autocomplete="current-password" maxlength="128" required placeholder="Paste password" /><button class="btn btn-primary" type="submit">Unlock paste</button></form></div></section>
+        <section class="d-none" id="pasteTextSection"><div class="d-flex justify-content-between align-items-center gap-2 mb-2"><h2 class="h5 mb-0">Content</h2><div class="btn-group btn-group-sm" role="group" aria-label="Content view"><button class="btn btn-outline-secondary active" type="button" data-paste-view="highlighted">Highlighted</button><button class="btn btn-outline-secondary" type="button" data-paste-view="raw">Raw</button></div></div><pre class="paste-code"><code id="pasteCode"></code></pre></section>
+        <section class="d-none mt-4" id="pasteFileSection"><h2 class="h5 mb-3">Attachment</h2><div class="paste-file-card" id="pasteFileCard"></div><div class="paste-file-preview d-none mt-3" id="pasteFilePreview"></div></section>
+    </div></div></div>
+</div>
+
+<div class="modal fade" id="deletePasteModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5">Delete paste</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">Delete this paste and its attachment permanently?</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger" id="confirmDeletePaste" type="button">Delete paste</button></div></div></div></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/lib/common.min.js"></script>
+    <script src="~/js/pages/page-paste.js" asp-append-version="true"></script>
+}
