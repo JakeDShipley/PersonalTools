@@ -1151,9 +1151,12 @@
         const levelLocked = !unlocked && xpRequirement > 0 && playerLevel < xpRequirement;
         const multiplier = Number(item.saleMultiplier || 1);
         const status = unlocked
-            ? $('<span>', { class: 'case-selector-status is-unlocked' }).append(
-                $('<i>', { class: 'fa-solid fa-lock-open', 'aria-hidden': 'true' }),
-                document.createTextNode(' Unlocked'))
+            ? $('<span>', { class: `case-selector-status${item.caseKey === caseKey ? ' is-selected' : ''}` }).append(
+                $('<i>', {
+                    class: item.caseKey === caseKey ? 'fa-solid fa-circle-check' : 'fa-solid fa-lock-open',
+                    'aria-hidden': 'true'
+                }),
+                document.createTextNode(item.caseKey === caseKey ? ' Selected' : ' Ready'))
             : $('<button>', {
                 class: 'btn btn-warning btn-sm case-selector-unlock js-unlock-case',
                 type: 'button',
@@ -1162,36 +1165,34 @@
                 text: levelLocked ? `Reach level ${xpRequirement}` : `Unlock · ${unlockCost} Stars`
             });
 
-        return $('<div>', { class: 'col-6 col-sm-4 col-lg-3 col-xl' }).append(
+        return $('<div>', { class: 'case-selector-column' }).append(
             $('<div>', {
-                class: `case-selector-tile h-100${unlocked ? '' : ' is-locked'}`,
+                class: `case-selector-tile${unlocked ? '' : ' is-locked'}`,
                 role: unlocked ? 'button' : undefined,
                 tabindex: unlocked ? 0 : undefined,
                 'data-case-key': item.caseKey
             }).append(
-                xpRequirement > 0
-                    ? $('<span>', { class: 'case-xp-requirement-badge', text: `Lv ${xpRequirement}` })
-                    : null,
                 $('<img>', { class: 'case-selector-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
-                $('<span>', { class: 'case-selector-shade', 'aria-hidden': 'true' }),
-                $('<span>', { class: 'case-selector-content' }).append(
-                    $('<span>').append(
-                        $('<small>', { text: item.type }),
-                        $('<strong>', { text: item.name }),
-                        $('<small>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
-                    ),
-                    $('<span>', { class: 'form-check form-switch m-0' }).append(
-                        $('<input>', {
-                            class: 'form-check-input pt-switch',
-                            type: 'radio',
-                            role: 'switch',
-                            name: 'caseSelection',
-                            id: inputId,
-                            value: item.caseKey,
-                            checked: item.caseKey === caseKey,
-                            disabled: !unlocked
-                        })
-                    ),
+                $('<div>', { class: 'case-selector-content' }).append(
+                    $('<small>', { text: item.type }),
+                    $('<strong>', { text: item.name }),
+                    $('<span>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
+                ),
+                unlocked
+                    ? $('<input>', {
+                        class: 'visually-hidden',
+                        type: 'radio',
+                        name: 'caseSelection',
+                        id: inputId,
+                        value: item.caseKey,
+                        checked: item.caseKey === caseKey,
+                        'aria-label': `Choose ${item.name}`
+                    })
+                    : null,
+                $('<div>', { class: 'case-selector-actions' }).append(
+                    xpRequirement > 0
+                        ? $('<span>', { class: 'case-xp-requirement-badge', text: `Lv ${xpRequirement}` })
+                        : null,
                     status
                 )
             )
@@ -1204,8 +1205,14 @@
         // omitted argument as a failed catalogue response.
         const catalogueItems = Array.isArray(items) ? items : catalogue;
         catalogue = catalogueItems;
+        const searchText = String($('#caseSelectorSearch').val() || '').trim().toLocaleLowerCase();
+        const visibleItems = catalogueItems.filter(item => !searchText
+            || [item.name, item.type, item.caseKey]
+                .some(value => String(value || '').toLocaleLowerCase().includes(searchText)));
         const $grid = $('#caseSelectorGrid').empty();
-        catalogueItems.forEach(item => $grid.append(caseSelectorTile(item)));
+        visibleItems.forEach(item => $grid.append(caseSelectorTile(item)));
+        $('#caseSelectorEmpty').toggleClass('d-none', visibleItems.length > 0);
+        $('#caseSelectorMatchCount').text(`${visibleItems.length} of ${catalogueItems.length}`);
     }
 
     function loadCaseCatalogue() {
@@ -1947,6 +1954,12 @@
         }
         saveSoundState();
         renderSoundControls();
+    });
+
+    // Keep the catalogue manageable as more cases and capsules are added. This only filters
+    // the already-loaded list, so searching does not add database or API traffic.
+    $('#caseSelectorSearch').on('input', function () {
+        renderCaseSelector();
     });
 
     $('#caseSelectorGrid').on('change', 'input[name="caseSelection"]', function () {
