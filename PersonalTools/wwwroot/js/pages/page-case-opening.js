@@ -34,6 +34,7 @@
     let historyPageSize = loadHistoryPageSize();
     let historyView = loadHistoryView();
     let historySearchTimer = null;
+    let postOpeningRefreshTimer = null;
     let sessionOpenings = [];
     const selectedInventoryIds = new Set();
     const skipAnimationStorageKey = 'personalTools.caseOpeningSkipAnimation';
@@ -226,7 +227,9 @@
         renderOpenQuantity();
         renderInventorySelection();
         refreshInventorySaleValues();
-        if (botProgress) renderBotProgress(botProgress);
+        // Stars are shared across the Case Opening page. Keep the bot purchase buttons in sync
+        // when inventory is sold or another upgrade changes the balance.
+        if (botProgress) renderBotProgress({ ...botProgress, stars: stars });
     }
 
     function isCaseUnlocked(item) {
@@ -654,11 +657,23 @@
                 src: gold ? caseData?.imageUrl : item.imageUrl,
                 alt: '',
                 loading: 'lazy',
-                referrerpolicy: 'no-referrer'
-            }),
-            $('<span>', { text: gold ? '★ Rare Special Item ★' : item.name })
-        ).toggleClass('case-reel-gold-placeholder', gold);
-    }
+          referrerpolicy: 'no-referrer'
+      }),
+      $('<span>', { text: gold ? '★ Rare Special Item ★' : item.name }),
+      statTrakBadge(item)
+  ).toggleClass('case-reel-gold-placeholder', gold);
+}
+
+// The reference data supplies one asset for the weapon skin. StatTrak is a variant of that
+// same skin rather than a second image, so the game-like marker makes the difference explicit.
+function statTrakBadge(item) {
+    if (item?.isStatTrak !== true) return null;
+
+    return $('<span>', { class: 'case-stattrak-badge' }).append(
+        $('<i>', { class: 'fa-solid fa-crosshairs', 'aria-hidden': 'true' }),
+        document.createTextNode(' StatTrak™')
+    );
+}
 
     function renderOpenButton(state) {
         const openingText = selectedOpenQuantity === 1 ? 'Open case' : `Open ${selectedOpenQuantity} cases`;
@@ -686,6 +701,10 @@
 
     function configureCase(data) {
         caseData = data;
+        // A multi-open has its own compact result layout. Reset it whenever the selected
+        // case changes so the normal reel is ready for the next opening.
+        $('.case-machine').removeClass('is-multi-results');
+        $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         $('#caseName').text(data.name);
         $('#caseType').text(data.type);
         $('#caseImage').attr('src', data.imageUrl);
@@ -720,7 +739,7 @@
             )
         );
 
-        if (collected) {
+        if (collected && !item.isRareSpecial) {
             $card.append($('<button>', {
                 class: 'btn btn-outline-primary btn-sm case-collection-inspect js-inspect-collection-item',
                 type: 'button',
@@ -1010,7 +1029,8 @@
                     'aria-label': `Select ${item.name} to sell`
                 }),
                 $('<div>', { class: 'card-body pt-0' }).append(
-                    $('<p>', { class: 'small fw-semibold rarity-label mb-1', text: item.rarityName }),
+           $('<p>', { class: 'small fw-semibold rarity-label mb-1', text: item.rarityName }),
+           statTrakBadge(item),
                     $('<h3>', { class: 'h6 fw-semibold mb-1', text: item.name }),
                     $('<p>', { class: 'small-muted mb-2', text: meta }),
                     condition ? $('<p>', { class: 'case-history-condition small mb-2', text: condition }) : null,
@@ -1054,8 +1074,10 @@
                 $('<span>', { class: 'case-history-item-cell' }).append(
                     $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
                     $('<span>').append(
-                        $('<strong>', { text: item.name }),
-                        $('<small>', { text: item.isStatTrak ? 'StatTrak™ item' : 'Standard item' })
+                   $('<strong>', { text: item.name }),
+                   item.isStatTrak
+                       ? statTrakBadge(item)
+                       : $('<small>', { text: 'Standard item' })
                     )
                 )
             ),
@@ -1286,8 +1308,9 @@
     }
 
     function animateReel(result) {
+        $('.case-machine').removeClass('is-multi-results');
         $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
-        $('#caseMultiResults').addClass('d-none').empty();
+        $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         result.reel.forEach(item => $reel.append(itemCard(item, 'case-reel-item')));
         $idle.addClass('d-none');
         $result.addClass('d-none');
@@ -1379,11 +1402,27 @@
         }
     }
 
+    function queuePostOpeningRefresh() {
+        window.clearTimeout(postOpeningRefreshTimer);
+
+        // The opening controls are the priority. Rebuilding an ever-growing history table can
+        // wait briefly for the user to finish a run of openings, rather than making every next
+        // click progressively slower.
+        postOpeningRefreshTimer = window.setTimeout(function () {
+            postOpeningRefreshTimer = null;
+            renderSessionSummary();
+            renderHistory(allHistoryItems);
+        }, 550);
+    }
+
     function completeOpening(results) {
-        addResultsToInventory(results);
-        $open.prop('disabled', false);
-        renderOpenButton('ready');
+        addResultsToInventory(results, false);
         opening = false;
+        renderOpenButton('ready');
+        // Re-enable after the ready state is painted. This avoids an occasional mobile touch
+        // target stale state immediately after a quick reveal finishes.
+        window.requestAnimationFrame(() => $open.prop('disabled', false));
+        queuePostOpeningRefresh();
         const resultNames = results.length === 1 ? results[0].winner.name : `${results.length} items`;
         window.personalToolsToast?.success(`${resultNames} unboxed.`);
         statisticsRequestedAfterOpening = results[0]?.caseKey || caseKey;
@@ -1407,16 +1446,25 @@
 
     function multiResultCard(result) {
         const winner = result.winner;
-        return $('<div>', { class: 'col-6 col-lg' }).append(
+        return $('<div>', { class: 'case-multi-result-column' }).append(
             $('<article>', { class: `case-multi-result ${rarityClass(winner)}` }).append(
                 $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
-                $('<strong>', { text: winner.name })
+                $('<span>', { class: 'case-multi-rarity', text: winner.rarityName }),
+                $('<strong>', { text: winner.name }),
+                statTrakBadge(winner)
             )
         );
     }
 
     function showMultiResults(results) {
-        const $multiResults = $('#caseMultiResults').empty().removeClass('d-none');
+        const $multiResults = $('#caseMultiResults')
+            .empty()
+            .attr('data-open-count', results.length)
+            .removeClass('d-none');
+
+        // Multi-opens reveal their final pulls together. Hiding the unused single reel keeps
+        // the controls and results together, especially on a small screen.
+        $('.case-machine').addClass('is-multi-results');
         $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
         $idle.addClass('d-none');
         $result.addClass('d-none');
@@ -1433,15 +1481,17 @@
 
     function showSkippedResult(result) {
         const winner = result.winner;
+        $('.case-machine').removeClass('is-multi-results');
         const $skipCard = $('<article>', { class: `case-skip-result ${rarityClass(winner)}` }).append(
             $('<img>', {
                 src: winner.imageUrl,
                 alt: '',
                 referrerpolicy: 'no-referrer'
             }),
-            $('<div>', { class: 'case-skip-result-copy' }).append(
-                $('<span>', { text: winner.rarityName }),
-                $('<strong>', { text: winner.name })
+       $('<div>', { class: 'case-skip-result-copy' }).append(
+           $('<span>', { text: winner.rarityName }),
+           $('<strong>', { text: winner.name }),
+           statTrakBadge(winner)
             )
         );
 
@@ -1453,7 +1503,7 @@
             .css('transform', 'translateX(0px)')
             .append($skipCard);
         $idle.addClass('d-none');
-        $('#caseMultiResults').addClass('d-none').empty();
+        $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         $result.addClass('d-none');
         window.setTimeout(function () {
             if (isGoldItem(winner)) {
@@ -1546,6 +1596,9 @@
 
     $open.on('click', function () {
         if (opening || !caseData) return;
+        // Restore the normal opening stage before asking the server for the next roll.
+        $('.case-machine').removeClass('is-multi-results');
+        $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         playOpeningStart();
         opening = true;
         $open.prop('disabled', true);

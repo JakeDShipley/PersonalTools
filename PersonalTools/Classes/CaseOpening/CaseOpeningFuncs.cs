@@ -152,6 +152,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             StringComparer.Ordinal);
 
         List<CaseOpeningCollectionItemObj> items = caseData.Items
+            .Where(item => !item.IsRareSpecial)
             .Select(item =>
             {
                 CaseOpeningCollectionItemObj collectionItem = item.Adapt<CaseOpeningCollectionItemObj>();
@@ -163,6 +164,40 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
 
                 return collectionItem;
             })
+            .ToList();
+
+        List<CaseOpeningItemObj> rareItems = caseData.Items
+            .Where(item => item.IsRareSpecial)
+            .ToList();
+
+        // A case may contain many knife or glove finishes, but the collection is intended to
+        // track rarity milestones. Any rare-special pull therefore completes one Gold objective.
+        if (rareItems.Count > 0)
+        {
+            List<DateTime> rareFirstObtainedDates = rareItems
+                .Where(item => firstObtainedBySourceId.ContainsKey(item.SourceItemId))
+                .Select(item => firstObtainedBySourceId[item.SourceItemId])
+                .ToList();
+
+            CaseOpeningCollectionItemObj rareCollectionItem = rareItems[0]
+                .Adapt<CaseOpeningCollectionItemObj>();
+            rareCollectionItem.SourceItemId = $"{caseData.CaseKey}:rare-special";
+            rareCollectionItem.Name = "Rare Special Item";
+            rareCollectionItem.MarketHashName = string.Empty;
+            rareCollectionItem.Description = "Pull any rare special item from this case to complete this objective.";
+            rareCollectionItem.WeaponName = string.Empty;
+            rareCollectionItem.PatternName = string.Empty;
+            rareCollectionItem.PaintIndex = string.Empty;
+            rareCollectionItem.Phase = string.Empty;
+            rareCollectionItem.IsCollected = rareFirstObtainedDates.Count > 0;
+            rareCollectionItem.FirstObtainedUtc = rareFirstObtainedDates.Count > 0
+                ? rareFirstObtainedDates.Min()
+                : null;
+
+            items.Add(rareCollectionItem);
+        }
+
+        items = items
             // Keep a case collection readable at a glance. Collection state should never move
             // Gold items ahead of the normal CS rarity progression.
             .OrderBy(item => GetCollectionRarityOrder(item.RarityKey))
