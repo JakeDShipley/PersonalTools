@@ -18,8 +18,11 @@
 .case-upgrade-card { display:flex; gap:1rem; padding:1rem; border:1px solid var(--pt-line); border-top:3px solid color-mix(in srgb,var(--case-gold) 65%,var(--pt-line)); border-radius:var(--pt-small-radius); background:color-mix(in srgb,var(--pt-surface) 97%,var(--case-gold)); }
 .case-upgrade-card.is-unlocked { border-color:color-mix(in srgb,var(--pt-mint) 55%,var(--pt-line)); border-top-color:var(--pt-mint); }
 .case-upgrade-card.is-unlocked .case-upgrade-icon { color:var(--pt-mint); border-color:color-mix(in srgb,var(--pt-mint) 45%,var(--pt-line)); background:color-mix(in srgb,var(--pt-mint) 12%,transparent); }
-.case-collapse-toggle { white-space:nowrap; }
-.case-collapse-toggle .fa-chevron-down { transition:transform .2s ease; }
+.case-collapse-toggle { display:inline-flex; align-items:center; justify-content:center; min-height:2.35rem; padding:.4rem .75rem; color:var(--pt-ink); border-color:color-mix(in srgb,var(--case-gold) 72%,var(--pt-line)); border-width:1px; border-radius:var(--pt-small-radius); background:color-mix(in srgb,var(--pt-surface) 88%,var(--case-gold)); box-shadow:0 .25rem .7rem color-mix(in srgb,var(--case-gold) 16%,transparent); font-weight:750; letter-spacing:.01em; white-space:nowrap; }
+.case-collapse-toggle:hover { color:#1a1204; border-color:var(--case-gold); background:var(--case-gold); box-shadow:0 .35rem .9rem color-mix(in srgb,var(--case-gold) 30%,transparent); }
+.case-collapse-toggle:focus-visible { color:var(--pt-ink); outline:0; box-shadow:0 0 0 .22rem color-mix(in srgb,var(--case-gold) 36%,transparent); }
+.case-collapse-toggle .fa-chevron-down { width:1.1rem; height:1.1rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:color-mix(in srgb,var(--pt-surface) 72%,var(--case-gold)); transition:transform .2s ease,background .2s ease; }
+.case-collapse-toggle:hover .fa-chevron-down { background:rgba(26,18,4,.16); }
 .case-collapse-toggle[aria-expanded="false"] .fa-chevron-down { transform:rotate(-90deg); }
 .case-upgrade-copy { flex:1 1 auto; min-width:0; }
 .case-open-quantity .btn { min-width:2.1rem; }
@@ -249,6 +252,8 @@
 :root[data-app-theme="tactical"] .case-upgrade-card,
 :root[data-app-theme="tactical"] .case-multi-result,
 :root[data-app-theme="tactical"] .case-inventory-actions { border-radius:0; }
+:root[data-app-theme="tactical"] .case-collapse-toggle,
+:root[data-app-theme="tactical"] .case-collapse-toggle .fa-chevron-down { border-radius:0; }
 :root[data-app-theme="tactical"] .case-session-summary,
 :root[data-app-theme="tactical"] .case-session-stat,
 :root[data-app-theme="tactical"] .case-session-distribution,
