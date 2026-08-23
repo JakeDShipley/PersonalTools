@@ -618,8 +618,18 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="small-muted">Select anywhere on a tile. The case contents, image and rarity odds update together.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <p class="small-muted mb-0">Select a case to update its contents, artwork and rarity odds.</p>
+                    <span class="small-muted" id="caseSelectorMatchCount" aria-live="polite"></span>
+                </div>
+                <div class="input-group case-selector-search mb-3">
+                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                    <input class="form-control" id="caseSelectorSearch" type="search" autocomplete="off" placeholder="Search cases, capsules and souvenir packages" aria-label="Search the case catalogue" />
+                </div>
                 <div class="row g-3 case-selector-grid" id="caseSelectorGrid"></div>
+                <div class="alert alert-secondary d-none mb-0" id="caseSelectorEmpty" role="status">
+                    No cases or capsules match that search.
+                </div>
             </div>
         </div>
     </div>

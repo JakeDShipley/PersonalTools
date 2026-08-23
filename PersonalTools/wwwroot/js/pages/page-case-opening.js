@@ -2,7 +2,8 @@
     'use strict';
 
     const $page = $('.case-opening-page');
-    let caseKey = String($page.data('case-key'));
+    const caseSelectionStorageKey = 'personalTools.caseOpeningSelectedCase';
+    let caseKey = loadSelectedCaseKey(String($page.data('case-key')));
     const $reel = $('#caseReel');
     const $idle = $('#caseReelIdle');
     const $open = $('#openCaseButton');
@@ -57,6 +58,24 @@
             return [10, 25, 50, 100].includes(value) ? value : 25;
         } catch {
             return 25;
+        }
+    }
+
+    // The chosen case is a harmless device preference. Keeping it locally avoids another
+    // database write every time someone browses the catalogue, while surviving a page refresh.
+    function loadSelectedCaseKey(fallbackCaseKey) {
+        try {
+            return localStorage.getItem(caseSelectionStorageKey) || fallbackCaseKey;
+        } catch {
+            return fallbackCaseKey;
+        }
+    }
+
+    function saveSelectedCaseKey(selectedCaseKey) {
+        try {
+            localStorage.setItem(caseSelectionStorageKey, selectedCaseKey);
+        } catch {
+            // The currently selected case still works when browser storage is unavailable.
         }
     }
 
@@ -683,6 +702,7 @@
         $result.addClass('d-none');
         $('#caseSelectorGrid input').prop('checked', false)
             .filter(`[value="${caseKey}"]`).prop('checked', true);
+        renderCaseSelector();
         renderRareItems(data);
         $open.prop('disabled', false);
     }
@@ -909,9 +929,9 @@
         const unlockCost = Number(item.unlockCostStars || 0);
         const multiplier = Number(item.saleMultiplier || 1);
         const status = unlocked
-            ? $('<span>', { class: 'case-selector-status is-unlocked' }).append(
-                $('<i>', { class: 'fa-solid fa-lock-open', 'aria-hidden': 'true' }),
-                document.createTextNode(' Unlocked'))
+            ? $('<span>', { class: `case-selector-status${item.caseKey === caseKey ? ' is-selected' : ''}` }).append(
+                $('<i>', { class: item.caseKey === caseKey ? 'fa-solid fa-circle-check' : 'fa-solid fa-lock-open', 'aria-hidden': 'true' }),
+                document.createTextNode(item.caseKey === caseKey ? ' Selected' : ' Ready'))
             : $('<button>', {
                 class: 'btn btn-warning btn-sm case-selector-unlock js-unlock-case',
                 type: 'button',
@@ -919,43 +939,44 @@
                 text: `Unlock · ${unlockCost} Stars`
             });
 
-        return $('<div>', { class: 'col-6 col-sm-4 col-lg-3 col-xl' }).append(
+        return $('<div>', { class: 'case-selector-column' }).append(
             $('<div>', {
-                class: `case-selector-tile h-100${unlocked ? '' : ' is-locked'}`,
+                class: `case-selector-tile${unlocked ? '' : ' is-locked'}`,
                 role: unlocked ? 'button' : undefined,
                 tabindex: unlocked ? 0 : undefined,
                 'data-case-key': item.caseKey
             }).append(
                 $('<img>', { class: 'case-selector-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
-                $('<span>', { class: 'case-selector-shade', 'aria-hidden': 'true' }),
-                $('<span>', { class: 'case-selector-content' }).append(
-                    $('<span>').append(
-                        $('<small>', { text: item.type }),
-                        $('<strong>', { text: item.name }),
-                        $('<small>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
-                    ),
-                    $('<span>', { class: 'form-check form-switch m-0' }).append(
-                        $('<input>', {
-                            class: 'form-check-input pt-switch',
-                            type: 'radio',
-                            role: 'switch',
-                            name: 'caseSelection',
-                            id: inputId,
-                            value: item.caseKey,
-                            checked: item.caseKey === caseKey,
-                            disabled: !unlocked
-                        })
-                    ),
-                    status
-                )
+                $('<div>', { class: 'case-selector-content' }).append(
+                    $('<small>', { text: item.type }),
+                    $('<strong>', { text: item.name }),
+                    $('<span>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
+                ),
+                unlocked
+                    ? $('<input>', {
+                        class: 'visually-hidden',
+                        type: 'radio',
+                        name: 'caseSelection',
+                        id: inputId,
+                        value: item.caseKey,
+                        checked: item.caseKey === caseKey,
+                        'aria-label': `Choose ${item.name}`
+                    })
+                    : null,
+                $('<div>', { class: 'case-selector-actions' }).append(status)
             )
         );
     }
 
     function renderCaseSelector(items) {
-        catalogue = items;
+        if (Array.isArray(items)) catalogue = items;
+        const searchText = String($('#caseSelectorSearch').val() || '').trim().toLocaleLowerCase();
+        const visibleItems = catalogue.filter(item => !searchText
+            || [item.name, item.type, item.caseKey].some(value => String(value || '').toLocaleLowerCase().includes(searchText)));
         const $grid = $('#caseSelectorGrid').empty();
-        items.forEach(item => $grid.append(caseSelectorTile(item)));
+        visibleItems.forEach(item => $grid.append(caseSelectorTile(item)));
+        $('#caseSelectorEmpty').toggleClass('d-none', visibleItems.length > 0);
+        $('#caseSelectorMatchCount').text(`${visibleItems.length} of ${catalogue.length}`);
     }
 
     function loadCaseCatalogue() {
@@ -1675,6 +1696,7 @@
         }
 
         caseKey = selectedKey;
+        saveSelectedCaseKey(caseKey);
         loadCase(caseKey, { closeSelector: true, showToast: true });
     });
 
@@ -1683,6 +1705,10 @@
         if ($(event.target).closest('input,button').length) return;
         event.preventDefault();
         $(this).find('input[name="caseSelection"]').prop('checked', true).trigger('change');
+    });
+
+    $('#caseSelectorSearch').on('input', function () {
+        renderCaseSelector();
     });
 
     $('#caseSelectorGrid').on('click', '.js-unlock-case', function (event) {
@@ -1699,9 +1725,10 @@
         request(`/api/case-opening/cases/${encodeURIComponent(selectedKey)}/unlock`, 'POST', { showLoader: false })
             .done(function (progress) {
                 renderProgress(progress);
-                selectedCase.isUnlocked = true;
-                caseKey = selectedKey;
-                renderCaseSelector(catalogue);
+            selectedCase.isUnlocked = true;
+            caseKey = selectedKey;
+            saveSelectedCaseKey(caseKey);
+            renderCaseSelector(catalogue);
                 loadCase(caseKey, { closeSelector: true, showToast: true });
                 window.personalToolsToast?.success(`${selectedCase.name} unlocked for ${cost} Stars. Open it whenever you like.`);
             })
@@ -1882,12 +1909,15 @@
     request('/api/case-opening/cases')
         .done(function (items) {
             renderCaseSelector(items);
-            const selected = items.find(item => item.caseKey === caseKey) || items[0];
+        const selected = items.find(item => item.caseKey === caseKey && isCaseUnlocked(item))
+            || items.find(isCaseUnlocked)
+            || items[0];
             if (!selected) {
                 showError(null, 'The case catalogue could not be loaded.');
                 return;
-            }
-            caseKey = selected.caseKey;
+        }
+        caseKey = selected.caseKey;
+        saveSelectedCaseKey(caseKey);
             loadCase(caseKey).done(function () {
                 loadHistory();
                 loadProgress();
