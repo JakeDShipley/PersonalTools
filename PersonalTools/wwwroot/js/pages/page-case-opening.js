@@ -1199,9 +1199,13 @@
     }
 
     function renderCaseSelector(items) {
-        catalogue = items;
+        // Loading an individual case refreshes its details before the catalogue is requested again.
+        // Keep rendering the last known catalogue during that short gap rather than treating an
+        // omitted argument as a failed catalogue response.
+        const catalogueItems = Array.isArray(items) ? items : catalogue;
+        catalogue = catalogueItems;
         const $grid = $('#caseSelectorGrid').empty();
-        items.forEach(item => $grid.append(caseSelectorTile(item)));
+        catalogueItems.forEach(item => $grid.append(caseSelectorTile(item)));
     }
 
     function loadCaseCatalogue() {
