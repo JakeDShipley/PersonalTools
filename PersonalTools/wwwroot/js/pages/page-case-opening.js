@@ -286,18 +286,19 @@
         }, 2200);
     }
 
-    const xpBubbleFlightMs = 1150;
-    const xpBubblePopMs = 300;
+    const xpBubbleLifeMs = 1300;
 
-    // Finds the element the XP bubble should launch from - the actual revealed skin wherever it
-    // currently is (the big gold reveal image, the skip-reveal card, the settled reel winner, or
-    // a multi-open result card), falling back to the reel window itself if none of those apply.
+    // Finds the element the XP bubble should appear next to - the actual revealed skin wherever
+    // it currently is (the big gold reveal image, the skip-reveal card, the settled reel winner,
+    // or a multi-open result card), falling back to the reel window itself if none of those apply.
     function resultImageOrigin(result) {
         const $goldImage = $('#caseGoldRevealImage');
         if ($goldImage.length && !$goldImage.closest('#caseGoldReveal').hasClass('d-none')) return $goldImage;
 
-        const $skipImage = $reel.find('.case-skip-result img');
-        if ($skipImage.length) return $skipImage;
+        // The skip-result card is image + text side by side (a grid), so centering on just the
+        // image would put the bubble off to the left - use the whole card instead.
+        const $skipCard = $reel.find('.case-skip-result');
+        if ($skipCard.length) return $skipCard;
 
         const $multiCard = $('#caseMultiResults .case-multi-result').last();
         if ($multiCard.length) return $multiCard;
@@ -308,88 +309,66 @@
         return $('#caseReelWindow');
     }
 
-    // Flies a "+N XP" bubble from wherever the opened skin is on screen to the XP bar, then
-    // resolves once it lands so the caller can update the bar's fill right as it arrives.
-    function flyXpBubble(amount, $origin) {
-        const deferred = $.Deferred();
-        if (!amount) {
-            deferred.resolve();
-            return deferred.promise();
-        }
-
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Shows a "+N XP" bubble hovering over whatever just gave the XP, then lets it dissipate in
+    // place (a pure CSS keyframe animation - no target to fly toward, so nothing to wait on here).
+    function showXpBubble(amount, $origin) {
+        if (!amount) return;
         const $source = $origin && $origin.length ? $origin : $('#caseReelWindow');
-        const $target = $('#caseXpBar');
-        if (!$target.length || (!reduced && !$source.length)) {
-            deferred.resolve();
-            return deferred.promise();
-        }
-
-        const $bubble = $('<span class="case-xp-bubble">')
-            .text(`+${amount}`)
-            .toggleClass('is-long', String(amount).length >= 3);
-        $('body').append($bubble);
-
-        if (reduced) {
-            // Respect the no-motion preference (no flight), but still show something rather than
-            // nothing - a brief static pop directly over the XP bar.
-            const targetRect = $target[0].getBoundingClientRect();
-            $bubble.css({ left: targetRect.left + (targetRect.width / 2), top: targetRect.top + (targetRect.height / 2) });
-            window.setTimeout(function () {
-                $bubble.remove();
-                deferred.resolve();
-            }, 500);
-            return deferred.promise();
-        }
+        if (!$source.length) return;
 
         const sourceRect = $source[0].getBoundingClientRect();
-        const targetRect = $target[0].getBoundingClientRect();
-        const startX = sourceRect.left + (sourceRect.width / 2);
-        const startY = sourceRect.top + (sourceRect.height / 2);
-        const endX = targetRect.left + (targetRect.width / 2);
-        const endY = targetRect.top + (targetRect.height / 2);
-        $bubble.css({ left: startX, top: startY });
+        const $bubble = $('<span class="case-xp-bubble">')
+            .text(`+${amount}`)
+            .toggleClass('is-long', String(amount).length >= 3)
+            .css({ left: sourceRect.left + (sourceRect.width / 2), top: sourceRect.top + (sourceRect.height * 0.22) });
+        $('body').append($bubble);
 
-        // Force the browser to commit the starting position/appearance before changing it,
-        // rather than relying on requestAnimationFrame - which does not reliably fire right after
-        // an element is inserted (observed directly: its callback can simply never run).
-        void $bubble[0].offsetWidth;
-
-        $bubble[0].style.setProperty('--case-xp-bubble-dx', `${endX - startX}px`);
-        $bubble[0].style.setProperty('--case-xp-bubble-dy', `${endY - startY}px`);
-        $bubble.addClass('is-flying');
-
-        window.setTimeout(function () {
-            // Swap the flight transition for the landing keyframe animation (same position, so
-            // there's no jump) and flash the bar to sell the impact.
-            $bubble.removeClass('is-flying').addClass('is-landed');
-            $target.addClass('is-hit');
-            window.setTimeout(() => $target.removeClass('is-hit'), 450);
-
-            deferred.resolve();
-
-            window.setTimeout(function () {
-                $bubble.remove();
-            }, xpBubblePopMs);
-        }, xpBubbleFlightMs);
-
-        return deferred.promise();
+        window.setTimeout(() => $bubble.remove(), xpBubbleLifeMs);
     }
 
-    // Called right after the celebration sparkles for a result, so the bubble launches from the
-    // skin that was just revealed rather than firing the moment the server response arrives.
-    function awardXp(results, $origin) {
-        if (!Array.isArray(results) || !results.length || !caseProgress) return;
-        const last = results[results.length - 1];
-        const xpGained = results.reduce((sum, item) => sum + Number(item.xpAwarded || 0), 0);
-        const totalXp = Number(last.totalXp || (caseProgress.xp + xpGained));
-        const leveledUp = results.some(item => item.leveledUp);
+    // Bots can finish opening within milliseconds of each other, so their bubbles would otherwise
+    // all pop into existence in the same instant and visually stack on top of one another over the
+    // (small, closely-packed) bot slot icons. This serialises their appearance a little instead -
+    // each new bubble waits until at least botXpBubbleStaggerMs after the last one was shown.
+    const botXpBubbleStaggerMs = 110;
+    let nextBotXpBubbleAt = 0;
 
-        flyXpBubble(xpGained, $origin).done(function () {
-            caseProgress = { ...caseProgress, xp: totalXp };
-            renderXpBar();
-            if (leveledUp) playLevelUpAnimation(xpLevelForTotal(totalXp));
+    function scheduleBotXpBubble(amount, $origin) {
+        const now = Date.now();
+        nextBotXpBubbleAt = Math.max(now, nextBotXpBubbleAt) + botXpBubbleStaggerMs;
+        window.setTimeout(() => showXpBubble(amount, $origin), nextBotXpBubbleAt - now);
+    }
+
+    // Called right after the celebration sparkles for a result, so each bubble appears next to the
+    // skin that actually earned it rather than firing the moment the server response arrives.
+    // `origin` is either a single jQuery element (one result) or a (result, index) => element
+    // resolver (a multi-open batch, so each card gets its own bubble instead of one combined one).
+    // `staggerBubbles` is used for bot opens, where several results can land in the same instant.
+    //
+    // The running total is accumulated locally from each result's own xpAwarded delta rather than
+    // trusting the absolute totalXp the server returns - a bot open and your own case open can be
+    // in flight at the same time, and whichever response happens to arrive back last would then
+    // overwrite the total with a snapshot the server took *before* the other one committed, making
+    // the XP bar visibly drop. Summing deltas locally is immune to that: addition doesn't care what
+    // order the responses arrive in, only that each delta is applied exactly once (which it is).
+    function awardXp(results, origin, staggerBubbles = false) {
+        if (!Array.isArray(results) || !results.length || !caseProgress) return;
+        const resolveOrigin = typeof origin === 'function' ? origin : () => origin;
+        results.forEach((result, index) => {
+            const amount = Number(result.xpAwarded || 0);
+            const $origin = resolveOrigin(result, index);
+            if (staggerBubbles) scheduleBotXpBubble(amount, $origin);
+            else showXpBubble(amount, $origin);
         });
+
+        const xpGained = results.reduce((sum, item) => sum + Number(item.xpAwarded || 0), 0);
+        const levelBefore = xpLevelForTotal(caseProgress.xp);
+        const totalXp = caseProgress.xp + xpGained;
+        const levelAfter = xpLevelForTotal(totalXp);
+
+        caseProgress = { ...caseProgress, xp: totalXp };
+        renderXpBar();
+        if (levelAfter > levelBefore) playLevelUpAnimation(levelAfter);
     }
 
     function isCaseUnlocked(item) {
@@ -621,7 +600,8 @@
                 const bot = serverBots[slot];
                 $slots.append($('<span>', {
                     class: `case-bot-slot${bot ? ' is-installed' : ''}${botsRunning && bot ? ' is-working' : ''}`,
-                    title: bot ? `Bot ${slot + 1}` : 'Available bot slot'
+                    title: bot ? `Bot ${slot + 1}` : 'Available bot slot',
+                    'data-bot-id': bot?.botId || ''
                 }).append($('<i>', { class: bot ? 'fa-solid fa-robot' : 'fa-solid fa-plus', 'aria-hidden': 'true' })));
             }
             $servers.append($('<div>', { class: 'col-12 col-md-6 col-xl-4' }).append(
@@ -642,19 +622,20 @@
             .fail(response => showError(response, 'Bot workshop status could not be loaded.'));
     }
 
+    const botFeedMaxItems = 24;
+
     function queueBotResult(result) {
         addResultsToInventory([result], false);
         const winner = result.winner;
-        const $image = $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
         $('#caseBotFeed').removeClass('d-none').prepend(
             $('<div>', { class: `case-bot-feed-item ${rarityClass(winner)}` }).append(
-                $image,
+                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
                 $('<span>').append(
                     $('<small>', { text: `${result.caseName} bot drop` }),
                     $('<strong>', { text: winner.name })
                 )
             )
-        ).children().slice(8).remove();
+        ).children().slice(botFeedMaxItems).remove();
 
         window.clearTimeout(botRefreshTimer);
         botRefreshTimer = window.setTimeout(function () {
@@ -663,35 +644,50 @@
             loadCollection(result.caseKey);
             loadStatistics(result.caseKey);
         }, 120);
-
-        return $image;
     }
+
+    // Browsers cap concurrent HTTP/1.1 connections per origin at roughly 6, so firing every bot's
+    // open request in the same tick (as this used to) means most of them queue up and get
+    // dispatched late - sometimes seconds late. The next cycle still fires at its fixed 12s mark
+    // regardless, so a bot whose actual claim landed a couple seconds into its window looks like
+    // it's "still cooling down" on the next tick even though nothing is actually wrong with it.
+    // Spacing the dispatches out keeps each bot's real claim time close to the intended cadence.
+    const botOpenStaggerMs = 60;
 
     function runBotCycle() {
         if (!botsRunning || document.hidden) return;
         const selectedCaseKey = String($('#caseBotCaseSelect').val() || '');
         if (!selectedCaseKey) return;
 
-        (botProgress?.servers || []).flatMap(server => server.bots || []).forEach(bot => {
+        const bots = (botProgress?.servers || []).flatMap(server => server.bots || []);
+        bots.forEach((bot, index) => {
             const botId = String(bot.botId || '');
             if (!botId || botOpenInFlight.has(botId)) return;
             botOpenInFlight.add(botId);
-            request(`/api/case-opening/bots/${encodeURIComponent(botId)}/open`, 'POST', {
-                data: JSON.stringify({ caseKey: selectedCaseKey }),
-                contentType: 'application/json; charset=utf-8',
-                showLoader: false
-            })
-                .done(function (result) {
-                    const $feedImage = queueBotResult(result);
-                    awardXp([result], $feedImage);
+
+            window.setTimeout(function () {
+                request(`/api/case-opening/bots/${encodeURIComponent(botId)}/open`, 'POST', {
+                    data: JSON.stringify({ caseKey: selectedCaseKey }),
+                    contentType: 'application/json; charset=utf-8',
+                    showLoader: false
                 })
-                .fail(function (response) {
-                    const message = response.responseJSON?.message || '';
-                    if (!message.toLowerCase().includes('cooling down')) {
-                        window.personalToolsToast?.error(message || 'A bot could not open its assigned case.');
-                    }
-                })
-                .always(() => botOpenInFlight.delete(botId));
+                    .done(function (result) {
+                        queueBotResult(result);
+                        // Anchor to this bot's own workshop slot rather than its feed thumbnail - the
+                        // feed always prepends the newest drop into the same top-left cell, so when
+                        // several bots finish close together their bubbles would all land on top of
+                        // each other there. Each bot's slot is a stable, distinct position instead.
+                        const $slot = $(`.case-bot-slot[data-bot-id="${botId}"]`);
+                        awardXp([result], $slot.length ? $slot : $('#caseBotFeed'), true);
+                    })
+                    .fail(function (response) {
+                        const message = response.responseJSON?.message || '';
+                        if (!message.toLowerCase().includes('cooling down')) {
+                            window.personalToolsToast?.error(message || 'A bot could not open its assigned case.');
+                        }
+                    })
+                    .always(() => botOpenInFlight.delete(botId));
+            }, index * botOpenStaggerMs);
         });
     }
 
@@ -736,6 +732,19 @@
             ? `case-rarity-${key}`
             : 'case-rarity-mil-spec';
     }
+
+    // Tweak-modal display names for the fixed set of rarity keys - not tied to any one case's
+    // odds, so it can't just read a name off catalogue data the way case-specific rarity text does.
+    const rarityDisplayNames = {
+        'mil-spec': 'Mil-Spec',
+        'restricted': 'Restricted',
+        'classified': 'Classified',
+        'covert': 'Covert',
+        'rare-special': 'Rare Special (Gold)',
+        'high-grade': 'High Grade',
+        'remarkable': 'Remarkable',
+        'exotic': 'Exotic'
+    };
 
     function isGoldItem(item) {
         return item?.isRareSpecial === true || String(item?.rarityKey || '').toLowerCase() === 'rare-special';
@@ -1690,7 +1699,7 @@
         results.filter(result => isGoldItem(result.winner)).forEach(result => {
             runParticles(result.winner.rarityColor || '#e4ae39', 64);
         });
-        awardXp(results, resultImageOrigin());
+        awardXp(results, (result, index) => $multiResults.children().eq(index));
         window.personalToolsMotion?.reveal(
             $multiResults.children().get(),
             { fromY: 14, delay: 80, duration: 420 }
@@ -2302,12 +2311,34 @@
         });
     }
 
+    function renderTweakXpByRarityTable(xpByRarityList) {
+        const $body = $('#caseTweakXpByRarityTableBody').empty();
+        xpByRarityList.forEach(item => {
+            $body.append(
+                $('<tr>').append(
+                    $('<td>', { text: rarityDisplayNames[item.rarityKey] || item.rarityKey }),
+                    $('<td>').append($('<input>', {
+                        class: 'form-control form-control-sm js-tweak-xp-rarity',
+                        type: 'number',
+                        min: 0,
+                        step: 1,
+                        'data-rarity-key': item.rarityKey,
+                        value: Number(item.xpAwarded || 0)
+                    }))
+                )
+            );
+        });
+    }
+
     $('#caseTweakModal').on('show.bs.modal', function () {
         fillTweakProgressForm();
         renderTweakCaseList();
         request('/api/case-opening/settings', 'GET', { showLoader: false })
             .done(fillTweakSettingsForm)
             .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Game settings could not be loaded.'));
+        request('/api/case-opening/settings/xp-by-rarity', 'GET', { showLoader: false })
+            .done(renderTweakXpByRarityTable)
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'XP rewards could not be loaded.'));
         request('/api/case-opening/settings/cases', 'GET', { showLoader: false })
             .done(renderTweakCasesTable)
             .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Case settings could not be loaded.'));
@@ -2430,6 +2461,26 @@
             .always(() => $button.prop('disabled', false));
     });
 
+    $('#saveCaseTweakXpByRarity').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        const updates = $('#caseTweakXpByRarityTableBody tr').map(function () {
+            const $row = $(this);
+            return {
+                rarityKey: String($row.find('.js-tweak-xp-rarity').data('rarity-key')),
+                xpAwarded: Math.max(0, Math.trunc(Number($row.find('.js-tweak-xp-rarity').val()) || 0))
+            };
+        }).get();
+
+        $.when(...updates.map(update => request(`/api/case-opening/settings/xp-by-rarity/${encodeURIComponent(update.rarityKey)}`, 'PUT', {
+            data: JSON.stringify({ xpAwarded: update.xpAwarded }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })))
+            .done(() => window.personalToolsToast?.success('XP rewards saved.'))
+            .fail(() => window.personalToolsToast?.error('One or more XP rewards could not be saved.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
     $('#caseTweakResetButton').on('click', function () {
         // Showing a second modal before the first one's hide transition (and backdrop cleanup)
         // has actually finished corrupts Bootstrap's modal state - the tweak modal would then
@@ -2445,17 +2496,14 @@
     $('#caseTweakResetForm').on('submit', function (event) {
         event.preventDefault();
         request('/api/case-opening/dev/reset', 'POST', { showLoader: false })
-            .done(function (progress) {
-                renderProgress(progress);
-                loadCaseCatalogue().done(renderTweakCaseList);
-                loadBotProgress();
-                sessionOpenings = [];
-                selectedInventoryIds.clear();
-                loadHistory();
-                loadCollection(caseKey);
-                loadStatistics(caseKey);
-                bootstrap.Modal.getInstance(document.getElementById('caseTweakResetModal'))?.hide();
-                window.personalToolsToast?.success('Your account has been reset to a new player.');
+            .done(function () {
+                // A reset touches almost every piece of client state at once - selected case, bot
+                // feed, history, collection, statistics, unlocked-case list, etc. Patching all of
+                // that back into sync individually is exactly how the bot feed and selected-case
+                // bugs happened (both got missed). A reload guarantees everything comes back from
+                // the fresh server state instead of relying on every spot being reconciled by hand.
+                window.personalToolsToast?.queue('Your account has been reset to a new player.', 'success');
+                window.location.reload();
             })
             .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Your account could not be reset.'));
     });

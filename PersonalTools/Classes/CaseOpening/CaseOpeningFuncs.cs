@@ -28,6 +28,8 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningGameSettingsObj> SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
     Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default);
+    Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default);
 
     // Testing overrides for the caller's own account only.
     Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
@@ -238,7 +240,9 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("This bot is still cooling down. It can open another case shortly.");
         }
 
-        return await OpenCase(userId, caseKey, cancellationToken);
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        Dictionary<string, int> xpByRarity = await GetXpByRarityByKey(cancellationToken);
+        return await OpenCase(userId, caseKey, cancellationToken, xpByRarity, settings.XpPerCaseOpen);
     }
 
     public async Task<CaseOpeningProgressObj> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default)
@@ -414,20 +418,28 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("Unlock this case before opening it.");
         }
 
+        Dictionary<string, int> xpByRarity = await GetXpByRarityByKey(cancellationToken);
         List<CaseOpeningResultObj> results = [];
         for (int index = 0; index < quantity; index++)
         {
-            results.Add(await OpenCase(userId, caseKey, cancellationToken, settings.XpPerCaseOpen));
+            results.Add(await OpenCase(userId, caseKey, cancellationToken, xpByRarity, settings.XpPerCaseOpen));
         }
 
         return new CaseOpeningOpenBatchResultObj { Results = results };
+    }
+
+    private async Task<Dictionary<string, int>> GetXpByRarityByKey(CancellationToken cancellationToken)
+    {
+        List<CaseOpeningXpByRarityObj> xpByRarity = await _data.GetXpByRarity(cancellationToken);
+        return xpByRarity.ToDictionary(item => item.RarityKey, item => item.XpAwarded, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task<CaseOpeningResultObj> OpenCase(
         Guid userId,
         string caseKey,
         CancellationToken cancellationToken,
-        int? xpPerCaseOpen = null)
+        Dictionary<string, int>? xpByRarity = null,
+        int fallbackXp = 5)
     {
         ValidateCaseKey(caseKey);
         CaseOpeningCaseObj caseData = await _referenceData.GetCase(caseKey, cancellationToken);
@@ -450,7 +462,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         history.OpenedUtc = DateTime.UtcNow;
         await _data.SaveCaseOpening(userId, history, cancellationToken);
 
-        int xpAward = xpPerCaseOpen ?? (await _data.GetGameSettings(cancellationToken)).XpPerCaseOpen;
+        Dictionary<string, int> resolvedXpByRarity = xpByRarity ?? await GetXpByRarityByKey(cancellationToken);
+        int xpAward = resolvedXpByRarity.TryGetValue(rarityKey, out int rarityXp) ? rarityXp : fallbackXp;
         CaseOpeningProgressDbModel? afterXp = await _data.AddCaseOpeningXp(userId, xpAward, cancellationToken);
         int totalXp = afterXp?.Xp ?? 0;
         int newLevel = CaseOpeningXpLevels.GetLevel(totalXp);
@@ -510,6 +523,26 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         return _data.SetCaseSettings(caseKey, unlockCostStars, xpRequirement, cancellationToken);
+    }
+
+    public Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default)
+    {
+        return _data.GetXpByRarity(cancellationToken);
+    }
+
+    public Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default)
+    {
+        if (!SaleValues.ContainsKey(rarityKey))
+        {
+            throw new InvalidOperationException("This is not a recognised rarity.");
+        }
+
+        if (xpAwarded < 0)
+        {
+            throw new InvalidOperationException("XP awarded cannot be negative.");
+        }
+
+        return _data.SetXpByRarity(rarityKey, xpAwarded, cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)

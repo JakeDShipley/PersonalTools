@@ -27,6 +27,8 @@ public interface ICaseOpeningData
     Task SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
     Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default);
+    Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
     Task SetCaseOpeningCaseUnlockDev(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
@@ -303,6 +305,19 @@ public sealed class CaseOpeningData : ICaseOpeningData
             cancellationToken);
     }
 
+    public Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_xp_by_rarity_get_all", ReadXpByRarity, cancellationToken: cancellationToken);
+    }
+
+    public Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_xp_by_rarity_set",
+            Parameters(("p_rarity_key", rarityKey), ("p_xp_awarded", xpAwarded)),
+            cancellationToken);
+    }
+
     public Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)
     {
         return _database.GetDataSP(
@@ -414,6 +429,15 @@ public sealed class CaseOpeningData : ICaseOpeningData
             CaseKey = reader.GetString("CaseKey"),
             UnlockCostStars = reader.GetInt32("UnlockCostStars"),
             XpRequirement = reader.GetInt32("XpRequirement")
+        };
+    }
+
+    private static CaseOpeningXpByRarityObj ReadXpByRarity(MySqlDataReader reader)
+    {
+        return new CaseOpeningXpByRarityObj
+        {
+            RarityKey = reader.GetString("RarityKey"),
+            XpAwarded = reader.GetInt32("XpAwarded")
         };
     }
 
