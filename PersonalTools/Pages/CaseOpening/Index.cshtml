@@ -31,10 +31,34 @@
 
     <div class="alert alert-danger d-none" id="caseOpeningError" role="alert"></div>
 
-    <aside class="case-stars-dock shadow-sm" aria-label="Case-opening Stars balance" aria-live="polite">
-        <span class="case-stars-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
-        <strong id="caseStarsBalance" aria-live="polite">0</strong>
-    </aside>
+    <div class="case-dock-row">
+        <aside class="case-stars-dock shadow-sm" aria-label="Case-opening Stars balance" aria-live="polite">
+            <span class="case-stars-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
+            <strong id="caseStarsBalance" aria-live="polite">0</strong>
+        </aside>
+        <button class="case-tweak-button shadow-sm" id="caseTweakButton" type="button" data-bs-toggle="modal" data-bs-target="#caseTweakModal" aria-label="Open variable tweak modal" title="Tweak variables (testing)">
+            <i class="fa-solid fa-wrench" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="case-xp-bar section-spacing" id="caseXpBar" aria-live="polite">
+        <div class="case-xp-bar-head">
+            <span class="case-xp-level-badge" id="caseXpLevelBadge">Lv 0</span>
+            <span class="case-xp-text" id="caseXpText">0 / 100 XP</span>
+        </div>
+        <div class="case-xp-track" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="caseXpTrack">
+            <span class="case-xp-fill" id="caseXpFill"></span>
+        </div>
+
+        <div class="case-level-up-toast d-none" id="caseLevelUpToast" aria-live="polite" aria-atomic="true">
+            <span class="case-level-up-burst" aria-hidden="true"></span>
+            <i class="fa-solid fa-star" aria-hidden="true"></i>
+            <div>
+                <p>Level up!</p>
+                <strong id="caseLevelUpText">Level 1</strong>
+            </div>
+        </div>
+    </div>
 
     <section class="card border-0 shadow-sm case-stage section-spacing" aria-labelledby="caseName">
         <canvas class="case-effects-canvas" id="caseEffectsCanvas" aria-hidden="true"></canvas>
@@ -191,6 +215,7 @@
             <div class="row g-3 pt-1">
                 <div class="col-12 col-lg-6">
                     <article class="case-upgrade-card h-100" id="caseSkipUpgrade">
+                        <span class="case-xp-requirement-badge d-none" id="caseSkipUpgradeXpBadge"></span>
                         <span class="case-upgrade-icon"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></span>
                         <div class="case-upgrade-copy">
                             <div class="d-flex align-items-center justify-content-between gap-2">
@@ -210,6 +235,7 @@
                 </div>
                 <div class="col-12 col-lg-6">
                     <article class="case-upgrade-card h-100" id="caseMultiUpgrade">
+                        <span class="case-xp-requirement-badge d-none" id="caseMultiUpgradeXpBadge"></span>
                         <span class="case-upgrade-icon"><i class="fa-solid fa-clone" aria-hidden="true"></i></span>
                         <div class="case-upgrade-copy">
                             <div class="d-flex align-items-center justify-content-between gap-2">
@@ -650,6 +676,196 @@
                         <span class="hold-delete-label position-relative">Hold to discard inventory</span>
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="caseTweakResetModal" tabindex="-1" aria-labelledby="caseTweakResetTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="caseTweakResetTitle">Reset as new player?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This wipes your Stars, XP, upgrades, unlocked cases (except Kilowatt), bot servers/bots, and opening history/collection. It cannot be undone.</p>
+                <form id="caseTweakResetForm">
+                    <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="caseTweakResetForm" data-hold-modal="caseTweakResetModal" data-hold-duration-ms="2500">
+                        <span class="hold-delete-fill"></span>
+                        <span class="hold-delete-label position-relative">Hold to reset your account</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="caseTweakModal" tabindex="-1" aria-labelledby="caseTweakTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1">Testing tools</p>
+                    <h2 class="modal-title fs-5" id="caseTweakTitle">Variable tweak modal</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning border-0 d-flex align-items-start gap-2 mb-3">
+                    <i class="fa-solid fa-triangle-exclamation mt-1" aria-hidden="true"></i>
+                    <span><strong>Your progress</strong> only changes your own account. <strong>Game settings</strong> and <strong>Case costs</strong> are shared and change the game for everyone.</span>
+                </div>
+
+                <ul class="nav nav-tabs case-tweak-tabs" id="caseTweakTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="caseTweakProgressTab" data-bs-toggle="tab" data-bs-target="#caseTweakProgressPane" type="button" role="tab" aria-controls="caseTweakProgressPane" aria-selected="true">Your progress</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="caseTweakSettingsTab" data-bs-toggle="tab" data-bs-target="#caseTweakSettingsPane" type="button" role="tab" aria-controls="caseTweakSettingsPane" aria-selected="false">Game settings</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="caseTweakCasesTab" data-bs-toggle="tab" data-bs-target="#caseTweakCasesPane" type="button" role="tab" aria-controls="caseTweakCasesPane" aria-selected="false">Case costs</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content case-tweak-tab-content pt-3" id="caseTweakTabContent">
+                    <div class="tab-pane fade show active" id="caseTweakProgressPane" role="tabpanel" aria-labelledby="caseTweakProgressTab">
+                        <form id="caseTweakProgressForm">
+                            <div class="row g-3 align-items-end mb-4">
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakStars">Stars</label>
+                                    <input class="form-control" id="caseTweakStars" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakXp">XP</label>
+                                    <input class="form-control" id="caseTweakXp" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-12 col-md-auto">
+                                    <button class="btn btn-warning" type="submit">Save Stars &amp; XP</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <form id="caseTweakUpgradesForm" class="mb-4">
+                            <h3 class="h6">Upgrades</h3>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-6 col-md-3">
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input pt-switch" id="caseTweakSkipAnimation" type="checkbox" role="switch" />
+                                        <label class="form-check-label small fw-semibold" for="caseTweakSkipAnimation">Skip animation unlocked</label>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMultiOpenLevel">Multi-open level</label>
+                                    <input class="form-control" id="caseTweakMultiOpenLevel" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-12 col-md-auto">
+                                    <button class="btn btn-warning" type="submit">Save upgrades</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                            <div>
+                                <h3 class="h6 mb-1">Unlocked cases</h3>
+                                <p class="small-muted mb-0">Toggle any case unlocked/locked for your account without spending Stars.</p>
+                            </div>
+                            <div class="btn-group btn-group-sm case-tweak-case-view-toggle" role="group" aria-label="Unlocked cases view">
+                                <button class="btn btn-outline-secondary active" type="button" data-case-tweak-view="cards" aria-pressed="true" title="Card view">
+                                    <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Card view</span>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" data-case-tweak-view="list" aria-pressed="false" title="List view">
+                                    <i class="fa-solid fa-list" aria-hidden="true"></i>
+                                    <span class="visually-hidden">List view</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="case-tweak-case-list case-tweak-case-list-cards" id="caseTweakCaseList"></div>
+
+                        <div class="case-tweak-danger-zone mt-4">
+                            <h3 class="h6 mb-1">Danger zone</h3>
+                            <p class="small-muted mb-3">Wipes your Stars, XP, upgrades, unlocked cases, bots, and opening history back to a brand-new account. Cannot be undone.</p>
+                            <button class="btn btn-outline-danger" id="caseTweakResetButton" type="button">
+                                <i class="fa-solid fa-user-slash me-1"></i>Reset as new player
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="caseTweakSettingsPane" role="tabpanel" aria-labelledby="caseTweakSettingsTab">
+                        <form id="caseTweakSettingsForm">
+                            <div class="row g-3">
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakXpPerOpen">XP per case open</label>
+                                    <input class="form-control" id="caseTweakXpPerOpen" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakSkipCost">Skip animation cost (Stars)</label>
+                                    <input class="form-control" id="caseTweakSkipCost" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakSkipXpReq">Skip animation XP requirement</label>
+                                    <input class="form-control" id="caseTweakSkipXpReq" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMultiCost">Multi-open cost (Stars)</label>
+                                    <input class="form-control" id="caseTweakMultiCost" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMultiXpReq">Multi-open XP requirement</label>
+                                    <input class="form-control" id="caseTweakMultiXpReq" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMaxMultiLevel">Maximum multi-open level</label>
+                                    <input class="form-control" id="caseTweakMaxMultiLevel" type="number" min="1" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMaxOpenQuantity">Maximum open quantity</label>
+                                    <input class="form-control" id="caseTweakMaxOpenQuantity" type="number" min="1" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakBotInterval">Bot opening interval (seconds)</label>
+                                    <input class="form-control" id="caseTweakBotInterval" type="number" min="1" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakBotServerBaseCost">Bot server base cost (Stars)</label>
+                                    <input class="form-control" id="caseTweakBotServerBaseCost" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakBotServerCostIncrement">Bot server cost increment (Stars)</label>
+                                    <input class="form-control" id="caseTweakBotServerCostIncrement" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakBotBaseCost">Bot base cost (Stars)</label>
+                                    <input class="form-control" id="caseTweakBotBaseCost" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakBotGrowthRate">Bot cost growth rate</label>
+                                    <input class="form-control" id="caseTweakBotGrowthRate" type="number" min="1" step="0.001" />
+                                </div>
+                            </div>
+                            <button class="btn btn-warning mt-4" type="submit">Save game settings</button>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="caseTweakCasesPane" role="tabpanel" aria-labelledby="caseTweakCasesTab">
+                        <p class="small-muted">Unlock cost and XP requirement per case. Changes are shared across every account.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle case-tweak-cases-table" id="caseTweakCasesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Case</th>
+                                        <th>Unlock cost (Stars)</th>
+                                        <th>XP requirement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="caseTweakCasesTableBody"></tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-warning" type="button" id="saveCaseTweakCosts">Save all case costs</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
