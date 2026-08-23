@@ -3,6 +3,7 @@
 
     const $page = $('.case-opening-page');
     let caseKey = String($page.data('case-key'));
+    $('#appToastContainer').addClass('case-toast-dock-offset');
     const $reel = $('#caseReel');
     const $idle = $('#caseReelIdle');
     const $open = $('#openCaseButton');
@@ -173,18 +174,26 @@
     function renderProgress(progress) {
         caseProgress = progress || null;
         const stars = Number(caseProgress?.stars || 0);
+        const level = Number(caseProgress?.level || 0);
         const skipUnlocked = caseProgress?.skipAnimationUnlocked === true;
         const multiLevel = Number(caseProgress?.multiOpenLevel || 0);
         const maximumMultiLevel = Number(caseProgress?.maximumMultiOpenLevel || 4);
         const multiUnlocked = multiLevel > 0;
-        const skipCost = Number(caseProgress?.skipAnimationCost || 35);
-        const multiCost = Number(caseProgress?.multiOpenCost || 150);
+        const skipCost = Number(caseProgress?.skipAnimationCost || 0);
+        const multiCost = Number(caseProgress?.multiOpenCost || 0);
+        const skipXpReq = Number(caseProgress?.skipAnimationXpRequirement || 0);
+        const multiXpReq = Number(caseProgress?.multiOpenXpRequirement || 0);
+        const skipLevelLocked = skipXpReq > 0 && level < skipXpReq;
+        const multiLevelLocked = multiXpReq > 0 && level < multiXpReq;
 
         $('#caseStarsBalance, #caseUpgradeStarsBalance').text(stars);
+        renderXpBar();
         $('#caseSkipUpgradeCost').text(`${skipCost} Stars`);
         $('#caseMultiUpgradeCost').text(`${multiCost} Stars`);
         $('#caseSkipUpgrade').toggleClass('is-unlocked', skipUnlocked);
         $('#caseMultiUpgrade').toggleClass('is-unlocked', multiUnlocked);
+        renderXpRequirementBadge($('#caseSkipUpgradeXpBadge'), skipXpReq);
+        renderXpRequirementBadge($('#caseMultiUpgradeXpBadge'), multiXpReq);
         $('#caseSkipAnimation')
             .prop('disabled', !skipUnlocked)
             .prop('checked', skipUnlocked && loadSkipAnimationPreference());
@@ -193,11 +202,11 @@
             ? `All ${maximumMultiLevel} extra openings unlocked · up to 5 cases`
             : `${multiLevel} of ${maximumMultiLevel} extra openings unlocked · up to ${1 + multiLevel} cases`);
         $('#unlockSkipAnimation')
-            .prop('disabled', skipUnlocked || stars < skipCost)
-            .text(skipUnlocked ? 'Unlocked' : `Unlock for ${skipCost}`);
+            .prop('disabled', skipUnlocked || stars < skipCost || skipLevelLocked)
+            .text(skipUnlocked ? 'Unlocked' : skipLevelLocked ? `Reach level ${skipXpReq}` : `Unlock for ${skipCost}`);
         $('#unlockMultiOpen')
-            .prop('disabled', multiLevel >= maximumMultiLevel || stars < multiCost)
-            .text(multiLevel >= maximumMultiLevel ? 'Fully unlocked' : `Unlock +1 for ${multiCost}`);
+            .prop('disabled', multiLevel >= maximumMultiLevel || stars < multiCost || multiLevelLocked)
+            .text(multiLevel >= maximumMultiLevel ? 'Fully unlocked' : multiLevelLocked ? `Reach level ${multiXpReq}` : `Unlock +1 for ${multiCost}`);
         $('#caseOpenQuantity').removeClass('d-none');
 
         if (selectedOpenQuantity > 1 + multiLevel) {
@@ -208,6 +217,157 @@
         renderInventorySelection();
         refreshInventorySaleValues();
         if (botProgress) renderBotProgress(botProgress);
+        if ($('#caseSelectorGrid').children().length) renderCaseSelector(catalogue);
+    }
+
+    function renderXpRequirementBadge($badge, requirement) {
+        if (!requirement || requirement <= 0) {
+            $badge.addClass('d-none').text('');
+            return;
+        }
+        $badge.removeClass('d-none').text(`Lv ${requirement}`);
+    }
+
+    // Mirrors CaseOpeningXpLevels in C#: level N needs an additional 100*N xp beyond level N-1.
+    function xpCumulativeForLevel(level) {
+        return 100 * level * (level + 1) / 2;
+    }
+
+    function xpLevelForTotal(xp) {
+        let level = 0;
+        while (xp >= xpCumulativeForLevel(level + 1)) level += 1;
+        return level;
+    }
+
+    function renderXpBar() {
+        const xp = Number(caseProgress?.xp || 0);
+        const level = xpLevelForTotal(xp);
+        const xpIntoLevel = xp - xpCumulativeForLevel(level);
+        const xpForNextLevel = Math.max(1, xpCumulativeForLevel(level + 1) - xpCumulativeForLevel(level));
+        const percentage = Math.max(0, Math.min(100, Math.round((xpIntoLevel / xpForNextLevel) * 100)));
+
+        $('#caseXpLevelBadge').text(`Lv ${level}`);
+        $('#caseXpText').text(`${xpIntoLevel} / ${xpForNextLevel} XP`);
+        $('#caseXpFill').css('width', `${percentage}%`);
+        $('#caseXpTrack').attr('aria-valuenow', String(percentage));
+    }
+
+    function playLevelUpAnimation(level) {
+        const $toast = $('#caseLevelUpToast');
+        $('#caseLevelUpText').text(`Level ${level}`);
+        $toast.removeClass('d-none').addClass('is-visible');
+        playLevelUp();
+        window.clearTimeout(playLevelUpAnimation.timer);
+        playLevelUpAnimation.timer = window.setTimeout(function () {
+            $toast.removeClass('is-visible');
+            window.setTimeout(() => $toast.addClass('d-none'), 300);
+        }, 2200);
+    }
+
+    const xpBubbleFlightMs = 1150;
+    const xpBubblePopMs = 300;
+
+    // Finds the element the XP bubble should launch from - the actual revealed skin wherever it
+    // currently is (the big gold reveal image, the skip-reveal card, the settled reel winner, or
+    // a multi-open result card), falling back to the reel window itself if none of those apply.
+    function resultImageOrigin(result) {
+        const $goldImage = $('#caseGoldRevealImage');
+        if ($goldImage.length && !$goldImage.closest('#caseGoldReveal').hasClass('d-none')) return $goldImage;
+
+        const $skipImage = $reel.find('.case-skip-result img');
+        if ($skipImage.length) return $skipImage;
+
+        const $multiCard = $reel.find('.case-multi-result').last();
+        if ($multiCard.length) return $multiCard;
+
+        const $winnerCard = result ? $reel.children().eq(result.winnerIndex) : $();
+        if ($winnerCard.length) return $winnerCard;
+
+        return $('#caseReelWindow');
+    }
+
+    // Flies a "+N XP" bubble from wherever the opened skin is on screen to the XP bar, then
+    // resolves once it lands so the caller can update the bar's fill right as it arrives.
+    function flyXpBubble(amount, $origin) {
+        const deferred = $.Deferred();
+        if (!amount) {
+            deferred.resolve();
+            return deferred.promise();
+        }
+
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const $source = $origin && $origin.length ? $origin : $('#caseReelWindow');
+        const $target = $('#caseXpBar');
+        if (!$target.length || (!reduced && !$source.length)) {
+            deferred.resolve();
+            return deferred.promise();
+        }
+
+        const $bubble = $('<span class="case-xp-bubble">')
+            .text(`+${amount}`)
+            .toggleClass('is-long', String(amount).length >= 3);
+        $('body').append($bubble);
+
+        if (reduced) {
+            // Respect the no-motion preference (no flight), but still show something rather than
+            // nothing - a brief static pop directly over the XP bar.
+            const targetRect = $target[0].getBoundingClientRect();
+            $bubble.css({ left: targetRect.left + (targetRect.width / 2), top: targetRect.top + (targetRect.height / 2) });
+            window.setTimeout(function () {
+                $bubble.remove();
+                deferred.resolve();
+            }, 500);
+            return deferred.promise();
+        }
+
+        const sourceRect = $source[0].getBoundingClientRect();
+        const targetRect = $target[0].getBoundingClientRect();
+        const startX = sourceRect.left + (sourceRect.width / 2);
+        const startY = sourceRect.top + (sourceRect.height / 2);
+        const endX = targetRect.left + (targetRect.width / 2);
+        const endY = targetRect.top + (targetRect.height / 2);
+        $bubble.css({ left: startX, top: startY });
+
+        // Force the browser to commit the starting position/appearance before changing it,
+        // rather than relying on requestAnimationFrame - which does not reliably fire right after
+        // an element is inserted (observed directly: its callback can simply never run).
+        void $bubble[0].offsetWidth;
+
+        $bubble[0].style.setProperty('--case-xp-bubble-dx', `${endX - startX}px`);
+        $bubble[0].style.setProperty('--case-xp-bubble-dy', `${endY - startY}px`);
+        $bubble.addClass('is-flying');
+
+        window.setTimeout(function () {
+            // Swap the flight transition for the landing keyframe animation (same position, so
+            // there's no jump) and flash the bar to sell the impact.
+            $bubble.removeClass('is-flying').addClass('is-landed');
+            $target.addClass('is-hit');
+            window.setTimeout(() => $target.removeClass('is-hit'), 450);
+
+            deferred.resolve();
+
+            window.setTimeout(function () {
+                $bubble.remove();
+            }, xpBubblePopMs);
+        }, xpBubbleFlightMs);
+
+        return deferred.promise();
+    }
+
+    // Called right after the celebration sparkles for a result, so the bubble launches from the
+    // skin that was just revealed rather than firing the moment the server response arrives.
+    function awardXp(results, $origin) {
+        if (!Array.isArray(results) || !results.length || !caseProgress) return;
+        const last = results[results.length - 1];
+        const xpGained = results.reduce((sum, item) => sum + Number(item.xpAwarded || 0), 0);
+        const totalXp = Number(last.totalXp || (caseProgress.xp + xpGained));
+        const leveledUp = results.some(item => item.leveledUp);
+
+        flyXpBubble(xpGained, $origin).done(function () {
+            caseProgress = { ...caseProgress, xp: totalXp };
+            renderXpBar();
+            if (leveledUp) playLevelUpAnimation(xpLevelForTotal(totalXp));
+        });
     }
 
     function isCaseUnlocked(item) {
@@ -341,6 +501,15 @@
         if (key === 'covert' || key === 'rare-special') noise(0.24, key === 'rare-special' ? 0.07 : 0.045);
     }
 
+    // A short rising fanfare - distinct in shape from playReveal's rarity chimes - timed to land
+    // just as the level-up toast pops in.
+    function playLevelUp() {
+        ensureAudioContext();
+        [523, 659, 784, 1047].forEach((frequency, index) => tone(frequency, 0.32, 'triangle', 0.07, index * 0.08));
+        tone(1568, 0.4, 'sine', 0.05, 0.32);
+        noise(0.18, 0.03);
+    }
+
     function renderSoundControls() {
         const percentage = Math.round(soundState.volume * 100);
         const audible = soundState.enabled && percentage > 0;
@@ -454,9 +623,10 @@
     function queueBotResult(result) {
         addResultsToInventory([result], false);
         const winner = result.winner;
+        const $image = $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
         $('#caseBotFeed').removeClass('d-none').prepend(
             $('<div>', { class: `case-bot-feed-item ${rarityClass(winner)}` }).append(
-                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $image,
                 $('<span>').append(
                     $('<small>', { text: `${result.caseName} bot drop` }),
                     $('<strong>', { text: winner.name })
@@ -471,6 +641,8 @@
             loadCollection(result.caseKey);
             loadStatistics(result.caseKey);
         }, 120);
+
+        return $image;
     }
 
     function runBotCycle() {
@@ -487,7 +659,10 @@
                 contentType: 'application/json; charset=utf-8',
                 showLoader: false
             })
-                .done(queueBotResult)
+                .done(function (result) {
+                    const $feedImage = queueBotResult(result);
+                    awardXp([result], $feedImage);
+                })
                 .fail(function (response) {
                     const message = response.responseJSON?.message || '';
                     if (!message.toLowerCase().includes('cooling down')) {
@@ -504,6 +679,33 @@
         botTimer = null;
         renderBotProgress(botProgress);
         if (showToast) window.personalToolsToast?.info('Bot operation stopped.');
+    }
+
+    function startBots(showToast) {
+        const bots = (botProgress?.servers || []).flatMap(server => server.bots || []);
+        if (botsRunning || bots.length === 0 || !$('#caseBotCaseSelect').val()) return;
+        botsRunning = true;
+        renderBotProgress(botProgress);
+        runBotCycle();
+        window.clearInterval(botTimer);
+        botTimer = window.setInterval(runBotCycle, Number(botProgress?.openingIntervalSeconds || 12) * 1000);
+        if (showToast) window.personalToolsToast?.success('Bot operation started. Keep this tab visible to continue opening cases.');
+    }
+
+    // Bots keep "running" conceptually while the tab is hidden - only the interval that actually
+    // ticks openings is paused/resumed, so switching back to this tab picks up right where it
+    // left off instead of requiring another manual Start click.
+    function pauseBotsForHiddenTab() {
+        if (!botTimer) return;
+        window.clearInterval(botTimer);
+        botTimer = null;
+    }
+
+    function resumeBotsIfDue() {
+        if (!botsRunning || botTimer || document.hidden) return;
+        runBotCycle();
+        botTimer = window.setInterval(runBotCycle, Number(botProgress?.openingIntervalSeconds || 12) * 1000);
+        window.personalToolsToast?.info('Bot operation resumed.');
     }
 
     function rarityClass(item) {
@@ -907,6 +1109,9 @@
         const inputId = `case-option-${item.caseKey}`;
         const unlocked = isCaseUnlocked(item);
         const unlockCost = Number(item.unlockCostStars || 0);
+        const xpRequirement = Number(item.xpRequirement || 0);
+        const playerLevel = Number(caseProgress?.level || 0);
+        const levelLocked = !unlocked && xpRequirement > 0 && playerLevel < xpRequirement;
         const multiplier = Number(item.saleMultiplier || 1);
         const status = unlocked
             ? $('<span>', { class: 'case-selector-status is-unlocked' }).append(
@@ -916,7 +1121,8 @@
                 class: 'btn btn-warning btn-sm case-selector-unlock js-unlock-case',
                 type: 'button',
                 'data-case-key': item.caseKey,
-                text: `Unlock · ${unlockCost} Stars`
+                disabled: levelLocked,
+                text: levelLocked ? `Reach level ${xpRequirement}` : `Unlock · ${unlockCost} Stars`
             });
 
         return $('<div>', { class: 'col-6 col-sm-4 col-lg-3 col-xl' }).append(
@@ -926,6 +1132,9 @@
                 tabindex: unlocked ? 0 : undefined,
                 'data-case-key': item.caseKey
             }).append(
+                xpRequirement > 0
+                    ? $('<span>', { class: 'case-xp-requirement-badge', text: `Lv ${xpRequirement}` })
+                    : null,
                 $('<img>', { class: 'case-selector-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
                 $('<span>', { class: 'case-selector-shade', 'aria-hidden': 'true' }),
                 $('<span>', { class: 'case-selector-content' }).append(
@@ -1265,8 +1474,7 @@
     }
 
     function animateReel(result) {
-        $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
-        $('#caseMultiResults').addClass('d-none').empty();
+        $reel.removeClass('case-skip-reel case-multi-reel').empty().css('transform', 'translateX(0px)');
         result.reel.forEach(item => $reel.append(itemCard(item, 'case-reel-item')));
         $idle.addClass('d-none');
         $result.addClass('d-none');
@@ -1305,6 +1513,7 @@
         runParticles(winner.rarityColor || '#e4ae39', 120);
 
         if (!window.anime?.animate || reduced) {
+            awardXp([result], resultImageOrigin(result));
             finishOpening(result);
             return;
         }
@@ -1319,6 +1528,7 @@
         $('#caseGoldRevealName').text(winner.name);
         $('#caseGoldRevealMeta').text([winner.phase, winner.wear, winner.isStatTrak ? 'StatTrak™' : ''].filter(Boolean).join(' · '));
         $reveal.removeClass('d-none');
+        awardXp([result], $('#caseGoldRevealImage'));
 
         window.anime.animate(reveal, { opacity: [0, 1], duration: 180, ease: 'out(3)' });
         window.anime.animate(rings, { scale: [.2, 1.45], opacity: [.9, 0], delay: (_, index) => index * 160, duration: 1150, ease: 'out(5)' });
@@ -1380,31 +1590,39 @@
         $result.removeClass('case-rarity-mil-spec case-rarity-restricted case-rarity-classified case-rarity-covert case-rarity-rare-special')
             .addClass(rarityClass(winner))
             .removeClass('d-none');
-        if (!isGoldItem(winner)) runParticles(winner.rarityColor, 28);
+        if (!isGoldItem(winner)) {
+            runParticles(winner.rarityColor, 28);
+            awardXp([result], resultImageOrigin(result));
+        }
         completeOpening([result]);
     }
 
     function multiResultCard(result) {
         const winner = result.winner;
-        return $('<div>', { class: 'col-6 col-lg' }).append(
-            $('<article>', { class: `case-multi-result ${rarityClass(winner)}` }).append(
-                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
-                $('<strong>', { text: winner.name })
-            )
+        return $('<article>', { class: `case-multi-result ${rarityClass(winner)}` }).append(
+            $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+            $('<strong>', { text: winner.name })
         );
     }
 
     function showMultiResults(results) {
-        const $multiResults = $('#caseMultiResults').empty().removeClass('d-none');
-        $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
+        // Multiple results settle inside the reel window itself (like the single-item skip
+        // reveal), rather than in a separate area below the Open button, so every opening -
+        // one case or several - lands in the same place on screen.
+        $reel
+            .addClass('case-multi-reel')
+            .removeClass('case-skip-reel')
+            .empty()
+            .css('transform', 'translateX(0px)');
         $idle.addClass('d-none');
         $result.addClass('d-none');
-        results.forEach(result => $multiResults.append(multiResultCard(result)));
+        results.forEach(result => $reel.append(multiResultCard(result)));
         results.filter(result => isGoldItem(result.winner)).forEach(result => {
             runParticles(result.winner.rarityColor || '#e4ae39', 64);
         });
+        awardXp(results, resultImageOrigin());
         window.personalToolsMotion?.reveal(
-            $multiResults.children().get(),
+            $reel.children().get(),
             { fromY: 14, delay: 80, duration: 420 }
         );
         window.setTimeout(() => completeOpening(results), 450);
@@ -1428,11 +1646,11 @@
         // Keeping this inside the reel window makes the quick path feel like an intentional reveal.
         $reel
             .addClass('case-skip-reel')
+            .removeClass('case-multi-reel')
             .empty()
             .css('transform', 'translateX(0px)')
             .append($skipCard);
         $idle.addClass('d-none');
-        $('#caseMultiResults').addClass('d-none').empty();
         $result.addClass('d-none');
         window.setTimeout(function () {
             if (isGoldItem(winner)) {
@@ -1619,27 +1837,23 @@
             .done(function (progress) {
                 renderBotProgress(progress);
                 renderProgress({ ...caseProgress, stars: progress.stars });
-                window.personalToolsToast?.success('Opening bot installed and ready for assignment.');
+                window.personalToolsToast?.success('Opening bot installed and started.');
+                startBots(false);
             })
             .fail(response => showError(response, 'The bot could not be purchased.'))
             .always(() => $button.prop('disabled', false));
     });
 
-    $('#startCaseBots').on('click', function () {
-        if (botsRunning || !$('#caseBotCaseSelect').val()) return;
-        botsRunning = true;
-        renderBotProgress(botProgress);
-        runBotCycle();
-        botTimer = window.setInterval(runBotCycle, Number(botProgress?.openingIntervalSeconds || 12) * 1000);
-        window.personalToolsToast?.success('Bot operation started. Keep this tab visible to continue opening cases.');
-    });
+    $('#startCaseBots').on('click', () => startBots(true));
 
     $('#stopCaseBots').on('click', () => stopBots(true));
 
     document.addEventListener('visibilitychange', function () {
-        if (document.hidden && botsRunning) {
-            stopBots(false);
-            window.personalToolsToast?.info('Bot operation paused because the Case Opening tab is no longer visible.');
+        if (document.hidden) {
+            pauseBotsForHiddenTab();
+            if (botsRunning) window.personalToolsToast?.info('Bot operation paused because the Case Opening tab is no longer visible.');
+        } else {
+            resumeBotsIfDue();
         }
     });
 
@@ -1870,6 +2084,296 @@
                 window.personalToolsToast?.success('Case-opening inventory discarded.');
             })
             .fail(response => showError(response, 'Your case-opening inventory could not be discarded.'));
+    });
+
+    // ---------- variable tweak modal (testing tools) ----------
+
+    function fillTweakProgressForm() {
+        $('#caseTweakStars').val(Number(caseProgress?.stars || 0));
+        $('#caseTweakXp').val(Number(caseProgress?.xp || 0));
+        $('#caseTweakSkipAnimation').prop('checked', caseProgress?.skipAnimationUnlocked === true);
+        $('#caseTweakMultiOpenLevel').val(Number(caseProgress?.multiOpenLevel || 0));
+    }
+
+    const caseTweakViewStorageKey = 'personalTools.caseOpeningTweakView';
+
+    function loadCaseTweakView() {
+        try {
+            return localStorage.getItem(caseTweakViewStorageKey) === 'list' ? 'list' : 'cards';
+        } catch {
+            return 'cards';
+        }
+    }
+
+    function saveCaseTweakView(view) {
+        try {
+            localStorage.setItem(caseTweakViewStorageKey, view);
+        } catch {
+            // The view choice still applies for this visit when browser storage is unavailable.
+        }
+    }
+
+    function setCaseTweakView(view) {
+        const resolved = view === 'list' ? 'list' : 'cards';
+        saveCaseTweakView(resolved);
+        $('#caseTweakCaseList')
+            .toggleClass('case-tweak-case-list-cards', resolved === 'cards')
+            .toggleClass('case-tweak-case-list-rows', resolved === 'list');
+        $('[data-case-tweak-view]').each(function () {
+            const active = $(this).data('case-tweak-view') === resolved;
+            $(this).toggleClass('active', active).attr('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    // The whole card/row is a native <label> wrapping its checkbox (not a for-attribute pointing
+    // at a nested id), so clicking anywhere on it toggles the switch exactly once - no separate
+    // click handler needed, and no nested <label> (which would be invalid HTML alongside a
+    // for-attribute pairing).
+    function tweakCaseCard(item, unlocked) {
+        return $('<label class="case-tweak-case-card">', { 'data-case-key': item.caseKey }).toggleClass('is-unlocked', unlocked).append(
+            $('<img>', { class: 'case-tweak-case-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+            $('<span class="case-tweak-case-shade" aria-hidden="true">'),
+            $('<span class="case-tweak-case-name">').text(item.name),
+            $('<span class="form-switch case-tweak-case-switch">').append(
+                $('<input>', {
+                    class: 'form-check-input pt-switch js-tweak-case-toggle',
+                    type: 'checkbox',
+                    role: 'switch',
+                    'data-case-key': item.caseKey,
+                    checked: unlocked,
+                    'aria-label': `Unlock ${item.name}`
+                })
+            )
+        );
+    }
+
+    function tweakCaseRow(item, unlocked) {
+        return $('<label class="case-tweak-case-row">', { 'data-case-key': item.caseKey }).append(
+            $('<img>', { class: 'case-tweak-case-row-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+            $('<span class="case-tweak-case-row-name">').text(item.name),
+            $('<span class="case-tweak-case-row-status small">').text(unlocked ? 'Unlocked' : 'Locked'),
+            $('<span class="form-switch case-tweak-case-row-switch">').append(
+                $('<input>', {
+                    class: 'form-check-input pt-switch js-tweak-case-toggle',
+                    type: 'checkbox',
+                    role: 'switch',
+                    'data-case-key': item.caseKey,
+                    checked: unlocked,
+                    'aria-label': `Unlock ${item.name}`
+                })
+            )
+        );
+    }
+
+    function renderTweakCaseList() {
+        const $list = $('#caseTweakCaseList').empty();
+        catalogue.forEach(item => {
+            const unlocked = isCaseUnlocked(item);
+            $list.append(tweakCaseCard(item, unlocked), tweakCaseRow(item, unlocked));
+        });
+        setCaseTweakView(loadCaseTweakView());
+    }
+
+    function fillTweakSettingsForm(settings) {
+        $('#caseTweakXpPerOpen').val(Number(settings.xpPerCaseOpen || 0));
+        $('#caseTweakSkipCost').val(Number(settings.skipAnimationCostStars || 0));
+        $('#caseTweakSkipXpReq').val(Number(settings.skipAnimationXpRequirement || 0));
+        $('#caseTweakMultiCost').val(Number(settings.multiOpenCostStars || 0));
+        $('#caseTweakMultiXpReq').val(Number(settings.multiOpenXpRequirement || 0));
+        $('#caseTweakMaxMultiLevel').val(Number(settings.maximumMultiOpenLevel || 4));
+        $('#caseTweakMaxOpenQuantity').val(Number(settings.maximumOpenQuantity || 5));
+        $('#caseTweakBotInterval').val(Number(settings.botOpeningIntervalSeconds || 12));
+        $('#caseTweakBotServerBaseCost').val(Number(settings.botServerBaseCostStars || 0));
+        $('#caseTweakBotServerCostIncrement').val(Number(settings.botServerCostIncrementStars || 0));
+        $('#caseTweakBotBaseCost').val(Number(settings.botBaseCostStars || 0));
+        $('#caseTweakBotGrowthRate').val(Number(settings.botCostGrowthRate || 1.55));
+    }
+
+    function renderTweakCasesTable(caseSettingsList) {
+        const settingsByKey = new Map(caseSettingsList.map(item => [String(item.caseKey).toLowerCase(), item]));
+        const $body = $('#caseTweakCasesTableBody').empty();
+        catalogue.forEach(item => {
+            const settings = settingsByKey.get(String(item.caseKey).toLowerCase()) || { unlockCostStars: 0, xpRequirement: 0 };
+            $body.append(
+                $('<tr>').append(
+                    $('<td>', { text: item.name }),
+                    $('<td>').append($('<input>', {
+                        class: 'form-control form-control-sm js-tweak-case-cost',
+                        type: 'number',
+                        min: 0,
+                        step: 1,
+                        'data-case-key': item.caseKey,
+                        value: Number(settings.unlockCostStars || 0)
+                    })),
+                    $('<td>').append($('<input>', {
+                        class: 'form-control form-control-sm js-tweak-case-xp',
+                        type: 'number',
+                        min: 0,
+                        step: 1,
+                        'data-case-key': item.caseKey,
+                        value: Number(settings.xpRequirement || 0)
+                    }))
+                )
+            );
+        });
+    }
+
+    $('#caseTweakModal').on('show.bs.modal', function () {
+        fillTweakProgressForm();
+        renderTweakCaseList();
+        request('/api/case-opening/settings', 'GET', { showLoader: false })
+            .done(fillTweakSettingsForm)
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Game settings could not be loaded.'));
+        request('/api/case-opening/settings/cases', 'GET', { showLoader: false })
+            .done(renderTweakCasesTable)
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Case settings could not be loaded.'));
+    });
+
+    $('#caseTweakProgressForm').on('submit', function (event) {
+        event.preventDefault();
+        const payload = {
+            stars: Math.max(0, Math.trunc(Number($('#caseTweakStars').val()) || 0)),
+            xp: Math.max(0, Math.trunc(Number($('#caseTweakXp').val()) || 0))
+        };
+        request('/api/case-opening/dev/progress', 'PUT', {
+            data: JSON.stringify(payload),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (progress) {
+                renderProgress(progress);
+                window.personalToolsToast?.success('Stars and XP updated.');
+            })
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Your progress could not be updated.'));
+    });
+
+    $('#caseTweakUpgradesForm').on('submit', function (event) {
+        event.preventDefault();
+        const payload = {
+            skipAnimationUnlocked: $('#caseTweakSkipAnimation').is(':checked'),
+            multiOpenLevel: Math.max(0, Math.trunc(Number($('#caseTweakMultiOpenLevel').val()) || 0))
+        };
+        request('/api/case-opening/dev/upgrades', 'PUT', {
+            data: JSON.stringify(payload),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (progress) {
+                renderProgress(progress);
+                window.personalToolsToast?.success('Upgrades updated.');
+            })
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Your upgrades could not be updated.'));
+    });
+
+    $('[data-case-tweak-view]').on('click', function () {
+        setCaseTweakView(String($(this).data('case-tweak-view')));
+    });
+
+    $('#caseTweakCaseList').on('change', '.js-tweak-case-toggle', function () {
+        const $toggle = $(this);
+        const caseKeyToToggle = String($toggle.data('case-key'));
+        const unlock = $toggle.is(':checked');
+        $toggle.prop('disabled', true);
+        request(`/api/case-opening/dev/cases/${encodeURIComponent(caseKeyToToggle)}`, 'PUT', {
+            data: JSON.stringify({ unlock: unlock }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (progress) {
+                renderProgress(progress);
+                loadCaseCatalogue().done(renderTweakCaseList);
+                window.personalToolsToast?.success(unlock ? 'Case unlocked.' : 'Case locked.');
+            })
+            .fail(function (response) {
+                $toggle.prop('checked', !unlock);
+                window.personalToolsToast?.error(response.responseJSON?.message || 'This case could not be updated.');
+            })
+            .always(() => $toggle.prop('disabled', false));
+    });
+
+    $('#caseTweakSettingsForm').on('submit', function (event) {
+        event.preventDefault();
+        const payload = {
+            xpPerCaseOpen: Math.max(0, Math.trunc(Number($('#caseTweakXpPerOpen').val()) || 0)),
+            skipAnimationCostStars: Math.max(0, Math.trunc(Number($('#caseTweakSkipCost').val()) || 0)),
+            skipAnimationXpRequirement: Math.max(0, Math.trunc(Number($('#caseTweakSkipXpReq').val()) || 0)),
+            multiOpenCostStars: Math.max(0, Math.trunc(Number($('#caseTweakMultiCost').val()) || 0)),
+            multiOpenXpRequirement: Math.max(0, Math.trunc(Number($('#caseTweakMultiXpReq').val()) || 0)),
+            maximumMultiOpenLevel: Math.max(1, Math.trunc(Number($('#caseTweakMaxMultiLevel').val()) || 1)),
+            maximumOpenQuantity: Math.max(1, Math.trunc(Number($('#caseTweakMaxOpenQuantity').val()) || 1)),
+            botOpeningIntervalSeconds: Math.max(1, Math.trunc(Number($('#caseTweakBotInterval').val()) || 1)),
+            botServerBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakBotServerBaseCost').val()) || 0)),
+            botServerCostIncrementStars: Math.max(0, Math.trunc(Number($('#caseTweakBotServerCostIncrement').val()) || 0)),
+            botBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakBotBaseCost').val()) || 0)),
+            botCostGrowthRate: Math.max(1, Number($('#caseTweakBotGrowthRate').val()) || 1)
+        };
+        request('/api/case-opening/settings', 'PUT', {
+            data: JSON.stringify(payload),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (settings) {
+                fillTweakSettingsForm(settings);
+                loadProgress();
+                loadBotProgress();
+                window.personalToolsToast?.success('Game settings saved.');
+            })
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Game settings could not be saved.'));
+    });
+
+    $('#saveCaseTweakCosts').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        const updates = $('#caseTweakCasesTableBody tr').map(function () {
+            const $row = $(this);
+            const caseKeyToSave = String($row.find('.js-tweak-case-cost').data('case-key'));
+            return {
+                caseKey: caseKeyToSave,
+                unlockCostStars: Math.max(0, Math.trunc(Number($row.find('.js-tweak-case-cost').val()) || 0)),
+                xpRequirement: Math.max(0, Math.trunc(Number($row.find('.js-tweak-case-xp').val()) || 0))
+            };
+        }).get();
+
+        $.when(...updates.map(update => request(`/api/case-opening/settings/cases/${encodeURIComponent(update.caseKey)}`, 'PUT', {
+            data: JSON.stringify({ unlockCostStars: update.unlockCostStars, xpRequirement: update.xpRequirement }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })))
+            .done(function () {
+                loadCaseCatalogue();
+                window.personalToolsToast?.success('Case costs saved.');
+            })
+            .fail(() => window.personalToolsToast?.error('One or more case costs could not be saved.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#caseTweakResetButton').on('click', function () {
+        // Showing a second modal before the first one's hide transition (and backdrop cleanup)
+        // has actually finished corrupts Bootstrap's modal state - the tweak modal would then
+        // refuse to reopen until the page was refreshed. Waiting for hidden.bs.modal before
+        // showing the next one avoids that.
+        const tweakModalEl = document.getElementById('caseTweakModal');
+        $(tweakModalEl).one('hidden.bs.modal', function () {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTweakResetModal')).show();
+        });
+        bootstrap.Modal.getInstance(tweakModalEl)?.hide();
+    });
+
+    $('#caseTweakResetForm').on('submit', function (event) {
+        event.preventDefault();
+        request('/api/case-opening/dev/reset', 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderProgress(progress);
+                loadCaseCatalogue().done(renderTweakCaseList);
+                loadBotProgress();
+                sessionOpenings = [];
+                selectedInventoryIds.clear();
+                loadHistory();
+                loadCollection(caseKey);
+                loadStatistics(caseKey);
+                bootstrap.Modal.getInstance(document.getElementById('caseTweakResetModal'))?.hide();
+                window.personalToolsToast?.success('Your account has been reset to a new player.');
+            })
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Your account could not be reset.'));
     });
 
     $('#caseHistoryPageSize').val(String(historyPageSize));

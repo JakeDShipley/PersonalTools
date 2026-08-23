@@ -22,65 +22,27 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
     Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
+
+    // Game settings (global, shared) + per-case settings, for the variable-tweak modal.
+    Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default);
+    Task<CaseOpeningGameSettingsObj> SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
+    Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+
+    // Testing overrides for the caller's own account only.
+    Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressObj> SetDevCaseUnlock(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressObj> ResetDevProgress(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
 {
-    // Keep rewards and upgrade prices here so the simulator economy can be rebalanced without
-    // changing browser code. MariaDB repeats the reward ladder only while completing a sale atomically.
-    private const int SkipAnimationCost = 250;
-    private const int MultiOpenCost = 1000;
-    private const int MaximumOpenQuantity = 5;
-    private const int MaximumMultiOpenLevel = MaximumOpenQuantity - 1;
     private const int BotServerCapacity = 4;
-    private const int BotOpeningIntervalSeconds = 12;
     private const string StarterCaseKey = "kilowatt";
 
-    // These are intentional Stars approximations of the relative Community Market value of the
-    // curated cases. They are not real-money prices and can be tuned without changing odds.
-    // A case costs Stars once to add it to a player's collection. Openings themselves are free,
-    // so a player can enjoy the simulator without repeatedly grinding for the same case.
-    private static readonly Dictionary<string, int> CaseUnlockCosts = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [StarterCaseKey] = 0,
-        ["fever"] = 10,
-        ["gallery"] = 10,
-        ["fracture"] = 10,
-        ["austin-2025-legends"] = 10,
-        ["snakebite"] = 15,
-        ["revolution"] = 15,
-        ["prisma-2"] = 20,
-        ["copenhagen-2024-legends"] = 20,
-        ["dreams-and-nightmares"] = 20,
-        ["recoil"] = 20,
-        ["prisma"] = 25,
-        ["paris-2023-legends"] = 30,
-        ["clutch"] = 35,
-        ["shattered-web"] = 40,
-        ["chroma-2"] = 40,
-        ["antwerp-2022-legends"] = 60,
-        ["broken-fang"] = 75,
-        ["breakout"] = 60,
-        ["cs20"] = 60,
-        ["stockholm-2021-legends"] = 80,
-        ["gamma-2"] = 80,
-        ["riptide"] = 100,
-        ["spectrum-2"] = 110,
-        ["atlanta-2017-legends"] = 120,
-        ["hydra"] = 150,
-        ["glove"] = 200,
-        ["esports-2013"] = 250,
-        ["weapon-case-3"] = 250,
-        ["esports-2014-summer"] = 275,
-        ["esports-2013-winter"] = 300,
-        ["weapon-case-1"] = 350,
-        ["weapon-case-2"] = 450,
-        ["cologne-2014-legends"] = 1200,
-        ["katowice-2014-challengers"] = 1000,
-        ["katowice-2014-legends"] = 1500,
-        ["cologne-2014-cobblestone-souvenir"] = 3000
-    };
-
+    // Higher unlock tiers pay more when their simulated items are sold. This does not depend on
+    // rebalance-in-testing the same way Stars costs/XP requirements do, so it stays a plain const.
     private static readonly Dictionary<string, int> SaleValues = new(StringComparer.OrdinalIgnoreCase)
     {
         ["mil-spec"] = 1,
@@ -92,6 +54,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         ["covert"] = 8,
         ["rare-special"] = 16
     };
+
     private readonly ICaseOpeningReferenceData _referenceData;
     private readonly ICaseOpeningData _data;
     private readonly ICS2ItemPriceData _prices;
@@ -118,10 +81,13 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         // endpoint so opening the page does not transfer every skin across all curated cases.
         List<CaseOpeningCaseObj> cases = await _referenceData.GetCuratedCases(cancellationToken);
         List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
+        Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings = await GetCaseSettingsByKey(cancellationToken);
         cases.ForEach(caseData =>
         {
-            caseData.UnlockCostStars = GetCaseUnlockCost(caseData.CaseKey);
-            caseData.SaleMultiplier = GetCaseSaleMultiplier(caseData.CaseKey);
+            (int cost, int xpRequirement) = GetCaseSettings(caseSettings, caseData.CaseKey);
+            caseData.UnlockCostStars = cost;
+            caseData.XpRequirement = xpRequirement;
+            caseData.SaleMultiplier = GetCaseSaleMultiplier(cost);
             caseData.IsUnlocked = unlockedCaseKeys.Contains(caseData.CaseKey, StringComparer.OrdinalIgnoreCase);
         });
         return cases
@@ -184,8 +150,9 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
         List<CaseOpeningBotServerDbModel> servers = await _data.GetCaseOpeningBotServers(userId, cancellationToken);
         List<CaseOpeningBotDbModel> bots = await _data.GetCaseOpeningBots(userId, cancellationToken);
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
 
-        return CreateBotProgress(progress.Stars, servers, bots);
+        return CreateBotProgress(progress.Stars, servers, bots, settings);
     }
 
     public async Task<CaseOpeningBotProgressObj> PurchaseCaseOpeningBotServer(Guid userId, CancellationToken cancellationToken = default)
@@ -241,9 +208,12 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
 
     public async Task<CaseOpeningProgressObj> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default)
     {
-        return CreateProgress(
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        return await BuildProgress(
             await _data.GetCaseOpeningProgress(userId, cancellationToken),
-            await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken));
+            settings,
+            await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken),
+            cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> UnlockCaseOpeningCase(
@@ -254,10 +224,12 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         ValidateCaseKey(caseKey);
         await _referenceData.GetCase(caseKey, cancellationToken);
 
-        if (!CaseUnlockCosts.TryGetValue(caseKey, out int cost))
+        Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings = await GetCaseSettingsByKey(cancellationToken);
+        if (!caseSettings.TryGetValue(caseKey, out CaseOpeningCaseSettingsObj? settings))
         {
             throw new InvalidOperationException("This case does not have an unlock price configured yet.");
         }
+
         List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
         if (unlockedCaseKeys.Contains(caseKey, StringComparer.OrdinalIgnoreCase))
         {
@@ -265,19 +237,25 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
-        if (progress.Stars < cost)
+        if (settings.XpRequirement > 0 && CaseOpeningXpLevels.GetLevel(progress.Xp) < settings.XpRequirement)
         {
-            throw new InvalidOperationException($"You need {cost} Stars to unlock this case.");
+            throw new InvalidOperationException($"Reach level {settings.XpRequirement} to unlock this case.");
         }
 
-        CaseOpeningProgressDbModel? updated = await _data.UnlockCaseOpeningCase(userId, caseKey, cost, cancellationToken);
+        if (progress.Stars < settings.UnlockCostStars)
+        {
+            throw new InvalidOperationException($"You need {settings.UnlockCostStars} Stars to unlock this case.");
+        }
+
+        CaseOpeningProgressDbModel? updated = await _data.UnlockCaseOpeningCase(userId, caseKey, settings.UnlockCostStars, cancellationToken);
         if (updated is null)
         {
             throw new InvalidOperationException("The case could not be unlocked because your Stars balance changed. Please try again.");
         }
 
         unlockedCaseKeys.Add(caseKey);
-        return CreateProgress(updated, unlockedCaseKeys);
+        CaseOpeningGameSettingsObj gameSettings = await _data.GetGameSettings(cancellationToken);
+        return await BuildProgress(updated, gameSettings, unlockedCaseKeys, cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> UnlockCaseOpeningUpgrade(
@@ -285,10 +263,11 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         string upgradeKey,
         CancellationToken cancellationToken = default)
     {
-        (string Key, int Cost, Func<CaseOpeningProgressDbModel, bool> IsUnlocked) upgrade = upgradeKey switch
+        CaseOpeningGameSettingsObj gameSettings = await _data.GetGameSettings(cancellationToken);
+        (string Key, int Cost, int XpRequirement, Func<CaseOpeningProgressDbModel, bool> IsUnlocked) upgrade = upgradeKey switch
         {
-            "skip-animation" => ("skip-animation", SkipAnimationCost, progress => progress.SkipAnimationUnlocked),
-            "multi-open" => ("multi-open", MultiOpenCost, progress => progress.MultiOpenLevel >= MaximumMultiOpenLevel),
+            "skip-animation" => ("skip-animation", gameSettings.SkipAnimationCostStars, gameSettings.SkipAnimationXpRequirement, progress => progress.SkipAnimationUnlocked),
+            "multi-open" => ("multi-open", gameSettings.MultiOpenCostStars, gameSettings.MultiOpenXpRequirement, progress => progress.MultiOpenLevel >= gameSettings.MaximumMultiOpenLevel),
             _ => throw new InvalidOperationException("That case-opening upgrade is not available.")
         };
 
@@ -296,6 +275,11 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         if (upgrade.IsUnlocked(progress))
         {
             throw new InvalidOperationException("That case-opening upgrade is already unlocked.");
+        }
+
+        if (upgrade.XpRequirement > 0 && CaseOpeningXpLevels.GetLevel(progress.Xp) < upgrade.XpRequirement)
+        {
+            throw new InvalidOperationException($"Reach level {upgrade.XpRequirement} to unlock this upgrade.");
         }
 
         if (progress.Stars < upgrade.Cost)
@@ -307,6 +291,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             userId,
             upgrade.Key,
             upgrade.Cost,
+            gameSettings.MaximumMultiOpenLevel,
             cancellationToken);
 
         if (updated is null)
@@ -314,7 +299,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("The upgrade could not be unlocked because your Stars balance changed. Please try again.");
         }
 
-        return CreateProgress(updated);
+        return await BuildProgress(updated, gameSettings, null, cancellationToken);
     }
 
     public async Task<CaseOpeningSellResultObj> SellCaseOpeningInventory(
@@ -343,9 +328,15 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("One or more selected inventory items could not be sold. Refresh your inventory and try again.");
         }
 
+        Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings = await GetCaseSettingsByKey(cancellationToken);
+
         // Higher unlock tiers pay more when their simulated items are sold. This is calculated
         // here rather than trusted from the browser, so a user cannot inflate their reward.
-        int starsAwarded = selectedItems.Sum(item => GetSaleValue(item.RarityKey) * GetCaseSaleMultiplier(item.CaseKey));
+        int starsAwarded = selectedItems.Sum(item =>
+        {
+            (int cost, _) = GetCaseSettings(caseSettings, item.CaseKey);
+            return GetSaleValue(item.RarityKey) * GetCaseSaleMultiplier(cost);
+        });
         CaseOpeningSellResultDbModel? result = await _data.SellCaseOpeningInventory(
             userId,
             selectedIds,
@@ -369,9 +360,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         int quantity,
         CancellationToken cancellationToken = default)
     {
-        if (quantity < 1 || quantity > MaximumOpenQuantity)
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        if (quantity < 1 || quantity > settings.MaximumOpenQuantity)
         {
-            throw new InvalidOperationException($"Open between 1 and {MaximumOpenQuantity} cases at a time.");
+            throw new InvalidOperationException($"Open between 1 and {settings.MaximumOpenQuantity} cases at a time.");
         }
 
         CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
@@ -390,7 +382,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         List<CaseOpeningResultObj> results = [];
         for (int index = 0; index < quantity; index++)
         {
-            results.Add(await OpenCase(userId, caseKey, cancellationToken));
+            results.Add(await OpenCase(userId, caseKey, cancellationToken, settings.XpPerCaseOpen));
         }
 
         return new CaseOpeningOpenBatchResultObj { Results = results };
@@ -399,7 +391,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
     private async Task<CaseOpeningResultObj> OpenCase(
         Guid userId,
         string caseKey,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? xpPerCaseOpen = null)
     {
         ValidateCaseKey(caseKey);
         CaseOpeningCaseObj caseData = await _referenceData.GetCase(caseKey, cancellationToken);
@@ -422,6 +415,12 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         history.OpenedUtc = DateTime.UtcNow;
         await _data.SaveCaseOpening(userId, history, cancellationToken);
 
+        int xpAward = xpPerCaseOpen ?? (await _data.GetGameSettings(cancellationToken)).XpPerCaseOpen;
+        CaseOpeningProgressDbModel? afterXp = await _data.AddCaseOpeningXp(userId, xpAward, cancellationToken);
+        int totalXp = afterXp?.Xp ?? 0;
+        int newLevel = CaseOpeningXpLevels.GetLevel(totalXp);
+        int previousLevel = CaseOpeningXpLevels.GetLevel(totalXp - xpAward);
+
         const int winnerIndex = 31;
         List<CaseOpeningItemObj> reel = Enumerable.Range(0, 38)
             // The visible reel must resemble the published rarity odds. Choosing uniformly from
@@ -437,7 +436,11 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             CaseName = caseData.Name,
             Winner = winner,
             Reel = reel,
-            WinnerIndex = winnerIndex
+            WinnerIndex = winnerIndex,
+            XpAwarded = xpAward,
+            TotalXp = totalXp,
+            Level = newLevel,
+            LeveledUp = newLevel > previousLevel
         };
     }
 
@@ -446,23 +449,141 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return _data.ClearCaseOpeningHistory(userId, cancellationToken);
     }
 
-    private static CaseOpeningProgressObj CreateProgress(CaseOpeningProgressDbModel progress, List<string>? unlockedCaseKeys = null)
+    public Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default)
+    {
+        return _data.GetGameSettings(cancellationToken);
+    }
+
+    public async Task<CaseOpeningGameSettingsObj> SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default)
+    {
+        ValidateGameSettings(settings);
+        await _data.SetGameSettings(settings, cancellationToken);
+        return await _data.GetGameSettings(cancellationToken);
+    }
+
+    public Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default)
+    {
+        return _data.GetCaseSettings(cancellationToken);
+    }
+
+    public Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default)
+    {
+        ValidateCaseKey(caseKey);
+        if (unlockCostStars < 0 || xpRequirement < 0)
+        {
+            throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
+        }
+
+        return _data.SetCaseSettings(caseKey, unlockCostStars, xpRequirement, cancellationToken);
+    }
+
+    public async Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)
+    {
+        if (stars < 0 || xp < 0)
+        {
+            throw new InvalidOperationException("Stars and XP cannot be negative.");
+        }
+
+        CaseOpeningProgressDbModel? updated = await _data.SetCaseOpeningProgressDev(userId, stars, xp, cancellationToken);
+        if (updated is null)
+        {
+            throw new InvalidOperationException("Your progress could not be updated. Please try again.");
+        }
+
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        return await BuildProgress(updated, settings, await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken), cancellationToken);
+    }
+
+    public async Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        if (multiOpenLevel < 0 || multiOpenLevel > settings.MaximumMultiOpenLevel)
+        {
+            throw new InvalidOperationException($"Multi-open level must be between 0 and {settings.MaximumMultiOpenLevel}.");
+        }
+
+        CaseOpeningProgressDbModel? updated = await _data.SetCaseOpeningUpgradesDev(userId, skipAnimationUnlocked, multiOpenLevel, cancellationToken);
+        if (updated is null)
+        {
+            throw new InvalidOperationException("Your upgrades could not be updated. Please try again.");
+        }
+
+        return await BuildProgress(updated, settings, await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken), cancellationToken);
+    }
+
+    public async Task<CaseOpeningProgressObj> SetDevCaseUnlock(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default)
+    {
+        ValidateCaseKey(caseKey);
+        await _data.SetCaseOpeningCaseUnlockDev(userId, caseKey, unlock, cancellationToken);
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        return await BuildProgress(
+            await _data.GetCaseOpeningProgress(userId, cancellationToken),
+            settings,
+            await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken),
+            cancellationToken);
+    }
+
+    public async Task<CaseOpeningProgressObj> ResetDevProgress(Guid userId, CancellationToken cancellationToken = default)
+    {
+        await _data.ResetCaseOpeningProgressDev(userId, cancellationToken);
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        return await BuildProgress(
+            await _data.GetCaseOpeningProgress(userId, cancellationToken),
+            settings,
+            await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<Dictionary<string, CaseOpeningCaseSettingsObj>> GetCaseSettingsByKey(CancellationToken cancellationToken)
+    {
+        List<CaseOpeningCaseSettingsObj> settings = await _data.GetCaseSettings(cancellationToken);
+        return settings.ToDictionary(item => item.CaseKey, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static (int Cost, int XpRequirement) GetCaseSettings(Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings, string caseKey)
+    {
+        return caseSettings.TryGetValue(caseKey, out CaseOpeningCaseSettingsObj? settings)
+            ? (settings.UnlockCostStars, settings.XpRequirement)
+            : (0, 0);
+    }
+
+    private async Task<CaseOpeningProgressObj> BuildProgress(
+        CaseOpeningProgressDbModel progress,
+        CaseOpeningGameSettingsObj settings,
+        List<string>? unlockedCaseKeys,
+        CancellationToken cancellationToken)
+    {
+        Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings = await GetCaseSettingsByKey(cancellationToken);
+        CaseOpeningProgressObj result = CreateProgress(progress, settings, unlockedCaseKeys);
+        result.CaseSaleMultipliers = caseSettings.Values.ToDictionary(
+            item => item.CaseKey,
+            item => GetCaseSaleMultiplier(item.UnlockCostStars),
+            StringComparer.OrdinalIgnoreCase);
+        return result;
+    }
+
+    private static CaseOpeningProgressObj CreateProgress(
+        CaseOpeningProgressDbModel progress,
+        CaseOpeningGameSettingsObj settings,
+        List<string>? unlockedCaseKeys = null)
     {
         return new CaseOpeningProgressObj
         {
             UserId = progress.UserId,
             Stars = progress.Stars,
+            Xp = progress.Xp,
+            Level = CaseOpeningXpLevels.GetLevel(progress.Xp),
+            XpIntoLevel = CaseOpeningXpLevels.GetXpIntoLevel(progress.Xp),
+            XpForNextLevel = CaseOpeningXpLevels.GetXpForNextLevel(progress.Xp),
             SkipAnimationUnlocked = progress.SkipAnimationUnlocked,
             MultiOpenLevel = progress.MultiOpenLevel,
-            SkipAnimationCost = SkipAnimationCost,
-            MultiOpenCost = MultiOpenCost,
-            MaximumMultiOpenLevel = MaximumMultiOpenLevel,
-            MaximumOpenQuantity = MaximumOpenQuantity,
+            SkipAnimationCost = settings.SkipAnimationCostStars,
+            SkipAnimationXpRequirement = settings.SkipAnimationXpRequirement,
+            MultiOpenCost = settings.MultiOpenCostStars,
+            MultiOpenXpRequirement = settings.MultiOpenXpRequirement,
+            MaximumMultiOpenLevel = settings.MaximumMultiOpenLevel,
+            MaximumOpenQuantity = settings.MaximumOpenQuantity,
             SaleValues = new Dictionary<string, int>(SaleValues, StringComparer.OrdinalIgnoreCase),
-            CaseSaleMultipliers = CaseUnlockCosts.Keys.ToDictionary(
-                caseKey => caseKey,
-                GetCaseSaleMultiplier,
-                StringComparer.OrdinalIgnoreCase),
             UnlockedCaseKeys = unlockedCaseKeys ?? []
         };
     }
@@ -485,16 +606,9 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         };
     }
 
-    private static int GetCaseUnlockCost(string caseKey)
+    private static int GetCaseSaleMultiplier(int unlockCostStars)
     {
-        return CaseUnlockCosts.TryGetValue(caseKey, out int value) ? value : 0;
-    }
-
-    private static int GetCaseSaleMultiplier(string caseKey)
-    {
-        int unlockCost = GetCaseUnlockCost(caseKey);
-
-        return unlockCost switch
+        return unlockCostStars switch
         {
             >= 1_000 => 6,
             >= 200 => 4,
@@ -507,7 +621,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
     private static CaseOpeningBotProgressObj CreateBotProgress(
         int stars,
         List<CaseOpeningBotServerDbModel> servers,
-        List<CaseOpeningBotDbModel> bots)
+        List<CaseOpeningBotDbModel> bots,
+        CaseOpeningGameSettingsObj settings)
     {
         List<CaseOpeningBotServerObj> serverObjs = servers
             .OrderBy(server => server.CreatedUtc)
@@ -526,21 +641,21 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         {
             Stars = stars,
             ServerCapacity = BotServerCapacity,
-            OpeningIntervalSeconds = BotOpeningIntervalSeconds,
-            NextServerCost = GetNextBotServerCost(serverObjs.Count),
-            NextBotCost = GetNextBotCost(bots.Count),
+            OpeningIntervalSeconds = settings.BotOpeningIntervalSeconds,
+            NextServerCost = GetNextBotServerCost(serverObjs.Count, settings),
+            NextBotCost = GetNextBotCost(bots.Count, settings),
             Servers = serverObjs
         };
     }
 
-    private static int GetNextBotServerCost(int ownedServerCount)
+    private static int GetNextBotServerCost(int ownedServerCount, CaseOpeningGameSettingsObj settings)
     {
-        return 2_500 + (ownedServerCount * 2_500);
+        return settings.BotServerBaseCostStars + (ownedServerCount * settings.BotServerCostIncrementStars);
     }
 
-    private static int GetNextBotCost(int ownedBotCount)
+    private static int GetNextBotCost(int ownedBotCount, CaseOpeningGameSettingsObj settings)
     {
-        return (int)Math.Ceiling(600d * Math.Pow(1.55d, ownedBotCount));
+        return (int)Math.Ceiling((double)settings.BotBaseCostStars * Math.Pow((double)settings.BotCostGrowthRate, ownedBotCount));
     }
 
     public async Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(
@@ -667,6 +782,32 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
     private static CaseOpeningItemObj Clone(CaseOpeningItemObj item)
     {
         return item.Adapt<CaseOpeningItemObj>();
+    }
+
+    private static void ValidateGameSettings(CaseOpeningGameSettingsObj settings)
+    {
+        if (settings.XpPerCaseOpen < 0 || settings.SkipAnimationCostStars < 0 || settings.MultiOpenCostStars < 0
+            || settings.SkipAnimationXpRequirement < 0 || settings.MultiOpenXpRequirement < 0
+            || settings.BotServerBaseCostStars < 0 || settings.BotServerCostIncrementStars < 0
+            || settings.BotBaseCostStars < 0)
+        {
+            throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
+        }
+
+        if (settings.MaximumMultiOpenLevel < 1 || settings.MaximumOpenQuantity < 1)
+        {
+            throw new InvalidOperationException("Maximum multi-open level and open quantity must be at least 1.");
+        }
+
+        if (settings.BotOpeningIntervalSeconds < 1)
+        {
+            throw new InvalidOperationException("Bot opening interval must be at least 1 second.");
+        }
+
+        if (settings.BotCostGrowthRate < 1m)
+        {
+            throw new InvalidOperationException("Bot cost growth rate must be at least 1.0.");
+        }
     }
 
     private static void ValidateCaseKey(string caseKey)

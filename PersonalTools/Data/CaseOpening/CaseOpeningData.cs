@@ -11,7 +11,7 @@ public interface ICaseOpeningData
     Task<CaseOpeningProgressDbModel> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default);
     Task<List<string>> GetCaseOpeningUnlockedCases(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningCase(Guid userId, string caseKey, int cost, CancellationToken cancellationToken = default);
-    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, int maximumMultiOpenLevel, CancellationToken cancellationToken = default);
     Task<CaseOpeningSellResultDbModel?> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, int starsAwarded, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotServerDbModel>> GetCaseOpeningBotServers(Guid userId, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotDbModel>> GetCaseOpeningBots(Guid userId, CancellationToken cancellationToken = default);
@@ -22,6 +22,15 @@ public interface ICaseOpeningData
     Task SaveCaseOpening(Guid userId, CaseOpeningHistoryDbModel opening, CancellationToken cancellationToken = default);
     Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsDbModel> GetCaseOpeningStatistics(Guid userId, string caseKey, string targetRarityKey, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> AddCaseOpeningXp(Guid userId, int xpDelta, CancellationToken cancellationToken = default);
+    Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default);
+    Task SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
+    Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
+    Task SetCaseOpeningCaseUnlockDev(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
+    Task ResetCaseOpeningProgressDev(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public sealed class CaseOpeningData : ICaseOpeningData
@@ -67,12 +76,17 @@ public sealed class CaseOpeningData : ICaseOpeningData
         Guid userId,
         string upgradeKey,
         int cost,
+        int maximumMultiOpenLevel,
         CancellationToken cancellationToken = default)
     {
         return _database.GetDataSP(
             "sp_case_opening_upgrade_unlock",
             ReadProgress,
-            Parameters(("p_user_id", userId), ("p_upgrade_key", upgradeKey), ("p_cost", cost)),
+            Parameters(
+                ("p_user_id", userId),
+                ("p_upgrade_key", upgradeKey),
+                ("p_cost", cost),
+                ("p_max_multi_open_level", maximumMultiOpenLevel)),
             cancellationToken);
     }
 
@@ -239,6 +253,90 @@ public sealed class CaseOpeningData : ICaseOpeningData
             cancellationToken) ?? new CaseOpeningStatisticsDbModel();
     }
 
+    public Task<CaseOpeningProgressDbModel?> AddCaseOpeningXp(Guid userId, int xpDelta, CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_xp_add",
+            ReadProgress,
+            Parameters(("p_user_id", userId), ("p_xp_delta", xpDelta)),
+            cancellationToken);
+    }
+
+    public async Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default)
+    {
+        return await _database.GetDataSP(
+            "sp_case_opening_game_settings_get",
+            ReadGameSettings,
+            cancellationToken: cancellationToken) ?? new CaseOpeningGameSettingsObj();
+    }
+
+    public Task SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_game_settings_set",
+            Parameters(
+                ("p_xp_per_case_open", settings.XpPerCaseOpen),
+                ("p_skip_animation_cost_stars", settings.SkipAnimationCostStars),
+                ("p_skip_animation_xp_requirement", settings.SkipAnimationXpRequirement),
+                ("p_multi_open_cost_stars", settings.MultiOpenCostStars),
+                ("p_multi_open_xp_requirement", settings.MultiOpenXpRequirement),
+                ("p_maximum_multi_open_level", settings.MaximumMultiOpenLevel),
+                ("p_maximum_open_quantity", settings.MaximumOpenQuantity),
+                ("p_bot_opening_interval_seconds", settings.BotOpeningIntervalSeconds),
+                ("p_bot_server_base_cost_stars", settings.BotServerBaseCostStars),
+                ("p_bot_server_cost_increment_stars", settings.BotServerCostIncrementStars),
+                ("p_bot_base_cost_stars", settings.BotBaseCostStars),
+                ("p_bot_cost_growth_rate", settings.BotCostGrowthRate)),
+            cancellationToken);
+    }
+
+    public Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_case_settings_get_all", ReadCaseSettings, cancellationToken: cancellationToken);
+    }
+
+    public Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_case_settings_set",
+            Parameters(("p_case_key", caseKey), ("p_unlock_cost_stars", unlockCostStars), ("p_xp_requirement", xpRequirement)),
+            cancellationToken);
+    }
+
+    public Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_progress_dev_set",
+            ReadProgress,
+            Parameters(("p_user_id", userId), ("p_stars", stars), ("p_xp", xp)),
+            cancellationToken);
+    }
+
+    public Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_upgrades_dev_set",
+            ReadProgress,
+            Parameters(("p_user_id", userId), ("p_skip_animation_unlocked", skipAnimationUnlocked), ("p_multi_open_level", multiOpenLevel)),
+            cancellationToken);
+    }
+
+    public Task SetCaseOpeningCaseUnlockDev(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_case_unlock_dev_set",
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey), ("p_unlock", unlock)),
+            cancellationToken);
+    }
+
+    public Task ResetCaseOpeningProgressDev(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_reset_dev",
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
     private static MySqlParameter[] Parameters(params (string Name, object Value)[] values)
     {
         return values.Select(value => new MySqlParameter(value.Name, value.Value)).ToArray();
@@ -284,8 +382,38 @@ public sealed class CaseOpeningData : ICaseOpeningData
         {
             UserId = reader.GetGuid("UserId"),
             Stars = reader.GetInt32("Stars"),
+            Xp = reader.GetInt32("Xp"),
             SkipAnimationUnlocked = reader.GetBoolean("SkipAnimationUnlocked"),
             MultiOpenLevel = reader.GetInt32("MultiOpenLevel")
+        };
+    }
+
+    private static CaseOpeningGameSettingsObj ReadGameSettings(MySqlDataReader reader)
+    {
+        return new CaseOpeningGameSettingsObj
+        {
+            XpPerCaseOpen = reader.GetInt32("XpPerCaseOpen"),
+            SkipAnimationCostStars = reader.GetInt32("SkipAnimationCostStars"),
+            SkipAnimationXpRequirement = reader.GetInt32("SkipAnimationXpRequirement"),
+            MultiOpenCostStars = reader.GetInt32("MultiOpenCostStars"),
+            MultiOpenXpRequirement = reader.GetInt32("MultiOpenXpRequirement"),
+            MaximumMultiOpenLevel = reader.GetInt32("MaximumMultiOpenLevel"),
+            MaximumOpenQuantity = reader.GetInt32("MaximumOpenQuantity"),
+            BotOpeningIntervalSeconds = reader.GetInt32("BotOpeningIntervalSeconds"),
+            BotServerBaseCostStars = reader.GetInt32("BotServerBaseCostStars"),
+            BotServerCostIncrementStars = reader.GetInt32("BotServerCostIncrementStars"),
+            BotBaseCostStars = reader.GetInt32("BotBaseCostStars"),
+            BotCostGrowthRate = reader.GetDecimal("BotCostGrowthRate")
+        };
+    }
+
+    private static CaseOpeningCaseSettingsObj ReadCaseSettings(MySqlDataReader reader)
+    {
+        return new CaseOpeningCaseSettingsObj
+        {
+            CaseKey = reader.GetString("CaseKey"),
+            UnlockCostStars = reader.GetInt32("UnlockCostStars"),
+            XpRequirement = reader.GetInt32("XpRequirement")
         };
     }
 

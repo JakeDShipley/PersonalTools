@@ -35,6 +35,7 @@ public sealed class CaseOpeningCaseObj
     public string Type { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public int UnlockCostStars { get; set; }
+    public int XpRequirement { get; set; }
     public int SaleMultiplier { get; set; } = 1;
     public bool IsUnlocked { get; set; }
     public List<CaseOpeningOddsObj> Odds { get; set; } = [];
@@ -48,6 +49,7 @@ public sealed class CaseOpeningCaseSummaryObj
     public string Type { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public int UnlockCostStars { get; set; }
+    public int XpRequirement { get; set; }
     public int SaleMultiplier { get; set; } = 1;
     public bool IsUnlocked { get; set; }
 }
@@ -68,6 +70,10 @@ public sealed class CaseOpeningResultObj
     public CaseOpeningItemObj Winner { get; set; } = new();
     public List<CaseOpeningItemObj> Reel { get; set; } = [];
     public int WinnerIndex { get; set; }
+    public int XpAwarded { get; set; }
+    public int TotalXp { get; set; }
+    public int Level { get; set; }
+    public bool LeveledUp { get; set; }
 }
 
 public sealed class CaseOpeningOpenRequestObj
@@ -120,19 +126,49 @@ public class CaseOpeningProgressDbModel
 {
     public Guid UserId { get; set; }
     public int Stars { get; set; }
+    public int Xp { get; set; }
     public bool SkipAnimationUnlocked { get; set; }
     public int MultiOpenLevel { get; set; }
 }
 
 public sealed class CaseOpeningProgressObj : CaseOpeningProgressDbModel
 {
+    public int Level { get; set; }
+    public int XpIntoLevel { get; set; }
+    public int XpForNextLevel { get; set; }
     public int SkipAnimationCost { get; set; }
+    public int SkipAnimationXpRequirement { get; set; }
     public int MultiOpenCost { get; set; }
+    public int MultiOpenXpRequirement { get; set; }
     public int MaximumMultiOpenLevel { get; set; }
     public int MaximumOpenQuantity { get; set; }
     public Dictionary<string, int> SaleValues { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, int> CaseSaleMultipliers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> UnlockedCaseKeys { get; set; } = [];
+}
+
+// Global, shared across every account - one singleton row (Id is always 1).
+public sealed class CaseOpeningGameSettingsObj
+{
+    public int XpPerCaseOpen { get; set; }
+    public int SkipAnimationCostStars { get; set; }
+    public int SkipAnimationXpRequirement { get; set; }
+    public int MultiOpenCostStars { get; set; }
+    public int MultiOpenXpRequirement { get; set; }
+    public int MaximumMultiOpenLevel { get; set; }
+    public int MaximumOpenQuantity { get; set; }
+    public int BotOpeningIntervalSeconds { get; set; }
+    public int BotServerBaseCostStars { get; set; }
+    public int BotServerCostIncrementStars { get; set; }
+    public int BotBaseCostStars { get; set; }
+    public decimal BotCostGrowthRate { get; set; }
+}
+
+public sealed class CaseOpeningCaseSettingsObj
+{
+    public string CaseKey { get; set; } = string.Empty;
+    public int UnlockCostStars { get; set; }
+    public int XpRequirement { get; set; }
 }
 
 public sealed class CaseOpeningSellRequestObj

@@ -150,6 +150,86 @@ public sealed class CaseOpeningController : ControllerBase
         }
     }
 
+    // ---------- Game settings + per-case settings (the variable-tweak modal's "Game settings" tab) ----------
+
+    [HttpGet("settings")]
+    public Task<ActionResult<CaseOpeningGameSettingsObj>> GetGameSettings(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetGameSettings(cancellationToken), "load game settings", "all");
+    }
+
+    [HttpPut("settings")]
+    public Task<ActionResult<CaseOpeningGameSettingsObj>> UpdateGameSettings(
+        [FromBody] CaseOpeningGameSettingsObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.SetGameSettings(request, cancellationToken), "update game settings", "all");
+    }
+
+    [HttpGet("settings/cases")]
+    public Task<ActionResult<List<CaseOpeningCaseSettingsObj>>> GetCaseSettings(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseSettings(cancellationToken), "load case settings", "all");
+    }
+
+    [HttpPut("settings/cases/{caseKey}")]
+    public async Task<ActionResult<ApiResponse>> UpdateCaseSettings(
+        string caseKey,
+        [FromBody] CaseOpeningCaseSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _caseOpening.SetCaseSettings(caseKey, request.UnlockCostStars, request.XpRequirement, cancellationToken);
+            return Ok(new ApiResponse(true, "Case settings saved."));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to update case settings for {CaseKey}.", caseKey);
+            return StatusCode(502, new ApiResponse(false, "Case settings could not be saved. Please try again shortly."));
+        }
+    }
+
+    // ---------- Testing overrides for your own account (the variable-tweak modal's "Your progress" tab) ----------
+
+    [HttpPut("dev/progress")]
+    public Task<ActionResult<CaseOpeningProgressObj>> SetDevProgress(
+        [FromBody] CaseOpeningDevProgressRequest request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.SetDevProgress(UserId, request.Stars, request.Xp, cancellationToken), "set dev progress", "all");
+    }
+
+    [HttpPut("dev/upgrades")]
+    public Task<ActionResult<CaseOpeningProgressObj>> SetDevUpgrades(
+        [FromBody] CaseOpeningDevUpgradesRequest request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.SetDevUpgrades(UserId, request.SkipAnimationUnlocked, request.MultiOpenLevel, cancellationToken),
+            "set dev upgrades",
+            "all");
+    }
+
+    [HttpPut("dev/cases/{caseKey}")]
+    public Task<ActionResult<CaseOpeningProgressObj>> SetDevCaseUnlock(
+        string caseKey,
+        [FromBody] CaseOpeningDevCaseUnlockRequest request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.SetDevCaseUnlock(UserId, caseKey, request.Unlock, cancellationToken), "set dev case unlock", caseKey);
+    }
+
+    [HttpPost("dev/reset")]
+    public Task<ActionResult<CaseOpeningProgressObj>> ResetDevProgress(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.ResetDevProgress(UserId, cancellationToken), "reset dev progress", "all");
+    }
+
     private async Task<ActionResult<T>> Execute<T>(Func<Task<T>> action, string operation, string caseKey)
     {
         try
@@ -172,3 +252,8 @@ public sealed class CaseOpeningController : ControllerBase
         }
     }
 }
+
+public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int XpRequirement);
+public sealed record CaseOpeningDevProgressRequest(int Stars, int Xp);
+public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel);
+public sealed record CaseOpeningDevCaseUnlockRequest(bool Unlock);
