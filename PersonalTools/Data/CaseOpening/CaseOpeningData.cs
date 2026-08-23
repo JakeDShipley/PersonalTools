@@ -1,11 +1,24 @@
 using MySqlConnector;
 using PersonalTools.Entities.CaseOpening;
+using System.Text.Json;
 
 namespace PersonalTools.Data.CaseOpening;
 
 public interface ICaseOpeningData
 {
     Task<List<CaseOpeningHistoryDbModel>> GetCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningCollectionDbModel>> GetCaseOpeningCollection(Guid userId, string caseKey, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<string>> GetCaseOpeningUnlockedCases(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningCase(Guid userId, string caseKey, int cost, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, CancellationToken cancellationToken = default);
+    Task<CaseOpeningSellResultDbModel?> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, int starsAwarded, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningBotServerDbModel>> GetCaseOpeningBotServers(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningBotDbModel>> GetCaseOpeningBots(Guid userId, CancellationToken cancellationToken = default);
+    Task PurchaseCaseOpeningBotServer(Guid userId, Guid serverId, int cost, CancellationToken cancellationToken = default);
+    Task PurchaseCaseOpeningBot(Guid userId, Guid serverId, Guid botId, int cost, CancellationToken cancellationToken = default);
+    Task<bool> ClaimCaseOpeningBotCycle(Guid userId, Guid botId, CancellationToken cancellationToken = default);
+    Task<bool> CaseOpeningConditionExists(Guid userId, string sourceItemId, decimal floatValue, int patternSeed, CancellationToken cancellationToken = default);
     Task SaveCaseOpening(Guid userId, CaseOpeningHistoryDbModel opening, CancellationToken cancellationToken = default);
     Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsDbModel> GetCaseOpeningStatistics(Guid userId, string caseKey, string targetRarityKey, CancellationToken cancellationToken = default);
@@ -27,6 +40,150 @@ public sealed class CaseOpeningData : ICaseOpeningData
             ReadHistory,
             Parameters(("p_user_id", userId)),
             cancellationToken);
+    }
+
+    public Task<List<CaseOpeningCollectionDbModel>> GetCaseOpeningCollection(
+        Guid userId,
+        string caseKey,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_collection_get",
+            ReadCollection,
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey)),
+            cancellationToken);
+    }
+
+    public async Task<CaseOpeningProgressDbModel> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _database.GetDataSP(
+            "sp_case_opening_progress_get",
+            ReadProgress,
+            Parameters(("p_user_id", userId)),
+            cancellationToken) ?? new CaseOpeningProgressDbModel { UserId = userId };
+    }
+
+    public Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(
+        Guid userId,
+        string upgradeKey,
+        int cost,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_upgrade_unlock",
+            ReadProgress,
+            Parameters(("p_user_id", userId), ("p_upgrade_key", upgradeKey), ("p_cost", cost)),
+            cancellationToken);
+    }
+
+    public Task<List<string>> GetCaseOpeningUnlockedCases(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_unlocked_cases_get",
+            reader => reader.GetString("CaseKey"),
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningCase(
+        Guid userId,
+        string caseKey,
+        int cost,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_case_unlock",
+            ReadProgress,
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey), ("p_cost", cost)),
+            cancellationToken);
+    }
+
+    public Task<CaseOpeningSellResultDbModel?> SellCaseOpeningInventory(
+        Guid userId,
+        List<Guid> openingIds,
+        int starsAwarded,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP(
+            "sp_case_opening_inventory_sell",
+            ReadSellResult,
+            Parameters(
+                ("p_user_id", userId),
+                ("p_opening_ids", JsonSerializer.Serialize(openingIds)),
+                ("p_item_count", openingIds.Count),
+                ("p_stars_awarded", starsAwarded)),
+            cancellationToken);
+    }
+
+    public Task<List<CaseOpeningBotServerDbModel>> GetCaseOpeningBotServers(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_bot_servers_get",
+            ReadBotServer,
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public Task<List<CaseOpeningBotDbModel>> GetCaseOpeningBots(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_bots_get",
+            ReadBot,
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public Task PurchaseCaseOpeningBotServer(Guid userId, Guid serverId, int cost, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_bot_server_purchase",
+            Parameters(("p_user_id", userId), ("p_server_id", serverId), ("p_cost", cost)),
+            cancellationToken);
+    }
+
+    public Task PurchaseCaseOpeningBot(Guid userId, Guid serverId, Guid botId, int cost, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_bot_purchase",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_server_id", serverId),
+                ("p_bot_id", botId),
+                ("p_cost", cost)),
+            cancellationToken);
+    }
+
+    public async Task<bool> ClaimCaseOpeningBotCycle(Guid userId, Guid botId, CancellationToken cancellationToken = default)
+    {
+        int claimed = await _database.GetScalarSP<int>(
+            "sp_case_opening_bot_cycle_claim",
+            Parameters(("p_user_id", userId), ("p_bot_id", botId)),
+            cancellationToken);
+
+        return claimed == 1;
+    }
+
+    /// <summary>
+    /// Checks the complete float and pattern pairing for this user and skin. Wear names are broad
+    /// bands and can repeat, but an exact simulated item condition should belong to one opening.
+    /// </summary>
+    public async Task<bool> CaseOpeningConditionExists(
+        Guid userId,
+        string sourceItemId,
+        decimal floatValue,
+        int patternSeed,
+        CancellationToken cancellationToken = default)
+    {
+        int count = await _database.GetScalarSP<int>(
+            "sp_case_opening_condition_exists",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_source_item_id", sourceItemId),
+                ("p_float_value", floatValue),
+                ("p_pattern_seed", patternSeed)),
+            cancellationToken);
+
+        return count > 0;
     }
 
     public async Task SaveCaseOpening(Guid userId, CaseOpeningHistoryDbModel opening, CancellationToken cancellationToken = default)
@@ -118,6 +275,63 @@ public sealed class CaseOpeningData : ICaseOpeningData
             // MariaDB DATETIME values have no timezone marker. The column is UTC by contract, so
             // restore that information before JSON serialisation rather than letting browsers read it as local time.
             OpenedUtc = DateTime.SpecifyKind(reader.GetDateTime("OpenedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningProgressDbModel ReadProgress(MySqlDataReader reader)
+    {
+        return new CaseOpeningProgressDbModel
+        {
+            UserId = reader.GetGuid("UserId"),
+            Stars = reader.GetInt32("Stars"),
+            SkipAnimationUnlocked = reader.GetBoolean("SkipAnimationUnlocked"),
+            MultiOpenLevel = reader.GetInt32("MultiOpenLevel")
+        };
+    }
+
+    private static CaseOpeningCollectionDbModel ReadCollection(MySqlDataReader reader)
+    {
+        return new CaseOpeningCollectionDbModel
+        {
+            CollectionId = reader.GetGuid("CollectionId"),
+            UserId = reader.GetGuid("UserId"),
+            CaseKey = reader.GetString("CaseKey"),
+            SourceItemId = reader.GetString("SourceItemId"),
+            FirstObtainedUtc = DateTime.SpecifyKind(reader.GetDateTime("FirstObtainedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningBotServerDbModel ReadBotServer(MySqlDataReader reader)
+    {
+        return new CaseOpeningBotServerDbModel
+        {
+            ServerId = reader.GetGuid("ServerId"),
+            UserId = reader.GetGuid("UserId"),
+            CreatedUtc = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningBotDbModel ReadBot(MySqlDataReader reader)
+    {
+        return new CaseOpeningBotDbModel
+        {
+            BotId = reader.GetGuid("BotId"),
+            ServerId = reader.GetGuid("ServerId"),
+            UserId = reader.GetGuid("UserId"),
+            CreatedUtc = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc),
+            LastOpenedUtc = reader.IsDBNull(reader.GetOrdinal("LastOpenedUtc"))
+                ? null
+                : DateTime.SpecifyKind(reader.GetDateTime("LastOpenedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningSellResultDbModel ReadSellResult(MySqlDataReader reader)
+    {
+        return new CaseOpeningSellResultDbModel
+        {
+            StarsAwarded = reader.GetInt32("StarsAwarded"),
+            StarsBalance = reader.GetInt32("StarsBalance"),
+            SoldItemCount = reader.GetInt32("SoldItemCount")
         };
     }
 

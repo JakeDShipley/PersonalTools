@@ -26,7 +26,7 @@ public sealed class CaseOpeningController : ControllerBase
     [HttpGet("cases")]
     public Task<ActionResult<List<CaseOpeningCaseSummaryObj>>> GetCases(CancellationToken cancellationToken)
     {
-        return Execute(() => _caseOpening.GetCaseOpeningCases(cancellationToken), "load catalogue", "curated");
+        return Execute(() => _caseOpening.GetCaseOpeningCases(UserId, cancellationToken), "load catalogue", "curated");
     }
 
     [HttpGet("cases/{caseKey}")]
@@ -49,6 +49,74 @@ public sealed class CaseOpeningController : ControllerBase
         }
     }
 
+    [HttpGet("cases/{caseKey}/collection")]
+    public Task<ActionResult<CaseOpeningCollectionObj>> GetCollection(string caseKey, CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.GetCaseOpeningCollection(UserId, caseKey, cancellationToken),
+            "load collection",
+            caseKey);
+    }
+
+    [HttpGet("progress")]
+    public Task<ActionResult<CaseOpeningProgressObj>> GetProgress(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningProgress(UserId, cancellationToken), "load progress", "all");
+    }
+
+    [HttpPost("upgrades/{upgradeKey}/unlock")]
+    public Task<ActionResult<CaseOpeningProgressObj>> UnlockUpgrade(string upgradeKey, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UnlockCaseOpeningUpgrade(UserId, upgradeKey, cancellationToken), "unlock upgrade", upgradeKey);
+    }
+
+    [HttpPost("cases/{caseKey}/unlock")]
+    public Task<ActionResult<CaseOpeningProgressObj>> UnlockCase(string caseKey, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UnlockCaseOpeningCase(UserId, caseKey, cancellationToken), "unlock case", caseKey);
+    }
+
+    [HttpPost("inventory/sell")]
+    public Task<ActionResult<CaseOpeningSellResultObj>> SellInventory(
+        [FromBody] CaseOpeningSellRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.SellCaseOpeningInventory(UserId, request?.OpeningIds ?? [], cancellationToken),
+            "sell inventory",
+            "selected");
+    }
+
+    [HttpGet("bots")]
+    public Task<ActionResult<CaseOpeningBotProgressObj>> GetBots(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningBotProgress(UserId, cancellationToken), "load bots", "all");
+    }
+
+    [HttpPost("bots/servers")]
+    public Task<ActionResult<CaseOpeningBotProgressObj>> PurchaseBotServer(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.PurchaseCaseOpeningBotServer(UserId, cancellationToken), "purchase bot server", "all");
+    }
+
+    [HttpPost("bots")]
+    public Task<ActionResult<CaseOpeningBotProgressObj>> PurchaseBot(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.PurchaseCaseOpeningBot(UserId, cancellationToken), "purchase bot", "all");
+    }
+
+    [HttpPost("bots/{botId:guid}/open")]
+    public Task<ActionResult<CaseOpeningResultObj>> OpenBotCase(
+        Guid botId,
+        [FromBody] CaseOpeningBotOpenRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.OpenCaseWithBot(UserId, botId, request?.CaseKey ?? string.Empty, cancellationToken),
+            "open bot case",
+            request?.CaseKey ?? string.Empty);
+    }
+
     [HttpGet("cases/{caseKey}/statistics")]
     public Task<ActionResult<CaseOpeningStatisticsObj>> GetStatistics(string caseKey, CancellationToken cancellationToken)
     {
@@ -59,9 +127,12 @@ public sealed class CaseOpeningController : ControllerBase
     }
 
     [HttpPost("cases/{caseKey}/open")]
-    public Task<ActionResult<CaseOpeningResultObj>> OpenCase(string caseKey, CancellationToken cancellationToken)
+    public Task<ActionResult<CaseOpeningOpenBatchResultObj>> OpenCase(
+        string caseKey,
+        [FromBody] CaseOpeningOpenRequestObj? request,
+        CancellationToken cancellationToken)
     {
-        return Execute(() => _caseOpening.OpenCase(UserId, caseKey, cancellationToken), "open", caseKey);
+        return Execute(() => _caseOpening.OpenCases(UserId, caseKey, request?.Quantity ?? 1, cancellationToken), "open", caseKey);
     }
 
     [HttpDelete("history")]

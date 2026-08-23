@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="~/css/pages/page-case-opening.css" asp-append-version="true" />
 }
 
-<div class="container px-3 px-lg-4 case-opening-page" data-case-key="dreams-and-nightmares">
+<div class="container px-3 px-lg-4 case-opening-page" data-case-key="kilowatt">
     @Html.AntiForgeryToken()
 
     <div class="row align-items-end gy-3 section-spacing">
@@ -26,10 +26,15 @@
     {
         "Press Open case and the server securely selects an item using the displayed rarity odds.",
         "Watch the reel settle on your result; simulated items have no cash value and are not added to Steam.",
-        "Your results are saved privately below. Hold the clear control if you want to reset the collection."
+        "Your results are saved privately below. Select unwanted items and sell them for Stars, or hold the clear control to discard the inventory."
     })
 
     <div class="alert alert-danger d-none" id="caseOpeningError" role="alert"></div>
+
+    <aside class="case-stars-dock shadow-sm" aria-label="Case-opening Stars balance" aria-live="polite">
+        <span class="case-stars-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
+        <strong id="caseStarsBalance" aria-live="polite">0</strong>
+    </aside>
 
     <section class="card border-0 shadow-sm case-stage section-spacing" aria-labelledby="caseName">
         <canvas class="case-effects-canvas" id="caseEffectsCanvas" aria-hidden="true"></canvas>
@@ -48,7 +53,7 @@
             <div class="case-stage-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
                     <p class="eyebrow mb-1" id="caseType">Weapon Case</p>
-                    <h2 class="h3 fw-semibold mb-0" id="caseName">Dreams &amp; Nightmares Case</h2>
+                    <h2 class="h3 fw-semibold mb-0" id="caseName">Kilowatt Case</h2>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <div class="dropdown">
@@ -92,23 +97,185 @@
                     <span class="case-reel-marker case-reel-marker-bottom" aria-hidden="true"></span>
                     <div class="case-reel" id="caseReel" aria-live="off"></div>
                     <div class="case-reel-idle" id="caseReelIdle">
-                        <img id="caseImage" alt="Dreams &amp; Nightmares Case" />
+                        <img id="caseImage" alt="Kilowatt Case" />
                         <span>Ready to open</span>
                     </div>
                 </div>
 
-                <div class="case-result d-none" id="caseResult" aria-live="polite">
-                    <p class="eyebrow mb-1">Unboxed</p>
-                    <h3 class="h4 mb-1" id="caseResultName"></h3>
-                    <p class="small-muted mb-0" id="caseResultMeta"></p>
+                <div class="case-result-slot" aria-live="polite">
+                    <div class="case-result d-none" id="caseResult">
+                        <p class="eyebrow mb-1">Unboxed</p>
+                        <h3 class="h4 mb-1" id="caseResultName"></h3>
+                        <p class="small-muted mb-0" id="caseResultMeta"></p>
+                    </div>
                 </div>
 
                 <div class="text-center mt-4">
                     <button class="btn btn-warning btn-lg case-open-button" id="openCaseButton" type="button" disabled>
                         <i class="fa-solid fa-box-open me-2"></i>Open case
                     </button>
+                    <div class="btn-group btn-group-sm case-open-quantity d-none ms-2" id="caseOpenQuantity" role="group" aria-label="Number of cases to open">
+                        <button class="btn btn-outline-warning active" type="button" data-open-quantity="1" aria-pressed="true">1</button>
+                        <button class="btn btn-outline-warning" type="button" data-open-quantity="2" aria-pressed="false">2</button>
+                        <button class="btn btn-outline-warning" type="button" data-open-quantity="3" aria-pressed="false">3</button>
+                        <button class="btn btn-outline-warning" type="button" data-open-quantity="4" aria-pressed="false">4</button>
+                        <button class="btn btn-outline-warning" type="button" data-open-quantity="5" aria-pressed="false">5</button>
+                    </div>
+                </div>
+                <div class="row g-2 mt-3 d-none" id="caseMultiResults" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm case-collection section-spacing" id="caseCollection" aria-labelledby="caseCollectionTitle">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <p class="eyebrow mb-1">Permanent collection</p>
+                    <h2 class="h4 mb-1" id="caseCollectionTitle">Case collection</h2>
+                    <p class="small-muted mb-0" id="caseCollectionSubtitle">Loading this case's collection…</p>
+                </div>
+                <div class="text-lg-end">
+                    <strong class="case-collection-count" id="caseCollectionCount">0 / 0</strong>
+                    <small class="d-block small-muted">unique items collected</small>
                 </div>
             </div>
+
+            <div class="case-collection-progress mb-3" role="progressbar" aria-label="Case collection progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span id="caseCollectionProgress"></span>
+            </div>
+            <div class="case-collection-rarity-summary mb-3" id="caseCollectionRaritySummary"></div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <p class="small-muted mb-0">Your progress remains visible while the item list is closed.</p>
+                <button class="btn btn-outline-secondary btn-sm case-collapse-toggle" type="button" data-case-collapse-toggle="collection" data-case-collapse-target="#caseCollectionContent" aria-controls="caseCollectionContent" aria-expanded="false">
+                    <i class="fa-solid fa-chevron-down me-1" aria-hidden="true"></i><span>Show items</span>
+                </button>
+            </div>
+
+            <div class="collapse" id="caseCollectionContent" data-case-collapse-default="closed">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 my-3">
+                    <p class="small-muted mb-0">Selling an item does not remove it from your collection.</p>
+                    <div class="btn-group btn-group-sm case-collection-filters" role="group" aria-label="Filter collection items">
+                        <button class="btn btn-outline-secondary active" type="button" data-collection-filter="all">All</button>
+                        <button class="btn btn-outline-secondary" type="button" data-collection-filter="collected">Collected</button>
+                        <button class="btn btn-outline-secondary" type="button" data-collection-filter="missing">Missing</button>
+                    </div>
+                </div>
+                <div class="row g-2" id="caseCollectionGrid" aria-live="polite"></div>
+                <div class="case-collection-empty text-center py-4 d-none" id="caseCollectionEmpty">
+                    <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                    <p class="mb-0 mt-2">No items match this collection filter.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm case-upgrades section-spacing" id="caseUpgrades" aria-labelledby="caseUpgradesTitle">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <p class="eyebrow mb-1">Stars upgrades</p>
+                    <h2 class="h4 mb-1" id="caseUpgradesTitle">Tune your opening flow</h2>
+                    <p class="small-muted mb-0">Sell simulated inventory items for Stars, then unlock quality-of-life upgrades permanently for your account.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary-subtle border"><i class="fa-solid fa-star me-1 text-warning"></i><span id="caseUpgradeStarsBalance">0</span> Stars available</span>
+                    <button class="btn btn-outline-secondary btn-sm case-collapse-toggle" type="button" data-case-collapse-toggle="upgrades" data-case-collapse-target="#caseUpgradesContent" aria-controls="caseUpgradesContent" aria-expanded="false">
+                        <i class="fa-solid fa-chevron-down me-1" aria-hidden="true"></i><span>Show upgrades</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapse" id="caseUpgradesContent" data-case-collapse-default="closed">
+            <div class="row g-3 pt-1">
+                <div class="col-12 col-lg-6">
+                    <article class="case-upgrade-card h-100" id="caseSkipUpgrade">
+                        <span class="case-upgrade-icon"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></span>
+                        <div class="case-upgrade-copy">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <h3 class="h6 mb-1">Skip animation</h3>
+                                <span class="badge text-bg-secondary" id="caseSkipUpgradeCost">35 Stars</span>
+                            </div>
+                            <p class="small-muted mb-3">Reveal the selected item straight away with a short result animation, without waiting for the reel.</p>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input pt-switch" id="caseSkipAnimation" type="checkbox" role="switch" disabled />
+                                    <label class="form-check-label small fw-semibold" for="caseSkipAnimation" id="caseSkipAnimationLabel">Locked</label>
+                                </div>
+                                <button class="btn btn-outline-warning btn-sm" id="unlockSkipAnimation" type="button" data-upgrade-key="skip-animation">Unlock</button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <article class="case-upgrade-card h-100" id="caseMultiUpgrade">
+                        <span class="case-upgrade-icon"><i class="fa-solid fa-clone" aria-hidden="true"></i></span>
+                        <div class="case-upgrade-copy">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <h3 class="h6 mb-1">Multi case opening</h3>
+                                <span class="badge text-bg-secondary" id="caseMultiUpgradeCost">150 Stars</span>
+                            </div>
+                            <p class="small-muted mb-3">Open up to five cases in one click. Every result remains a separate secure server-side roll.</p>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <span class="small fw-semibold" id="caseMultiUpgradeLabel">Locked</span>
+                                <button class="btn btn-outline-warning btn-sm" id="unlockMultiOpen" type="button" data-upgrade-key="multi-open">Unlock</button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm case-bots section-spacing" id="caseBots" aria-labelledby="caseBotsTitle">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <p class="eyebrow mb-1">Case operations</p>
+                    <h2 class="h4 mb-1" id="caseBotsTitle">Bot workshop</h2>
+                    <p class="small-muted mb-0">Bots only work while this tab is visible. Each bot makes one secure opening every 12 seconds.</p>
+                </div>
+                <span class="badge text-bg-secondary-subtle border" id="caseBotStatus"><i class="fa-solid fa-robot me-1"></i>Offline</span>
+            </div>
+
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-lg">
+                    <label class="form-label small fw-semibold" for="caseBotCaseSelect">Assigned case</label>
+                    <select class="form-select" id="caseBotCaseSelect" disabled></select>
+                </div>
+                <div class="col-12 col-lg-auto d-flex flex-wrap gap-2">
+                    <button class="btn btn-warning" id="startCaseBots" type="button" disabled><i class="fa-solid fa-play me-1"></i>Start bots</button>
+                    <button class="btn btn-outline-secondary" id="stopCaseBots" type="button" disabled><i class="fa-solid fa-stop me-1"></i>Stop</button>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-lg-6">
+                    <article class="case-bot-purchase h-100">
+                        <i class="fa-solid fa-server" aria-hidden="true"></i>
+                        <div>
+                            <h3 class="h6 mb-1">Bot server</h3>
+                            <p class="small-muted mb-2">Adds four bot slots. Server prices rise with each expansion.</p>
+                            <button class="btn btn-outline-warning btn-sm" id="buyCaseBotServer" type="button" disabled>Buy server</button>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <article class="case-bot-purchase h-100">
+                        <i class="fa-solid fa-robot" aria-hidden="true"></i>
+                        <div>
+                            <h3 class="h6 mb-1">Opening bot</h3>
+                            <p class="small-muted mb-2">Uses an available server slot. Every bot opens independently.</p>
+                            <button class="btn btn-outline-warning btn-sm" id="buyCaseBot" type="button" disabled>Buy bot</button>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div class="row g-3" id="caseBotServers" aria-live="polite"></div>
+            <div class="case-bot-feed mt-3 d-none" id="caseBotFeed" aria-live="polite"></div>
         </div>
     </section>
 
@@ -243,13 +410,45 @@
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
             <div>
                 <p class="eyebrow mb-1">Your collection</p>
-                <h2 class="h4 mb-0" id="caseHistoryTitle">Skins obtained <span class="badge rounded-pill text-bg-secondary ms-1" id="caseHistoryCount">0</span></h2>
+                <h2 class="h4 mb-0" id="caseHistoryTitle">Inventory <span class="badge rounded-pill text-bg-secondary ms-1" id="caseHistoryCount">0</span></h2>
             </div>
-            <button class="btn btn-outline-danger btn-sm" id="openClearHistory" type="button" data-bs-toggle="modal" data-bs-target="#clearCaseHistoryModal" disabled>
-                <i class="fa-solid fa-trash-can me-1"></i>Clear history
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-secondary btn-sm case-collapse-toggle" type="button" data-case-collapse-toggle="inventory" data-case-collapse-target="#caseInventoryContent" aria-controls="caseInventoryContent" aria-expanded="true">
+                    <i class="fa-solid fa-chevron-down me-1" aria-hidden="true"></i><span>Hide inventory</span>
+                </button>
+                <button class="btn btn-outline-danger btn-sm d-none" id="openClearHistory" type="button" data-bs-toggle="modal" data-bs-target="#clearCaseHistoryModal" disabled>
+                    <i class="fa-solid fa-trash-can me-1"></i>Discard inventory
+                </button>
+            </div>
+        </div>
+
+        <div class="collapse show" id="caseInventoryContent" data-case-collapse-default="open">
+        <div class="nav nav-pills case-history-tabs mb-3" id="caseHistoryTabs" role="tablist" aria-label="Opening history scope">
+            <button class="nav-link active" id="caseHistorySessionTab" type="button" role="tab" aria-selected="true" aria-controls="caseHistoryPanel" data-history-scope="session">
+                <i class="fa-solid fa-bolt me-1" aria-hidden="true"></i>This session
+                <span class="badge rounded-pill ms-1" id="caseHistorySessionCount">0</span>
+            </button>
+            <button class="nav-link" id="caseHistoryAllTab" type="button" role="tab" aria-selected="false" aria-controls="caseHistoryPanel" data-history-scope="all">
+                <i class="fa-solid fa-boxes-stacked me-1" aria-hidden="true"></i>Inventory
+                <span class="badge rounded-pill ms-1" id="caseHistoryAllCount">0</span>
             </button>
         </div>
 
+        <div id="caseHistoryPanel" role="tabpanel" aria-labelledby="caseHistorySessionTab">
+        <div class="case-inventory-actions d-none mb-3" id="caseInventoryActions">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="form-check m-0">
+                    <input class="form-check-input" id="caseInventorySelectPage" type="checkbox" />
+                    <label class="form-check-label small fw-semibold" for="caseInventorySelectPage">Select this page</label>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small-muted" id="caseInventorySelectionText">0 selected</span>
+                    <button class="btn btn-warning btn-sm" id="sellCaseInventory" type="button" disabled>
+                        <i class="fa-solid fa-star me-1"></i>Sell selected
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="card border-0 shadow-sm mb-3 case-history-toolbar">
             <div class="card-body p-3">
                 <div class="row g-2 align-items-end">
@@ -275,6 +474,19 @@
                             <option value="100">100</option>
                         </select>
                     </div>
+                    <div class="col-auto d-none d-md-block">
+                        <span class="form-label small fw-semibold d-block">View</span>
+                        <div class="btn-group btn-group-sm case-history-view-toggle" role="group" aria-label="Opening history view">
+                            <button class="btn btn-outline-secondary active" type="button" data-history-view="list" aria-pressed="true" title="List view">
+                                <i class="fa-solid fa-list" aria-hidden="true"></i>
+                                <span class="visually-hidden">List view</span>
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" data-history-view="cards" aria-pressed="false" title="Card view">
+                                <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+                                <span class="visually-hidden">Card view</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -285,6 +497,7 @@
             <table class="table table-hover align-middle mb-0 case-history-table" id="caseHistoryTable">
                 <thead>
                     <tr>
+                        <th class="case-history-select-column"><span class="visually-hidden">Select</span></th>
                         <th>Item</th>
                         <th>Case</th>
                         <th>Rarity</th>
@@ -309,8 +522,8 @@
         <div class="case-history-empty card border-0 shadow-sm" id="caseHistoryEmpty">
             <div class="card-body p-4 text-center">
                 <i class="fa-solid fa-box-open mb-3" aria-hidden="true"></i>
-                <h3 class="h6 fw-semibold">No openings yet</h3>
-                <p class="small-muted mb-0">Your simulated case results will collect here.</p>
+                <h3 class="h6 fw-semibold" id="caseHistoryEmptyTitle">No session openings yet</h3>
+                <p class="small-muted mb-0" id="caseHistoryEmptyCopy">Cases opened during this visit will collect here.</p>
             </div>
         </div>
         <div class="case-history-empty card border-0 shadow-sm d-none" id="caseHistoryFilteredEmpty">
@@ -319,6 +532,8 @@
                 <h3 class="h6 fw-semibold">No matching openings</h3>
                 <p class="small-muted mb-0">Try a different search or rarity filter.</p>
             </div>
+        </div>
+        </div>
         </div>
     </section>
 </div>
@@ -414,15 +629,15 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="clearCaseHistoryTitle">Clear case history?</h2>
+                <h2 class="modal-title fs-5" id="clearCaseHistoryTitle">Discard inventory?</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>This removes every simulated item from your case-opening history. It cannot be undone.</p>
+                <p>This discards every simulated item in your inventory without awarding Stars. It cannot be undone.</p>
                 <form id="caseOpeningClearForm">
                     <button type="button" class="btn btn-outline-danger w-100 position-relative overflow-hidden hold-delete-btn" data-hold-form="caseOpeningClearForm" data-hold-modal="clearCaseHistoryModal" data-hold-duration-ms="2000">
                         <span class="hold-delete-fill"></span>
-                        <span class="hold-delete-label position-relative">Hold to clear history</span>
+                        <span class="hold-delete-label position-relative">Hold to discard inventory</span>
                     </button>
                 </form>
             </div>

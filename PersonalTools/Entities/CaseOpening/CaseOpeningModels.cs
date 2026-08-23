@@ -34,6 +34,9 @@ public sealed class CaseOpeningCaseObj
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
+    public int UnlockCostStars { get; set; }
+    public int SaleMultiplier { get; set; } = 1;
+    public bool IsUnlocked { get; set; }
     public List<CaseOpeningOddsObj> Odds { get; set; } = [];
     public List<CaseOpeningItemObj> Items { get; set; } = [];
 }
@@ -44,6 +47,9 @@ public sealed class CaseOpeningCaseSummaryObj
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
+    public int UnlockCostStars { get; set; }
+    public int SaleMultiplier { get; set; } = 1;
+    public bool IsUnlocked { get; set; }
 }
 
 public sealed class CaseOpeningOddsObj
@@ -64,6 +70,16 @@ public sealed class CaseOpeningResultObj
     public int WinnerIndex { get; set; }
 }
 
+public sealed class CaseOpeningOpenRequestObj
+{
+    public int Quantity { get; set; } = 1;
+}
+
+public sealed class CaseOpeningOpenBatchResultObj
+{
+    public List<CaseOpeningResultObj> Results { get; set; } = [];
+}
+
 public class CaseOpeningHistoryObj : CaseOpeningItemObj
 {
     public Guid OpeningId { get; set; }
@@ -74,6 +90,101 @@ public class CaseOpeningHistoryObj : CaseOpeningItemObj
 public sealed class CaseOpeningHistoryDbModel : CaseOpeningHistoryObj
 {
     public Guid UserId { get; set; }
+}
+
+public sealed class CaseOpeningCollectionDbModel
+{
+    public Guid CollectionId { get; set; }
+    public Guid UserId { get; set; }
+    public string CaseKey { get; set; } = string.Empty;
+    public string SourceItemId { get; set; } = string.Empty;
+    public DateTime FirstObtainedUtc { get; set; }
+}
+
+public sealed class CaseOpeningCollectionItemObj : CaseOpeningItemObj
+{
+    public bool IsCollected { get; set; }
+    public DateTime? FirstObtainedUtc { get; set; }
+}
+
+public sealed class CaseOpeningCollectionObj
+{
+    public string CaseKey { get; set; } = string.Empty;
+    public string CaseName { get; set; } = string.Empty;
+    public int TotalItemCount { get; set; }
+    public int CollectedItemCount { get; set; }
+    public List<CaseOpeningCollectionItemObj> Items { get; set; } = [];
+}
+
+public class CaseOpeningProgressDbModel
+{
+    public Guid UserId { get; set; }
+    public int Stars { get; set; }
+    public bool SkipAnimationUnlocked { get; set; }
+    public int MultiOpenLevel { get; set; }
+}
+
+public sealed class CaseOpeningProgressObj : CaseOpeningProgressDbModel
+{
+    public int SkipAnimationCost { get; set; }
+    public int MultiOpenCost { get; set; }
+    public int MaximumMultiOpenLevel { get; set; }
+    public int MaximumOpenQuantity { get; set; }
+    public Dictionary<string, int> SaleValues { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, int> CaseSaleMultipliers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> UnlockedCaseKeys { get; set; } = [];
+}
+
+public sealed class CaseOpeningSellRequestObj
+{
+    public List<Guid> OpeningIds { get; set; } = [];
+}
+
+public class CaseOpeningSellResultObj
+{
+    public int StarsAwarded { get; set; }
+    public int StarsBalance { get; set; }
+    public int SoldItemCount { get; set; }
+}
+
+public sealed class CaseOpeningSellResultDbModel : CaseOpeningSellResultObj
+{
+}
+
+public class CaseOpeningBotServerDbModel
+{
+    public Guid ServerId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTime CreatedUtc { get; set; }
+}
+
+public sealed class CaseOpeningBotDbModel
+{
+    public Guid BotId { get; set; }
+    public Guid ServerId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTime CreatedUtc { get; set; }
+    public DateTime? LastOpenedUtc { get; set; }
+}
+
+public sealed class CaseOpeningBotServerObj : CaseOpeningBotServerDbModel
+{
+    public List<CaseOpeningBotDbModel> Bots { get; set; } = [];
+}
+
+public sealed class CaseOpeningBotProgressObj
+{
+    public int Stars { get; set; }
+    public int ServerCapacity { get; set; }
+    public int OpeningIntervalSeconds { get; set; }
+    public int NextServerCost { get; set; }
+    public int NextBotCost { get; set; }
+    public List<CaseOpeningBotServerObj> Servers { get; set; } = [];
+}
+
+public sealed class CaseOpeningBotOpenRequestObj
+{
+    public string CaseKey { get; set; } = string.Empty;
 }
 
 public class CaseOpeningStatisticsDbModel

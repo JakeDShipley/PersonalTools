@@ -20,23 +20,43 @@ public sealed class CaseOpeningReferenceData : ICaseOpeningReferenceData
     private const string CacheKey = "case-opening-curated-catalogue";
     private static readonly IReadOnlyDictionary<string, string> CuratedCases = new Dictionary<string, string>
     {
+        ["esports-2013"] = "crate-4002",
+        ["esports-2013-winter"] = "crate-4005",
         ["weapon-case-1"] = "crate-4001",
         ["weapon-case-2"] = "crate-4004",
         ["weapon-case-3"] = "crate-4010",
         ["katowice-2014-challengers"] = "crate-4014",
         ["katowice-2014-legends"] = "crate-4015",
+        ["esports-2014-summer"] = "crate-4019",
+        ["cologne-2014-legends"] = "crate-4020",
+        ["cologne-2014-cobblestone-souvenir"] = "crate-4027",
         ["breakout"] = "crate-4018",
         ["chroma-2"] = "crate-4089",
         ["gamma-2"] = "crate-4281",
+        ["atlanta-2017-legends"] = "crate-4323",
         ["glove"] = "crate-4288",
         ["hydra"] = "crate-4352",
         ["spectrum-2"] = "crate-4403",
         ["clutch"] = "crate-4471",
+        ["prisma"] = "crate-4598",
+        ["shattered-web"] = "crate-4620",
+        ["cs20"] = "crate-4669",
+        ["prisma-2"] = "crate-4695",
+        ["fracture"] = "crate-4698",
+        ["broken-fang"] = "crate-4717",
+        ["snakebite"] = "crate-4747",
+        ["riptide"] = "crate-4790",
+        ["stockholm-2021-legends"] = "crate-4803",
+        ["antwerp-2022-legends"] = "crate-4832",
+        ["recoil"] = "crate-4846",
+        ["paris-2023-legends"] = "crate-4890",
+        ["copenhagen-2024-legends"] = "crate-4923",
         ["dreams-and-nightmares"] = "crate-4818",
         ["revolution"] = "crate-4880",
         ["kilowatt"] = "crate-4904",
         ["gallery"] = "crate-7003",
-        ["fever"] = "crate-7007"
+        ["fever"] = "crate-7007",
+        ["austin-2025-legends"] = "crate-5117"
     };
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
@@ -67,13 +87,18 @@ public sealed class CaseOpeningReferenceData : ICaseOpeningReferenceData
                 ApiCrate crate = crates.FirstOrDefault(value => value.Id == configured.Value)
                     ?? throw new InvalidOperationException($"The {configured.Key} catalogue is unavailable right now.");
                 bool stickerCapsule = crate.Type.Contains("Sticker", StringComparison.OrdinalIgnoreCase);
+                bool souvenirPackage = crate.Type.Equals("Souvenir", StringComparison.OrdinalIgnoreCase);
                 return new CaseOpeningCaseObj
                 {
                     CaseKey = configured.Key,
                     Name = crate.Name,
-                    Type = stickerCapsule ? "Sticker Capsule" : "Weapon Case",
+                    Type = GetDisplayType(crate),
                     ImageUrl = crate.Image,
-                    Odds = stickerCapsule ? CaseOpeningOdds.Stickers : CaseOpeningOdds.Weapons,
+                    Odds = stickerCapsule
+                        ? CaseOpeningOdds.Stickers
+                        : souvenirPackage
+                            ? CaseOpeningOdds.Souvenirs
+                            : CaseOpeningOdds.Weapons,
                     Items = crate.Contains.Select(item => MapItem(item, false, stickerCapsule, skinsById))
                         .Concat(crate.ContainsRare.Select(item => MapItem(item, true, false, skinsById)))
                         .ToList()
@@ -88,6 +113,23 @@ public sealed class CaseOpeningReferenceData : ICaseOpeningReferenceData
     {
         return (await GetCuratedCases(cancellationToken)).FirstOrDefault(item => item.CaseKey == caseKey)
             ?? throw new InvalidOperationException("That case is not available.");
+    }
+
+    private static string GetDisplayType(ApiCrate crate)
+    {
+        if (crate.Type.Contains("Sticker", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Sticker Capsule";
+        }
+
+        if (crate.Type.Equals("Souvenir", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Souvenir Package";
+        }
+
+        return crate.Name.Contains("eSports", StringComparison.OrdinalIgnoreCase)
+            ? "Esports Case"
+            : "Weapon Case";
     }
 
     private static CaseOpeningItemObj MapItem(
@@ -230,5 +272,15 @@ public static class CaseOpeningOdds
         new() { RarityKey = "high-grade", RarityName = "High Grade", RarityColor = "#4b69ff", Percentage = 80m },
         new() { RarityKey = "remarkable", RarityName = "Remarkable (Holo)", RarityColor = "#8847ff", Percentage = 16m },
         new() { RarityKey = "exotic", RarityName = "Exotic (Foil)", RarityColor = "#d32ce6", Percentage = 4m }
+    ];
+
+    // Souvenir packages have no knife/glove special-item pool. Keeping their odds separate means
+    // the simulated roll can only select rarities that their curated contents genuinely contain.
+    public static List<CaseOpeningOddsObj> Souvenirs =>
+    [
+        new() { RarityKey = "mil-spec", RarityName = "Base collection", RarityColor = "#4b69ff", Percentage = 80m },
+        new() { RarityKey = "restricted", RarityName = "Restricted", RarityColor = "#8847ff", Percentage = 16m },
+        new() { RarityKey = "classified", RarityName = "Classified", RarityColor = "#d32ce6", Percentage = 3.4m },
+        new() { RarityKey = "covert", RarityName = "Covert", RarityColor = "#eb4b4b", Percentage = 0.6m }
     ];
 }

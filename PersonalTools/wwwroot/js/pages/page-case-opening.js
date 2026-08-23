@@ -13,14 +13,31 @@
     const $error = $('#caseOpeningError');
     let caseData = null;
     let catalogue = [];
+    let collectionData = null;
+    let collectionFilter = 'all';
+    const collectionItems = new Map();
+    const botCaseStorageKey = 'personalTools.caseOpeningBotCase';
+    const botOpenInFlight = new Set();
+    let botProgress = null;
+    let botsRunning = false;
+    let botTimer = null;
+    let botRefreshTimer = null;
     const historyItems = new Map();
     const historyPageSizeStorageKey = 'personalTools.caseOpeningHistoryPageSize';
+    const historyViewStorageKey = 'personalTools.caseOpeningHistoryView';
+    const collapsePreferenceStorageKey = 'personalTools.caseOpeningCollapsedSections';
     let allHistoryItems = [];
     let filteredHistoryItems = [];
+    let historyScope = 'session';
     let historyPage = 1;
     let historyPageSize = loadHistoryPageSize();
+    let historyView = loadHistoryView();
     let historySearchTimer = null;
     let sessionOpenings = [];
+    const selectedInventoryIds = new Set();
+    const skipAnimationStorageKey = 'personalTools.caseOpeningSkipAnimation';
+    let caseProgress = null;
+    let selectedOpenQuantity = 1;
     let sessionStartedAt = Date.now();
     let statisticsRequestedAfterOpening = null;
     const announcedDryStreaks = new Set();
@@ -41,6 +58,174 @@
         } catch {
             return 25;
         }
+    }
+
+    // The desktop presentation is a device preference. Mobile stays in card view because the
+    // full history table is not useful at that width.
+    function loadHistoryView() {
+        try {
+            const value = localStorage.getItem(historyViewStorageKey);
+            return ['list', 'cards'].includes(value) ? value : 'list';
+        } catch {
+            return 'list';
+        }
+    }
+
+    function renderHistoryView() {
+        $('.case-history-section').toggleClass('is-card-view', historyView === 'cards');
+        $('[data-history-view]').each(function () {
+            const active = String($(this).data('history-view')) === historyView;
+            $(this).toggleClass('active', active).attr('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    function loadCollapsePreferences() {
+        try {
+            const stored = JSON.parse(localStorage.getItem(collapsePreferenceStorageKey) || '{}');
+            return stored && typeof stored === 'object' ? stored : {};
+        } catch {
+            return {};
+        }
+    }
+
+    function saveCollapsePreference(section, isOpen) {
+        try {
+            const preferences = loadCollapsePreferences();
+            preferences[section] = isOpen;
+            localStorage.setItem(collapsePreferenceStorageKey, JSON.stringify(preferences));
+        } catch {
+            // These layout choices are convenience preferences and should never block the page.
+        }
+    }
+
+    function renderCollapseToggle($button, isOpen) {
+        $button
+            .attr('aria-expanded', isOpen ? 'true' : 'false')
+            .find('span')
+            .text(isOpen
+                ? $button.data('case-collapse-toggle') === 'collection'
+                    ? 'Hide items'
+                    : $button.data('case-collapse-toggle') === 'upgrades'
+                        ? 'Hide upgrades'
+                        : 'Hide inventory'
+                : $button.data('case-collapse-toggle') === 'collection'
+                    ? 'Show items'
+                    : $button.data('case-collapse-toggle') === 'upgrades'
+                        ? 'Show upgrades'
+                        : 'Show inventory');
+    }
+
+    function initialiseCollapsibleSections() {
+        const preferences = loadCollapsePreferences();
+
+        $('[data-case-collapse-toggle]').each(function () {
+            const $button = $(this);
+            const section = String($button.data('case-collapse-toggle'));
+            const targetSelector = String($button.data('case-collapse-target'));
+            const $target = $(targetSelector);
+            const target = $target.get(0);
+
+            if (!section || !target || !window.bootstrap?.Collapse) return;
+
+            const defaultOpen = String($target.data('case-collapse-default')) === 'open';
+            const isOpen = typeof preferences[section] === 'boolean'
+                ? preferences[section]
+                : defaultOpen;
+            const collapse = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+
+            if (isOpen) collapse.show();
+            else collapse.hide();
+
+            renderCollapseToggle($button, isOpen);
+            $button.on('click', function () {
+                collapse.toggle();
+            });
+            $target.on('shown.bs.collapse hidden.bs.collapse', function (event) {
+                const expanded = event.type === 'shown';
+                renderCollapseToggle($button, expanded);
+                saveCollapsePreference(section, expanded);
+            });
+        });
+    }
+
+    function loadSkipAnimationPreference() {
+        try {
+            return localStorage.getItem(skipAnimationStorageKey) === 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    function saveSkipAnimationPreference(enabled) {
+        try {
+            localStorage.setItem(skipAnimationStorageKey, enabled ? 'true' : 'false');
+        } catch {
+            // This visual preference is optional and should not block opening a case.
+        }
+    }
+
+    function saleValueFor(item) {
+        const rarityValue = Number(caseProgress?.saleValues?.[String(item.rarityKey || '')] || 0);
+        const multiplier = Number(caseProgress?.caseSaleMultipliers?.[String(item.caseKey || '')] || 1);
+        return rarityValue * multiplier;
+    }
+
+    function renderProgress(progress) {
+        caseProgress = progress || null;
+        const stars = Number(caseProgress?.stars || 0);
+        const skipUnlocked = caseProgress?.skipAnimationUnlocked === true;
+        const multiLevel = Number(caseProgress?.multiOpenLevel || 0);
+        const maximumMultiLevel = Number(caseProgress?.maximumMultiOpenLevel || 4);
+        const multiUnlocked = multiLevel > 0;
+        const skipCost = Number(caseProgress?.skipAnimationCost || 35);
+        const multiCost = Number(caseProgress?.multiOpenCost || 150);
+
+        $('#caseStarsBalance, #caseUpgradeStarsBalance').text(stars);
+        $('#caseSkipUpgradeCost').text(`${skipCost} Stars`);
+        $('#caseMultiUpgradeCost').text(`${multiCost} Stars`);
+        $('#caseSkipUpgrade').toggleClass('is-unlocked', skipUnlocked);
+        $('#caseMultiUpgrade').toggleClass('is-unlocked', multiUnlocked);
+        $('#caseSkipAnimation')
+            .prop('disabled', !skipUnlocked)
+            .prop('checked', skipUnlocked && loadSkipAnimationPreference());
+        $('#caseSkipAnimationLabel').text(skipUnlocked ? 'Skip long reel animation' : 'Locked');
+        $('#caseMultiUpgradeLabel').text(multiLevel >= maximumMultiLevel
+            ? `All ${maximumMultiLevel} extra openings unlocked · up to 5 cases`
+            : `${multiLevel} of ${maximumMultiLevel} extra openings unlocked · up to ${1 + multiLevel} cases`);
+        $('#unlockSkipAnimation')
+            .prop('disabled', skipUnlocked || stars < skipCost)
+            .text(skipUnlocked ? 'Unlocked' : `Unlock for ${skipCost}`);
+        $('#unlockMultiOpen')
+            .prop('disabled', multiLevel >= maximumMultiLevel || stars < multiCost)
+            .text(multiLevel >= maximumMultiLevel ? 'Fully unlocked' : `Unlock +1 for ${multiCost}`);
+        $('#caseOpenQuantity').removeClass('d-none');
+
+        if (selectedOpenQuantity > 1 + multiLevel) {
+            selectedOpenQuantity = 1;
+        }
+
+        renderOpenQuantity();
+        renderInventorySelection();
+        refreshInventorySaleValues();
+        if (botProgress) renderBotProgress(botProgress);
+    }
+
+    function isCaseUnlocked(item) {
+        return item?.isUnlocked === true || (caseProgress?.unlockedCaseKeys || [])
+            .some(key => String(key).toLowerCase() === String(item?.caseKey || '').toLowerCase());
+    }
+
+    function renderOpenQuantity() {
+        const availableQuantity = 1 + Number(caseProgress?.multiOpenLevel || 0);
+        $('[data-open-quantity]').each(function () {
+            const quantity = Number($(this).data('open-quantity'));
+            const active = quantity === selectedOpenQuantity;
+            $(this)
+                .prop('disabled', quantity > availableQuantity)
+                .toggleClass('active', active)
+                .attr('aria-pressed', active ? 'true' : 'false');
+        });
+        if (!opening) renderOpenButton('ready');
     }
 
     // Sound is a device preference rather than user data, so it is kept locally and never delays an opening request.
@@ -178,6 +363,149 @@
         }, options || {}));
     }
 
+    function loadBotCasePreference() {
+        try {
+            return localStorage.getItem(botCaseStorageKey) || '';
+        } catch {
+            return '';
+        }
+    }
+
+    function saveBotCasePreference(selectedCaseKey) {
+        try {
+            localStorage.setItem(botCaseStorageKey, selectedCaseKey);
+        } catch {
+            // The bot assignment is a convenience preference and does not need to block use.
+        }
+    }
+
+    function availableBotCases() {
+        return catalogue.filter(item => isCaseUnlocked(item));
+    }
+
+    function renderBotProgress(progress) {
+        botProgress = progress || null;
+        const servers = botProgress?.servers || [];
+        const bots = servers.flatMap(server => server.bots || []);
+        const stars = Number(botProgress?.stars || 0);
+        const serverCost = Number(botProgress?.nextServerCost || 0);
+        const botCost = Number(botProgress?.nextBotCost || 0);
+        const capacity = Number(botProgress?.serverCapacity || 4);
+        const $select = $('#caseBotCaseSelect');
+        const priorSelection = String($select.val() || loadBotCasePreference() || caseKey);
+        const unlockedCases = availableBotCases();
+
+        $select.empty();
+        unlockedCases.forEach(item => $select.append($('<option>', { value: item.caseKey, text: item.name })));
+        const selectedCaseKey = unlockedCases.some(item => item.caseKey === priorSelection)
+            ? priorSelection
+            : unlockedCases[0]?.caseKey || '';
+        $select.val(selectedCaseKey).prop('disabled', unlockedCases.length === 0);
+        saveBotCasePreference(selectedCaseKey);
+
+        $('#buyCaseBotServer')
+            .prop('disabled', stars < serverCost)
+            .text(`Buy server · ${serverCost} Stars`);
+        $('#buyCaseBot')
+            .prop('disabled', servers.length === 0 || bots.length >= servers.length * capacity || stars < botCost)
+            .text(`Buy bot · ${botCost} Stars`);
+        $('#startCaseBots').prop('disabled', bots.length === 0 || !selectedCaseKey || botsRunning);
+        $('#stopCaseBots').prop('disabled', !botsRunning);
+        const $status = $('#caseBotStatus')
+            .toggleClass('text-bg-success', botsRunning)
+            .toggleClass('text-bg-secondary-subtle', !botsRunning)
+            .empty();
+        $status.append($('<i>', {
+            class: `${botsRunning ? 'fa-solid fa-satellite-dish' : 'fa-solid fa-robot'} me-1`,
+            'aria-hidden': 'true'
+        }), document.createTextNode(botsRunning
+            ? `${bots.length} bot${bots.length === 1 ? '' : 's'} active`
+            : bots.length === 0 ? 'No bots installed' : 'Ready'));
+
+        const $servers = $('#caseBotServers').empty();
+        servers.forEach((server, index) => {
+            const serverBots = server.bots || [];
+            const $slots = $('<div>', { class: 'case-bot-slots' });
+            for (let slot = 0; slot < capacity; slot += 1) {
+                const bot = serverBots[slot];
+                $slots.append($('<span>', {
+                    class: `case-bot-slot${bot ? ' is-installed' : ''}${botsRunning && bot ? ' is-working' : ''}`,
+                    title: bot ? `Bot ${slot + 1}` : 'Available bot slot'
+                }).append($('<i>', { class: bot ? 'fa-solid fa-robot' : 'fa-solid fa-plus', 'aria-hidden': 'true' })));
+            }
+            $servers.append($('<div>', { class: 'col-12 col-md-6 col-xl-4' }).append(
+                $('<article>', { class: 'case-bot-server h-100' }).append(
+                    $('<div>', { class: 'd-flex align-items-center justify-content-between gap-2 mb-3' }).append(
+                        $('<strong>', { text: `Server ${index + 1}` }),
+                        $('<span>', { class: 'small-muted', text: `${serverBots.length}/${capacity} slots` })
+                    ),
+                    $slots
+                )
+            ));
+        });
+    }
+
+    function loadBotProgress() {
+        return request('/api/case-opening/bots', 'GET', { showLoader: false })
+            .done(renderBotProgress)
+            .fail(response => showError(response, 'Bot workshop status could not be loaded.'));
+    }
+
+    function queueBotResult(result) {
+        addResultsToInventory([result], false);
+        const winner = result.winner;
+        $('#caseBotFeed').removeClass('d-none').prepend(
+            $('<div>', { class: `case-bot-feed-item ${rarityClass(winner)}` }).append(
+                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<span>').append(
+                    $('<small>', { text: `${result.caseName} bot drop` }),
+                    $('<strong>', { text: winner.name })
+                )
+            )
+        ).children().slice(8).remove();
+
+        window.clearTimeout(botRefreshTimer);
+        botRefreshTimer = window.setTimeout(function () {
+            renderSessionSummary();
+            renderHistory(allHistoryItems);
+            loadCollection(result.caseKey);
+            loadStatistics(result.caseKey);
+        }, 120);
+    }
+
+    function runBotCycle() {
+        if (!botsRunning || document.hidden) return;
+        const selectedCaseKey = String($('#caseBotCaseSelect').val() || '');
+        if (!selectedCaseKey) return;
+
+        (botProgress?.servers || []).flatMap(server => server.bots || []).forEach(bot => {
+            const botId = String(bot.botId || '');
+            if (!botId || botOpenInFlight.has(botId)) return;
+            botOpenInFlight.add(botId);
+            request(`/api/case-opening/bots/${encodeURIComponent(botId)}/open`, 'POST', {
+                data: JSON.stringify({ caseKey: selectedCaseKey }),
+                contentType: 'application/json; charset=utf-8',
+                showLoader: false
+            })
+                .done(queueBotResult)
+                .fail(function (response) {
+                    const message = response.responseJSON?.message || '';
+                    if (!message.toLowerCase().includes('cooling down')) {
+                        window.personalToolsToast?.error(message || 'A bot could not open its assigned case.');
+                    }
+                })
+                .always(() => botOpenInFlight.delete(botId));
+        });
+    }
+
+    function stopBots(showToast) {
+        botsRunning = false;
+        window.clearInterval(botTimer);
+        botTimer = null;
+        renderBotProgress(botProgress);
+        if (showToast) window.personalToolsToast?.info('Bot operation stopped.');
+    }
+
     function rarityClass(item) {
         const key = String(item?.rarityKey || 'mil-spec').toLowerCase();
         return ['mil-spec', 'restricted', 'classified', 'covert', 'rare-special', 'high-grade', 'remarkable', 'exotic'].includes(key)
@@ -200,6 +528,19 @@
             'high-grade': 2,
             'mil-spec': 2
         }[String(item?.rarityKey || '').toLowerCase()] || 1;
+    }
+
+    function rarityDisplayOrder(rarityKey) {
+        return {
+            'mil-spec': 1,
+            'high-grade': 1,
+            restricted: 2,
+            remarkable: 2,
+            classified: 3,
+            exotic: 3,
+            covert: 4,
+            'rare-special': 5
+        }[String(rarityKey || '').toLowerCase()] || 99;
     }
 
     function sessionDurationText() {
@@ -301,11 +642,12 @@
     }
 
     function renderOpenButton(state) {
+        const openingText = selectedOpenQuantity === 1 ? 'Open case' : `Open ${selectedOpenQuantity} cases`;
         const settings = {
-            ready: { icon: 'fa-solid fa-box-open me-2', text: 'Open case' },
+            ready: { icon: 'fa-solid fa-box-open me-2', text: openingText },
             requesting: { icon: 'spinner-border spinner-border-sm me-2', text: 'Unlocking…' },
-            rolling: { icon: 'fa-solid fa-arrows-left-right me-2', text: 'Opening…' }
-        }[state] || { icon: 'fa-solid fa-box-open me-2', text: 'Open case' };
+            rolling: { icon: 'fa-solid fa-arrows-left-right me-2', text: selectedOpenQuantity === 1 ? 'Opening…' : `Opening ${selectedOpenQuantity} cases…` }
+        }[state] || { icon: 'fa-solid fa-box-open me-2', text: openingText };
         const $icon = $('<span>', { class: settings.icon, 'aria-hidden': 'true' });
         $open.empty().append($icon, document.createTextNode(settings.text));
         $('.case-machine').toggleClass('is-requesting', state === 'requesting');
@@ -337,12 +679,101 @@
             customClass: 'case-odds-popover'
         });
         $idle.removeClass('d-none');
-        $reel.empty().css('transform', 'translateX(0px)');
+        $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
         $result.addClass('d-none');
         $('#caseSelectorGrid input').prop('checked', false)
             .filter(`[value="${caseKey}"]`).prop('checked', true);
         renderRareItems(data);
         $open.prop('disabled', false);
+    }
+
+    function collectionCard(item) {
+        const collected = item.isCollected === true;
+        const $card = $('<article>', { class: `case-collection-item ${rarityClass(item)}${collected ? ' is-collected' : ' is-missing'}` }).append(
+            $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+            $('<div>', { class: 'case-collection-item-copy' }).append(
+                $('<span>', { class: 'case-collection-rarity', text: item.rarityName }),
+                $('<strong>', { text: item.name }),
+                collected
+                    ? $('<small>', { text: `Collected ${new Date(item.firstObtainedUtc).toLocaleDateString()}` })
+                    : $('<small>', { text: 'Not collected yet' })
+            )
+        );
+
+        if (collected) {
+            $card.append($('<button>', {
+                class: 'btn btn-outline-primary btn-sm case-collection-inspect js-inspect-collection-item',
+                type: 'button',
+                'data-source-item-id': item.sourceItemId,
+                text: 'Inspect'
+            }));
+        }
+
+        return $('<div>', { class: 'col-6 col-md-4 col-xl-3' }).append($card);
+    }
+
+    function renderCollection() {
+        const items = collectionData?.items || [];
+        const total = Number(collectionData?.totalItemCount || 0);
+        const collected = Number(collectionData?.collectedItemCount || 0);
+        const percentage = total === 0 ? 0 : Math.round((collected / total) * 100);
+        collectionItems.clear();
+        items.forEach(item => {
+            item.caseKey = collectionData.caseKey;
+            collectionItems.set(String(item.sourceItemId), item);
+        });
+
+        $('#caseCollectionSubtitle').text(`Unique items pulled from ${collectionData?.caseName || 'this case'}.`);
+        $('#caseCollectionCount').text(`${collected} / ${total}`);
+        $('#caseCollectionProgress').css('width', `${percentage}%`);
+        $('.case-collection-progress').attr('aria-valuenow', percentage);
+        const raritySummary = new Map();
+        items.forEach(item => {
+            const key = String(item.rarityKey || 'mil-spec');
+            const entry = raritySummary.get(key) || { item: item, total: 0, collected: 0 };
+            entry.total += 1;
+            entry.collected += item.isCollected ? 1 : 0;
+            raritySummary.set(key, entry);
+        });
+        const $summary = $('#caseCollectionRaritySummary').empty();
+        [...raritySummary.entries()]
+            .sort(([leftKey], [rightKey]) => rarityDisplayOrder(leftKey) - rarityDisplayOrder(rightKey))
+            .forEach(([, entry]) => $summary.append(
+            $('<span>', { class: `case-collection-rarity-chip ${rarityClass(entry.item)}` }).append(
+                $('<i>', { 'aria-hidden': 'true' }),
+                document.createTextNode(`${entry.item.rarityName}: ${entry.collected}/${entry.total}`)
+            )
+        ));
+        $('[data-collection-filter]').each(function () {
+            $(this).toggleClass('active', String($(this).data('collection-filter')) === collectionFilter);
+        });
+
+        const visibleItems = items
+            .filter(item => collectionFilter === 'all'
+                || (collectionFilter === 'collected' && item.isCollected)
+                || (collectionFilter === 'missing' && !item.isCollected))
+            .sort((left, right) => {
+                const rarityDifference = rarityDisplayOrder(left.rarityKey) - rarityDisplayOrder(right.rarityKey);
+
+                return rarityDifference !== 0
+                    ? rarityDifference
+                    : String(left.name || '').localeCompare(String(right.name || ''));
+            });
+        const $grid = $('#caseCollectionGrid').empty();
+        visibleItems.forEach(item => $grid.append(collectionCard(item)));
+        $('#caseCollectionEmpty').toggleClass('d-none', visibleItems.length > 0);
+        window.personalToolsMotion?.reveal($grid.children().get(), { fromY: 8, delay: 20, duration: 260 });
+    }
+
+    function loadCollection(selectedCaseKey) {
+        const requestedCaseKey = selectedCaseKey || caseKey;
+        return request(`/api/case-opening/cases/${encodeURIComponent(requestedCaseKey)}/collection`, 'GET', { showLoader: false })
+            .done(function (data) {
+                if (data.caseKey !== caseKey) return;
+                collectionData = data;
+                renderCollection();
+            })
+            .fail(response => showError(response, 'This case collection could not be loaded.'));
     }
 
     function rarePreviewItems(data) {
@@ -395,6 +826,7 @@
             .done(function (data) {
                 configureCase(data);
                 loadStatistics();
+                loadCollection(selectedKey);
                 if (settings.closeSelector) {
                     bootstrap.Modal.getInstance(document.getElementById('caseSelectorModal'))?.hide();
                 }
@@ -473,14 +905,34 @@
 
     function caseSelectorTile(item) {
         const inputId = `case-option-${item.caseKey}`;
-        return $('<div>', { class: 'col-12 col-sm-6 col-lg-4' }).append(
-            $('<label>', { class: 'case-selector-tile h-100', for: inputId }).append(
+        const unlocked = isCaseUnlocked(item);
+        const unlockCost = Number(item.unlockCostStars || 0);
+        const multiplier = Number(item.saleMultiplier || 1);
+        const status = unlocked
+            ? $('<span>', { class: 'case-selector-status is-unlocked' }).append(
+                $('<i>', { class: 'fa-solid fa-lock-open', 'aria-hidden': 'true' }),
+                document.createTextNode(' Unlocked'))
+            : $('<button>', {
+                class: 'btn btn-warning btn-sm case-selector-unlock js-unlock-case',
+                type: 'button',
+                'data-case-key': item.caseKey,
+                text: `Unlock · ${unlockCost} Stars`
+            });
+
+        return $('<div>', { class: 'col-6 col-sm-4 col-lg-3 col-xl' }).append(
+            $('<div>', {
+                class: `case-selector-tile h-100${unlocked ? '' : ' is-locked'}`,
+                role: unlocked ? 'button' : undefined,
+                tabindex: unlocked ? 0 : undefined,
+                'data-case-key': item.caseKey
+            }).append(
                 $('<img>', { class: 'case-selector-image', src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
                 $('<span>', { class: 'case-selector-shade', 'aria-hidden': 'true' }),
                 $('<span>', { class: 'case-selector-content' }).append(
                     $('<span>').append(
                         $('<small>', { text: item.type }),
-                        $('<strong>', { text: item.name })
+                        $('<strong>', { text: item.name }),
+                        $('<small>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
                     ),
                     $('<span>', { class: 'form-check form-switch m-0' }).append(
                         $('<input>', {
@@ -490,9 +942,11 @@
                             name: 'caseSelection',
                             id: inputId,
                             value: item.caseKey,
-                            checked: item.caseKey === caseKey
+                            checked: item.caseKey === caseKey,
+                            disabled: !unlocked
                         })
-                    )
+                    ),
+                    status
                 )
             )
         );
@@ -504,6 +958,15 @@
         items.forEach(item => $grid.append(caseSelectorTile(item)));
     }
 
+    function loadCaseCatalogue() {
+        return request('/api/case-opening/cases', 'GET', { showLoader: false })
+            .done(function (items) {
+                renderCaseSelector(items);
+                if (botProgress) renderBotProgress(botProgress);
+            })
+            .fail(response => showError(response, 'The case catalogue could not be loaded.'));
+    }
+
     function caseNameFor(key) {
         return catalogue.find(item => item.caseKey === key)?.name || key;
     }
@@ -511,13 +974,30 @@
     function historyCard(item) {
         const opened = new Date(item.openedUtc);
         const meta = [item.rarityName, item.phase, item.wear, item.isStatTrak ? 'StatTrak™' : ''].filter(Boolean).join(' · ');
+        const condition = item.floatValue == null || item.patternSeed == null
+            ? ''
+            : `Float ${Number(item.floatValue).toFixed(6)} · Pattern #${item.patternSeed}`;
+        const stars = saleValueFor(item);
         return $('<div>', { class: 'col-12 col-sm-6 col-xl-3' }).append(
             $('<article>', { class: `card border-0 shadow-sm case-history-card ${rarityClass(item)}` }).append(
                 $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<input>', {
+                    class: 'form-check-input case-history-select js-case-inventory-select',
+                    type: 'checkbox',
+                    checked: selectedInventoryIds.has(String(item.openingId)),
+                    'data-opening-id': item.openingId,
+                    'aria-label': `Select ${item.name} to sell`
+                }),
                 $('<div>', { class: 'card-body pt-0' }).append(
                     $('<p>', { class: 'small fw-semibold rarity-label mb-1', text: item.rarityName }),
                     $('<h3>', { class: 'h6 fw-semibold mb-1', text: item.name }),
                     $('<p>', { class: 'small-muted mb-2', text: meta }),
+                    condition ? $('<p>', { class: 'case-history-condition small mb-2', text: condition }) : null,
+                    $('<p>', {
+                        class: 'small fw-semibold mb-2 text-warning js-case-sale-value',
+                        'data-opening-id': item.openingId,
+                        text: `${stars} ${stars === 1 ? 'Star' : 'Stars'} on sale`
+                    }),
                     $('<span>', { class: 'badge text-bg-secondary-subtle border mb-2', text: caseNameFor(item.caseKey) }),
                     $('<br>'),
                     $('<time>', { class: 'small-muted', datetime: item.openedUtc, text: Number.isNaN(opened.getTime()) ? '' : opened.toLocaleString() }),
@@ -534,10 +1014,21 @@
 
     function historyTableRow(item) {
         const opened = new Date(item.openedUtc);
-        const details = [item.weaponName, item.patternName, item.phase, item.wear, item.isStatTrak ? 'StatTrak™' : '']
+        const condition = item.floatValue == null || item.patternSeed == null
+            ? ''
+            : `Float ${Number(item.floatValue).toFixed(6)} · Pattern #${item.patternSeed}`;
+        const details = [item.weaponName, item.patternName, item.phase, item.wear, condition, item.isStatTrak ? 'StatTrak™' : '']
             .filter(Boolean)
             .join(' · ');
+        const stars = saleValueFor(item);
         return $('<tr>', { class: `case-history-row ${rarityClass(item)}` }).append(
+            $('<td>').append($('<input>', {
+                class: 'form-check-input case-history-select js-case-inventory-select',
+                type: 'checkbox',
+                checked: selectedInventoryIds.has(String(item.openingId)),
+                'data-opening-id': item.openingId,
+                'aria-label': `Select ${item.name} to sell`
+            })),
             $('<td>').append(
                 $('<span>', { class: 'case-history-item-cell' }).append(
                     $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
@@ -548,7 +1039,14 @@
                 )
             ),
             $('<td>').append($('<span>', { class: 'badge text-bg-secondary-subtle border', text: caseNameFor(item.caseKey) })),
-            $('<td>').append($('<span>', { class: 'case-history-rarity', text: item.rarityName })),
+            $('<td>').append(
+                $('<span>', { class: 'case-history-rarity d-block', text: item.rarityName }),
+                $('<small>', {
+                    class: 'text-warning js-case-sale-value',
+                    'data-opening-id': item.openingId,
+                    text: `${stars}★`
+                })
+            ),
             $('<td>', { class: 'small', text: details || '—' }),
             $('<td>').append($('<time>', {
                 class: 'small text-nowrap',
@@ -570,6 +1068,10 @@
     function historyPageItems() {
         const start = (historyPage - 1) * historyPageSize;
         return filteredHistoryItems.slice(start, start + historyPageSize);
+    }
+
+    function activeHistoryItems() {
+        return historyScope === 'all' ? allHistoryItems : sessionOpenings;
     }
 
     function historyPageCount() {
@@ -609,6 +1111,41 @@
         $('#caseHistoryPaginationBar').toggleClass('d-none', filteredHistoryItems.length === 0);
     }
 
+    function renderInventorySelection() {
+        const visibleItems = historyPageItems();
+        const selectedItems = [...selectedInventoryIds];
+        const stars = allHistoryItems
+            .filter(item => selectedInventoryIds.has(String(item.openingId)))
+            .reduce((total, item) => total + saleValueFor(item), 0);
+        const allVisibleSelected = visibleItems.length > 0
+            && visibleItems.every(item => selectedInventoryIds.has(String(item.openingId)));
+
+        $('#caseInventoryActions').toggleClass('d-none', activeHistoryItems().length === 0);
+        $('#caseInventorySelectPage').prop('checked', allVisibleSelected).prop('indeterminate', !allVisibleSelected && visibleItems.some(item => selectedInventoryIds.has(String(item.openingId))));
+        $('#caseInventorySelectionText').text(selectedItems.length === 0
+            ? '0 selected'
+            : `${selectedItems.length} selected · ${stars} ${stars === 1 ? 'Star' : 'Stars'}`);
+        $('#sellCaseInventory').prop('disabled', selectedItems.length === 0);
+
+        // Selection should feel immediate. Rebuilding cards after every checkbox change causes
+        // the list to jump and interrupts users selecting several items in a row.
+        $('.js-case-inventory-select').each(function () {
+            const openingId = String($(this).data('opening-id'));
+            $(this).prop('checked', selectedInventoryIds.has(openingId));
+        });
+    }
+
+    function refreshInventorySaleValues() {
+        $('.js-case-sale-value').each(function () {
+            const item = historyItems.get(String($(this).data('opening-id')));
+            if (!item) return;
+            const stars = saleValueFor(item);
+            $(this).text($(this).closest('tr').length > 0
+                ? `${stars}★`
+                : `${stars} ${stars === 1 ? 'Star' : 'Stars'} on sale`);
+        });
+    }
+
     function renderHistoryPage() {
         $historyCards.empty();
         $historyTableBody.empty();
@@ -617,12 +1154,13 @@
             $historyTableBody.append(historyTableRow(item));
         });
 
-        const hasHistory = allHistoryItems.length > 0;
+        const hasHistory = activeHistoryItems().length > 0;
         const hasFilteredHistory = filteredHistoryItems.length > 0;
         $('#caseHistoryTableWrap, #caseHistory').toggleClass('d-none', !hasFilteredHistory);
         $empty.toggleClass('d-none', hasHistory);
         $('#caseHistoryFilteredEmpty').toggleClass('d-none', !hasHistory || hasFilteredHistory);
         renderHistoryPagination();
+        renderInventorySelection();
         window.personalToolsMotion?.reveal(
             $('#caseHistoryTableBody tr:visible, #caseHistory > div:visible').get(),
             { fromY: 6, delay: 18, duration: 220 }
@@ -632,7 +1170,7 @@
     function filterHistory() {
         const search = String($('#caseHistorySearch').val() || '').trim().toLowerCase();
         const rarity = String($('#caseHistoryRarity').val() || '').toLowerCase();
-        filteredHistoryItems = allHistoryItems.filter(item => {
+        filteredHistoryItems = activeHistoryItems().filter(item => {
             if (rarity && String(item.rarityKey || '').toLowerCase() !== rarity) return false;
             if (!search) return true;
             return [
@@ -644,11 +1182,39 @@
                 item.patternName,
                 item.phase,
                 item.wear,
+                item.floatValue,
+                item.patternSeed == null ? '' : `pattern ${item.patternSeed}`,
                 item.isStatTrak ? 'stattrak' : ''
             ].filter(Boolean).join(' ').toLowerCase().includes(search);
         });
         historyPage = 1;
         renderHistoryPage();
+    }
+
+    function renderHistoryScope() {
+        const activeItems = activeHistoryItems();
+        $('#caseHistorySessionCount').text(sessionOpenings.length);
+        $('#caseHistoryAllCount').text(allHistoryItems.length);
+        $('#caseHistoryCount').text(activeItems.length);
+        $('#openClearHistory')
+            .toggleClass('d-none', historyScope !== 'all')
+            .prop('disabled', allHistoryItems.length === 0);
+        $('#caseHistoryEmptyTitle').text(historyScope === 'all' ? 'No saved openings yet' : 'No session openings yet');
+        $('#caseHistoryEmptyCopy').text(historyScope === 'all'
+            ? 'Your unsold simulated case items will collect here.'
+            : 'Cases opened during this visit will collect here.');
+        refreshHistoryRarityFilter(activeItems);
+    }
+
+    function setHistoryScope(scope) {
+        historyScope = scope === 'all' ? 'all' : 'session';
+        $('#caseHistoryTabs [data-history-scope]').each(function () {
+            const active = String($(this).data('history-scope')) === historyScope;
+            $(this).toggleClass('active', active).attr('aria-selected', active ? 'true' : 'false');
+        });
+        $('#caseHistoryPanel').attr('aria-labelledby', historyScope === 'all' ? 'caseHistoryAllTab' : 'caseHistorySessionTab');
+        renderHistoryScope();
+        filterHistory();
     }
 
     function refreshHistoryRarityFilter(items) {
@@ -664,19 +1230,27 @@
 
     function renderHistory(items) {
         allHistoryItems = Array.isArray(items) ? items : [];
+        const availableIds = new Set(allHistoryItems.map(item => String(item.openingId)));
+        [...selectedInventoryIds].forEach(openingId => {
+            if (!availableIds.has(openingId)) selectedInventoryIds.delete(openingId);
+        });
         historyItems.clear();
-        allHistoryItems.forEach(item => {
+        [...allHistoryItems, ...sessionOpenings].forEach(item => {
             historyItems.set(String(item.openingId), item);
         });
-        refreshHistoryRarityFilter(allHistoryItems);
-        $('#caseHistoryCount').text(allHistoryItems.length);
-        $('#openClearHistory').prop('disabled', allHistoryItems.length === 0);
+        renderHistoryScope();
         filterHistory();
     }
 
     function loadHistory() {
         return request('/api/case-opening/history').done(renderHistory)
             .fail(response => showError(response, 'Your case-opening history could not be loaded.'));
+    }
+
+    function loadProgress() {
+        return request('/api/case-opening/progress')
+            .done(renderProgress)
+            .fail(response => showError(response, 'Your Stars balance could not be loaded.'));
     }
 
     function reelTarget(result) {
@@ -691,7 +1265,8 @@
     }
 
     function animateReel(result) {
-        $reel.empty().css('transform', 'translateX(0px)');
+        $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
+        $('#caseMultiResults').addClass('d-none').empty();
         result.reel.forEach(item => $reel.append(itemCard(item, 'case-reel-item')));
         $idle.addClass('d-none');
         $result.addClass('d-none');
@@ -765,6 +1340,38 @@
         }, 1850);
     }
 
+    function addResultsToInventory(results, refreshDisplay) {
+        results.forEach(result => {
+            const historyItem = {
+                ...result.winner,
+                openingId: result.openingId,
+                caseKey: result.caseKey,
+                openedUtc: new Date().toISOString()
+            };
+            sessionOpenings.push(historyItem);
+            historyItems.set(String(result.openingId), historyItem);
+            allHistoryItems.unshift(historyItem);
+        });
+        if (refreshDisplay !== false) {
+            renderSessionSummary();
+            renderHistory(allHistoryItems);
+        }
+    }
+
+    function completeOpening(results) {
+        addResultsToInventory(results);
+        $open.prop('disabled', false);
+        renderOpenButton('ready');
+        opening = false;
+        const resultNames = results.length === 1 ? results[0].winner.name : `${results.length} items`;
+        window.personalToolsToast?.success(`${resultNames} unboxed.`);
+        statisticsRequestedAfterOpening = results[0]?.caseKey || caseKey;
+        loadStatistics(statisticsRequestedAfterOpening).always(function () {
+            if (!opening) $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
+        });
+        loadCollection(results[0]?.caseKey || caseKey);
+    }
+
     function finishOpening(result) {
         const winner = result.winner;
         if (!isGoldItem(winner)) playReveal(winner);
@@ -774,20 +1381,68 @@
             .addClass(rarityClass(winner))
             .removeClass('d-none');
         if (!isGoldItem(winner)) runParticles(winner.rarityColor, 28);
-        const historyItem = { ...winner, openingId: result.openingId, caseKey: result.caseKey, openedUtc: new Date().toISOString() };
-        sessionOpenings.push(historyItem);
-        renderSessionSummary();
-        historyItems.set(String(result.openingId), historyItem);
-        allHistoryItems.unshift(historyItem);
-        renderHistory(allHistoryItems);
-        $open.prop('disabled', false);
-        renderOpenButton('ready');
-        opening = false;
-        window.personalToolsToast?.success(`${winner.name} unboxed.`);
-        statisticsRequestedAfterOpening = result.caseKey;
-        loadStatistics(result.caseKey).always(function () {
-            if (!opening) $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
+        completeOpening([result]);
+    }
+
+    function multiResultCard(result) {
+        const winner = result.winner;
+        return $('<div>', { class: 'col-6 col-lg' }).append(
+            $('<article>', { class: `case-multi-result ${rarityClass(winner)}` }).append(
+                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<strong>', { text: winner.name })
+            )
+        );
+    }
+
+    function showMultiResults(results) {
+        const $multiResults = $('#caseMultiResults').empty().removeClass('d-none');
+        $reel.removeClass('case-skip-reel').empty().css('transform', 'translateX(0px)');
+        $idle.addClass('d-none');
+        $result.addClass('d-none');
+        results.forEach(result => $multiResults.append(multiResultCard(result)));
+        results.filter(result => isGoldItem(result.winner)).forEach(result => {
+            runParticles(result.winner.rarityColor || '#e4ae39', 64);
         });
+        window.personalToolsMotion?.reveal(
+            $multiResults.children().get(),
+            { fromY: 14, delay: 80, duration: 420 }
+        );
+        window.setTimeout(() => completeOpening(results), 450);
+    }
+
+    function showSkippedResult(result) {
+        const winner = result.winner;
+        const $skipCard = $('<article>', { class: `case-skip-result ${rarityClass(winner)}` }).append(
+            $('<img>', {
+                src: winner.imageUrl,
+                alt: '',
+                referrerpolicy: 'no-referrer'
+            }),
+            $('<div>', { class: 'case-skip-result-copy' }).append(
+                $('<span>', { text: winner.rarityName }),
+                $('<strong>', { text: winner.name })
+            )
+        );
+
+        // Skipping the long reel still needs to show the item that was actually won.
+        // Keeping this inside the reel window makes the quick path feel like an intentional reveal.
+        $reel
+            .addClass('case-skip-reel')
+            .empty()
+            .css('transform', 'translateX(0px)')
+            .append($skipCard);
+        $idle.addClass('d-none');
+        $('#caseMultiResults').addClass('d-none').empty();
+        $result.addClass('d-none');
+        window.setTimeout(function () {
+            if (isGoldItem(winner)) {
+                showGoldReveal(result);
+                return;
+            }
+
+            finishOpening(result);
+            window.personalToolsMotion?.reveal([$skipCard.get(0), $result.get(0)], { fromY: 10, delay: 60, duration: 260 });
+        }, 120);
     }
 
     function runParticles(colour, count) {
@@ -879,8 +1534,29 @@
         request(
             `/api/case-opening/cases/${encodeURIComponent(caseKey)}/open`,
             'POST',
-            { showLoader: false })
-            .done(animateReel)
+            {
+                data: JSON.stringify({ quantity: selectedOpenQuantity }),
+                contentType: 'application/json; charset=utf-8',
+                showLoader: false
+            })
+            .done(function (batch) {
+                const results = Array.isArray(batch?.results) ? batch.results : [];
+                if (results.length !== selectedOpenQuantity) {
+                    opening = false;
+                    $open.prop('disabled', false);
+                    renderOpenButton('ready');
+                    $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
+                    showError(null, 'The case-opening result was incomplete. Please try again.');
+                    return;
+                }
+                if (results.length > 1) {
+                    showMultiResults(results);
+                } else if (caseProgress?.skipAnimationUnlocked && $('#caseSkipAnimation').prop('checked')) {
+                    showSkippedResult(results[0]);
+                } else {
+                    animateReel(results[0]);
+                }
+            })
             .fail(response => {
                 clearReelSounds();
                 opening = false;
@@ -890,6 +1566,84 @@
                 showError(response, 'The case could not be opened. Please try again.');
             });
     });
+
+    $('#caseOpenQuantity').on('click', '[data-open-quantity]', function () {
+        if (opening) return;
+        const quantity = Number($(this).data('open-quantity')) || 1;
+        if (quantity > 1 + Number(caseProgress?.multiOpenLevel || 0)) return;
+        selectedOpenQuantity = quantity;
+        renderOpenQuantity();
+    });
+
+    $('#caseSkipAnimation').on('change', function () {
+        if (caseProgress?.skipAnimationUnlocked !== true) {
+            this.checked = false;
+            return;
+        }
+        saveSkipAnimationPreference(this.checked);
+        window.personalToolsToast?.info(this.checked ? 'Long reel animation will be skipped.' : 'Long reel animation restored.');
+    });
+
+    $('[data-upgrade-key]').on('click', function () {
+        const upgradeKey = String($(this).data('upgrade-key'));
+        if (!upgradeKey) return;
+        const $button = $(this).prop('disabled', true);
+        request(`/api/case-opening/upgrades/${encodeURIComponent(upgradeKey)}/unlock`, 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderProgress(progress);
+                window.personalToolsToast?.success('Case-opening upgrade unlocked.');
+            })
+            .fail(response => showError(response, 'The upgrade could not be unlocked.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#caseBotCaseSelect').on('change', function () {
+        saveBotCasePreference(String(this.value || ''));
+    });
+
+    $('#buyCaseBotServer').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        request('/api/case-opening/bots/servers', 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderBotProgress(progress);
+                renderProgress({ ...caseProgress, stars: progress.stars });
+                window.personalToolsToast?.success('Bot server installed. It has four available slots.');
+            })
+            .fail(response => showError(response, 'The bot server could not be purchased.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#buyCaseBot').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        request('/api/case-opening/bots', 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderBotProgress(progress);
+                renderProgress({ ...caseProgress, stars: progress.stars });
+                window.personalToolsToast?.success('Opening bot installed and ready for assignment.');
+            })
+            .fail(response => showError(response, 'The bot could not be purchased.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#startCaseBots').on('click', function () {
+        if (botsRunning || !$('#caseBotCaseSelect').val()) return;
+        botsRunning = true;
+        renderBotProgress(botProgress);
+        runBotCycle();
+        botTimer = window.setInterval(runBotCycle, Number(botProgress?.openingIntervalSeconds || 12) * 1000);
+        window.personalToolsToast?.success('Bot operation started. Keep this tab visible to continue opening cases.');
+    });
+
+    $('#stopCaseBots').on('click', () => stopBots(true));
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden && botsRunning) {
+            stopBots(false);
+            window.personalToolsToast?.info('Bot operation paused because the Case Opening tab is no longer visible.');
+        }
+    });
+
+    window.addEventListener('pagehide', () => stopBots(false));
 
     $('#caseSoundEnabled').on('change', function () {
         soundState.enabled = this.checked;
@@ -924,9 +1678,91 @@
         loadCase(caseKey, { closeSelector: true, showToast: true });
     });
 
+    $('#caseSelectorGrid').on('click keydown', '.case-selector-tile:not(.is-locked)', function (event) {
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        if ($(event.target).closest('input,button').length) return;
+        event.preventDefault();
+        $(this).find('input[name="caseSelection"]').prop('checked', true).trigger('change');
+    });
+
+    $('#caseSelectorGrid').on('click', '.js-unlock-case', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (opening) return;
+
+        const selectedKey = String($(this).data('case-key') || '');
+        const selectedCase = catalogue.find(item => item.caseKey === selectedKey);
+        if (!selectedCase || isCaseUnlocked(selectedCase)) return;
+
+        const cost = Number(selectedCase.unlockCostStars || 0);
+        const $button = $(this).prop('disabled', true);
+        request(`/api/case-opening/cases/${encodeURIComponent(selectedKey)}/unlock`, 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderProgress(progress);
+                selectedCase.isUnlocked = true;
+                caseKey = selectedKey;
+                renderCaseSelector(catalogue);
+                loadCase(caseKey, { closeSelector: true, showToast: true });
+                window.personalToolsToast?.success(`${selectedCase.name} unlocked for ${cost} Stars. Open it whenever you like.`);
+            })
+            .fail(response => showError(response, 'The case could not be unlocked.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
     $('.case-history-section').on('click', '.js-inspect-case-item', function () {
         const item = historyItems.get(String($(this).data('opening-id')));
         if (item) openInspect(item);
+    });
+
+    $('#caseCollectionGrid').on('click', '.js-inspect-collection-item', function () {
+        const item = collectionItems.get(String($(this).data('source-item-id')));
+        if (item) openInspect(item);
+    });
+
+    $('[data-collection-filter]').on('click', function () {
+        const filter = String($(this).data('collection-filter'));
+        if (!['all', 'collected', 'missing'].includes(filter) || filter === collectionFilter) return;
+        collectionFilter = filter;
+        renderCollection();
+    });
+
+    $('.case-history-section').on('change', '.js-case-inventory-select', function () {
+        const openingId = String($(this).data('opening-id'));
+        if (!openingId) return;
+        if (this.checked) selectedInventoryIds.add(openingId);
+        else selectedInventoryIds.delete(openingId);
+        renderInventorySelection();
+    });
+
+    $('#caseInventorySelectPage').on('change', function () {
+        historyPageItems().forEach(item => {
+            const openingId = String(item.openingId);
+            if (this.checked) selectedInventoryIds.add(openingId);
+            else selectedInventoryIds.delete(openingId);
+        });
+        renderInventorySelection();
+    });
+
+    $('#sellCaseInventory').on('click', function () {
+        const openingIds = [...selectedInventoryIds];
+        if (openingIds.length === 0) return;
+        const $button = $(this).prop('disabled', true);
+        request('/api/case-opening/inventory/sell', 'POST', {
+            data: JSON.stringify({ openingIds: openingIds }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                const soldIds = new Set(openingIds);
+                allHistoryItems = allHistoryItems.filter(item => !soldIds.has(String(item.openingId)));
+                sessionOpenings = sessionOpenings.filter(item => !soldIds.has(String(item.openingId)));
+                openingIds.forEach(openingId => selectedInventoryIds.delete(openingId));
+                renderProgress({ ...caseProgress, stars: result.starsBalance });
+                renderHistory(allHistoryItems);
+                window.personalToolsToast?.success(`${result.soldItemCount} item${result.soldItemCount === 1 ? '' : 's'} sold for ${result.starsAwarded} ${result.starsAwarded === 1 ? 'Star' : 'Stars'}.`);
+            })
+            .fail(response => showError(response, 'The selected inventory items could not be sold.'))
+            .always(() => $button.prop('disabled', false));
     });
 
     $('#caseInspectStage').on('pointerdown', function (event) {
@@ -956,7 +1792,24 @@
         sessionStartedAt = Date.now();
         renderSessionDuration();
         renderSessionSummary();
+        renderHistory(allHistoryItems);
         window.personalToolsToast?.success('Opening session summary reset. Saved results were not removed.');
+    });
+
+    $('#caseHistoryTabs').on('click', '[data-history-scope]', function () {
+        const scope = String($(this).data('history-scope'));
+        if (scope === historyScope) return;
+        $('#caseHistoryTableWrap, #caseHistory, #caseHistoryPanel').addClass('case-history-changing');
+        window.setTimeout(function () {
+            setHistoryScope(scope);
+            $('#caseHistoryTableWrap, #caseHistory, #caseHistoryPanel').removeClass('case-history-changing');
+        }, 100);
+    }).on('keydown', '[data-history-scope]', function (event) {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const scope = historyScope === 'session' ? 'all' : 'session';
+        const $target = $(`#caseHistoryTabs [data-history-scope="${scope}"]`);
+        $target.trigger('click').trigger('focus');
     });
 
     $('#caseHistorySearch').on('input', function () {
@@ -965,6 +1818,22 @@
     });
 
     $('#caseHistoryRarity').on('change', filterHistory);
+
+    $('.case-history-view-toggle').on('click', '[data-history-view]', function () {
+        const selectedView = String($(this).data('history-view'));
+        if (!['list', 'cards'].includes(selectedView) || selectedView === historyView) return;
+        $('#caseHistoryTableWrap, #caseHistory').addClass('case-history-changing');
+        window.setTimeout(function () {
+            historyView = selectedView;
+            try {
+                localStorage.setItem(historyViewStorageKey, historyView);
+            } catch {
+                // The selected view still applies for this visit when browser storage is unavailable.
+            }
+            renderHistoryView();
+            $('#caseHistoryTableWrap, #caseHistory').removeClass('case-history-changing');
+        }, 100);
+    });
 
     $('#caseHistoryPageSize').on('change', function () {
         historyPageSize = Number(this.value) || 25;
@@ -992,15 +1861,20 @@
         event.preventDefault();
         request('/api/case-opening/history', 'DELETE')
             .done(function () {
+                sessionOpenings = [];
+                selectedInventoryIds.clear();
                 renderHistory([]);
+                renderSessionSummary();
                 loadStatistics();
                 bootstrap.Modal.getInstance(document.getElementById('clearCaseHistoryModal'))?.hide();
-                window.personalToolsToast?.success('Case-opening history cleared.');
+                window.personalToolsToast?.success('Case-opening inventory discarded.');
             })
-            .fail(response => showError(response, 'Your case-opening history could not be cleared.'));
+            .fail(response => showError(response, 'Your case-opening inventory could not be discarded.'));
     });
 
     $('#caseHistoryPageSize').val(String(historyPageSize));
+    initialiseCollapsibleSections();
+    renderHistoryView();
     renderSessionSummary();
     renderSessionDuration();
     window.setInterval(renderSessionDuration, 1000);
@@ -1014,7 +1888,12 @@
                 return;
             }
             caseKey = selected.caseKey;
-            loadCase(caseKey).done(loadHistory);
+            loadCase(caseKey).done(function () {
+                loadHistory();
+                loadProgress();
+                loadCaseCatalogue();
+                loadBotProgress();
+            });
         })
         .fail(response => showError(response, 'The case catalogue could not be loaded.'));
 })(jQuery);
