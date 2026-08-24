@@ -161,11 +161,11 @@
                             <span class="app-nav-icon"><i class="fa-solid fa-crosshairs"></i></span><span class="sidebar-label">CS Match Tracker</span><span class="blits-nav-scan" aria-hidden="true"></span>
                         </a>
                     </div>
-
-                    <div class="app-nav-group">
+                    @if (canManageSettings)
+                    {
+                        <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">System</span>
-                        @if (canManageSettings)
-                        {
+                        
                         <a class="app-sidebar-link sidebar-feature-link tracker-sidebar-link @ActivePage("/Tracker")"
                            asp-page="/Tracker/Index"
                            title="Bug/Feature Tracker"
@@ -190,8 +190,8 @@
                         <a class="app-sidebar-link @ActivePage("/Admin/Users")" asp-page="/Admin/Users/Index" title="User management">
                             <span class="app-nav-icon"><i class="fa-solid fa-users-gear"></i></span><span class="sidebar-label">User management</span>
                         </a>
-                        }
-                    </div>
+                        
+                    </div>}
                 </nav>
 
                 <div class="app-sidebar-utilities">
@@ -201,12 +201,9 @@
                     <button class="app-utility-link theme-utility" type="button" data-theme-toggle aria-label="Switch theme" title="Switch theme" data-bs-toggle="tooltip" data-bs-placement="top">
                         <span class="app-nav-icon"><i class="fa-solid fa-moon" aria-hidden="true"></i></span>
                     </button>
-                    @if (canManageSettings)
-                    {
-                        <a class="app-utility-link settings-utility @ActivePage("/Settings")" asp-page="/Settings/Index" aria-label="Settings" title="Settings" data-bs-toggle="tooltip" data-bs-placement="top">
-                            <span class="app-nav-icon"><i class="fa-solid fa-gear"></i></span>
-                        </a>
-                    }
+                    <a class="app-utility-link settings-utility @ActivePage("/Settings")" asp-page="/Settings/Index" aria-label="Settings" title="Settings" data-bs-toggle="tooltip" data-bs-placement="top">
+                        <span class="app-nav-icon"><i class="fa-solid fa-gear"></i></span>
+                    </a>
                     <form method="post" asp-page="/Login" asp-page-handler="SignOut" class="js-signout-form">
                         <button class="app-utility-link signout-utility" type="submit" aria-label="Sign out" title="Sign out" data-bs-toggle="tooltip" data-bs-placement="top">
                             <span class="app-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>

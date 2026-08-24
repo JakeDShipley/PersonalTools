@@ -7,12 +7,11 @@ using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
 using PersonalTools.Classes.Tracker;
 using PersonalTools.Classes.PasteBin;
-using PersonalTools.Pages.Shared;
 using PersonalTools.Security;
 
 namespace PersonalTools.Pages.Settings;
 
-public sealed class IndexModel : RoleRestrictedPageModel
+public sealed class IndexModel : PageModel
 {
     private readonly IAuthFuncs _auth;
     private readonly ICSMatchReferenceData _referenceData;
@@ -44,6 +43,7 @@ public sealed class IndexModel : RoleRestrictedPageModel
     public List<AppSettingView> Settings { get; private set; } = [];
     public int TrackerAutoCloseAfterDays { get; private set; }
     public int PasteBinMaximumUploadSizeMb { get; private set; } = 50;
+    public bool IsAdministrator => User.IsUserAllowedHere(AppRole.Admin);
 
     [BindProperty(SupportsGet = true)]
     public bool SteamRequired { get; set; }
@@ -53,35 +53,23 @@ public sealed class IndexModel : RoleRestrictedPageModel
 
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    private bool IsUserAllowedHere()
-    {
-        return base.IsUserAllowedHere(AppRole.Admin);
-    }
-
     public async Task<IActionResult> OnGetAsync()
     {
-        if (!IsUserAllowedHere())
-        {
-            return RedirectWhenUserIsNotAllowed();
-        }
-
         LinkedSteamId = (await _auth.GetUser(UserId))?.SteamId;
-        AllMaps = await _referenceData.GetMaps();
-        ActiveDutyPool = await _referenceData.GetActiveDutyPool();
-        PendingMapPoolSuggestion = await _mapPoolSuggestion.GetPendingSuggestion();
         Settings = await _settings.Get(UserId);
-        TrackerAutoCloseAfterDays = (await _tracker.GetSettings()).AutoCloseAfterDays;
-        PasteBinMaximumUploadSizeMb = (await _pasteBin.GetPasteBinSettings()).MaximumUploadSizeMb;
+        if (IsAdministrator)
+        {
+            AllMaps = await _referenceData.GetMaps();
+            ActiveDutyPool = await _referenceData.GetActiveDutyPool();
+            PendingMapPoolSuggestion = await _mapPoolSuggestion.GetPendingSuggestion();
+            TrackerAutoCloseAfterDays = (await _tracker.GetSettings()).AutoCloseAfterDays;
+            PasteBinMaximumUploadSizeMb = (await _pasteBin.GetPasteBinSettings()).MaximumUploadSizeMb;
+        }
         return Page();
     }
 
     public async Task<IActionResult> OnPostUnlinkSteam()
     {
-        if (!IsUserAllowedHere())
-        {
-            return RedirectWhenUserIsNotAllowed();
-        }
-
         await _auth.UnlinkSteam(UserId);
         TempData["SuccessMessage"] = "Steam account unlinked.";
         return RedirectToPage();
@@ -89,10 +77,7 @@ public sealed class IndexModel : RoleRestrictedPageModel
 
     public async Task<IActionResult> OnPostUpdateActiveDutyPool()
     {
-        if (!IsUserAllowedHere())
-        {
-            return RedirectWhenUserIsNotAllowed();
-        }
+        if (!IsAdministrator) return Forbid();
 
         await _referenceData.SetActiveDutyPool(SelectedActiveDutyMaps);
         TempData["SuccessMessage"] = "Active Duty map pool updated.";

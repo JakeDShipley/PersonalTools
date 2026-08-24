@@ -73,15 +73,9 @@
     let historyLoaded = false;
 
     function loadDestinationPreference() {
-        const hashDestination = String(window.location.hash || '').replace(/^#/, '').toLowerCase();
-        if (validDestinations.includes(hashDestination)) return hashDestination;
-
-        try {
-            const savedDestination = localStorage.getItem(destinationStorageKey);
-            return validDestinations.includes(savedDestination) ? savedDestination : 'open';
-        } catch {
-            return 'open';
-        }
+        // The opening machine is the primary experience. Always begin there instead of restoring
+        // a previously browsed shop or inventory panel after a refresh/new visit.
+        return 'open';
     }
 
     function loadHistoryPageSize() {

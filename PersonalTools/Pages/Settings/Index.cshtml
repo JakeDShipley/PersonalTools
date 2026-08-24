@@ -3,7 +3,10 @@
 @using PersonalTools.Entities
 @{
     ViewData["Title"] = "Settings";
-    var settingGroups = Model.Settings.GroupBy(setting => setting.Definition.Group).ToList();
+    var settingGroups = Model.Settings
+        .Where(setting => Model.IsAdministrator || setting.Definition.Group != "Integrations")
+        .GroupBy(setting => setting.Definition.Group)
+        .ToList();
 }
 
 @section Head { <link rel="stylesheet" href="~/css/pages/page-settings.css" asp-append-version="true" /> }
@@ -107,6 +110,8 @@
             </section>
         </div>
 
+        @if (Model.IsAdministrator)
+        {
         <div class="col-12">
             <section class="card tool-card border-0 shadow-sm">
                 <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -198,7 +203,6 @@
                 </div>
             </section>
         </div>
-
         <div class="col-12">
             <section class="card tool-card border-0 shadow-sm">
                 <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -213,6 +217,7 @@
                 </div>
             </section>
         </div>
+        }
     </div>
 </div>
 
