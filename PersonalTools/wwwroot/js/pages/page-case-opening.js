@@ -622,10 +622,12 @@
     // skin that was just revealed rather than firing the moment the server response arrives.
     function awardXp(results, $origin) {
         if (!Array.isArray(results) || !results.length || !caseProgress) return;
-        const last = results[results.length - 1];
         const xpGained = results.reduce((sum, item) => sum + Number(item.xpAwarded || 0), 0);
-        const totalXp = Number(last.totalXp || (caseProgress.xp + xpGained));
-        const leveledUp = results.some(item => item.leveledUp);
+        const levelBefore = xpLevelForTotal(Number(caseProgress.xp || 0));
+        // Bot and manual opens may complete out of order. Applying each response's delta locally
+        // prevents an older absolute server snapshot making the XP bar move backwards.
+        const totalXp = Number(caseProgress.xp || 0) + xpGained;
+        const leveledUp = xpLevelForTotal(totalXp) > levelBefore;
         const levelRewardStars = results.reduce((sum, item) => sum + Number(item.levelRewardStars || 0), 0);
 
         flyXpBubble(xpGained, $origin).done(function () {
@@ -3320,9 +3322,36 @@
         request('/api/case-opening/settings', 'GET', { showLoader: false })
             .done(fillTweakSettingsForm)
             .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Game settings could not be loaded.'));
+        request('/api/case-opening/settings/xp-by-rarity', 'GET', { showLoader: false })
+            .done(function (items) {
+                const names = { 'mil-spec': 'Mil-Spec', restricted: 'Restricted', classified: 'Classified', covert: 'Covert', 'rare-special': 'Rare Special (Gold)', 'high-grade': 'High Grade', remarkable: 'Remarkable', exotic: 'Exotic' };
+                const $body = $('#caseTweakXpByRarityTableBody').empty();
+                (items || []).forEach(function (item) {
+                    $body.append($('<tr>').append(
+                        $('<td>', { text: names[item.rarityKey] || item.rarityKey }),
+                        $('<td>').append($('<input>', { class: 'form-control form-control-sm js-tweak-xp-rarity', type: 'number', min: 0, step: 1, value: Number(item.xpAwarded || 0) }).data('rarity-key', item.rarityKey))
+                    ));
+                });
+            })
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'XP rewards could not be loaded.'));
         request('/api/case-opening/settings/cases', 'GET', { showLoader: false })
             .done(renderTweakCasesTable)
             .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'Case settings could not be loaded.'));
+    });
+
+    $('#saveCaseTweakXpByRarity').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        const updates = $('#caseTweakXpByRarityTableBody .js-tweak-xp-rarity').map(function () {
+            return request(`/api/case-opening/settings/xp-by-rarity/${encodeURIComponent(String($(this).data('rarity-key')))}`, 'PUT', {
+                data: JSON.stringify({ xpAwarded: Math.max(0, Math.trunc(Number($(this).val()) || 0)) }),
+                contentType: 'application/json; charset=utf-8',
+                showLoader: false
+            });
+        }).get();
+        $.when(...updates)
+            .done(() => window.personalToolsToast?.success('XP rewards saved.'))
+            .fail(response => window.personalToolsToast?.error(response.responseJSON?.message || 'One or more XP rewards could not be saved.'))
+            .always(() => $button.prop('disabled', false));
     });
 
     $('#caseTweakProgressForm').on('submit', function (event) {

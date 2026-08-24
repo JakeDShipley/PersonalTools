@@ -1030,6 +1030,22 @@
                             </div>
                             <button class="btn btn-warning mt-4" type="submit">Save game settings</button>
                         </form>
+
+                        <hr class="my-4" />
+                        <h3 class="h6 mb-1">XP per rarity</h3>
+                        <p class="small-muted">How much XP each rarity tier earns when opened. Changes are shared across every account.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle case-tweak-cases-table" id="caseTweakXpByRarityTable">
+                                <thead>
+                                    <tr>
+                                        <th>Rarity</th>
+                                        <th>XP awarded</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="caseTweakXpByRarityTableBody"></tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-warning" type="button" id="saveCaseTweakXpByRarity">Save XP rewards</button>
                     </div>
 
                     <div class="tab-pane fade" id="caseTweakCasesPane" role="tabpanel" aria-labelledby="caseTweakCasesTab">

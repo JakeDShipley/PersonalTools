@@ -90,24 +90,22 @@
 .case-xp-requirement-badge { position:absolute; top:.5rem; left:.5rem; z-index:2; padding:.15rem .5rem; color:#fff; border-radius:999px; background:color-mix(in srgb,var(--case-xp) 88%,#000); font-size:.62rem; font-weight:800; letter-spacing:.03em; box-shadow:0 .2rem .5rem rgba(0,0,0,.28); }
 .case-upgrade-card { position:relative; }
 
-.case-xp-bubble { --case-xp-bubble-dx:0px; --case-xp-bubble-dy:0px; position:fixed; z-index:1090; display:grid; place-items:center; width:2.75rem; height:2.75rem; color:#fff; border:2px solid color-mix(in srgb,var(--case-xp,#8847ff) 30%,#fff); border-radius:50%; background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--case-xp,#8847ff) 55%,#fff),var(--case-xp,#8847ff) 68%); box-shadow:0 0 0 .3rem color-mix(in srgb,var(--case-xp,#8847ff) 30%,transparent),0 .5rem 1.2rem rgba(0,0,0,.4); font-size:.92rem; font-weight:800; letter-spacing:-.01em; line-height:1; pointer-events:none; transform:translate(-50%,-50%) scale(1); opacity:1; transition:transform 1.05s cubic-bezier(.22,.05,.32,1); }
-.case-xp-bubble.is-flying { transform:translate(calc(-50% + var(--case-xp-bubble-dx)),calc(-50% + var(--case-xp-bubble-dy))) scale(.85); }
-.case-xp-bubble.is-landed { animation:case-xp-bubble-pop .3s cubic-bezier(.34,1.56,.64,1) forwards; }
-.case-xp-bubble.is-long { font-size:.72rem; }
-@keyframes case-xp-bubble-pop {
-    0% { transform:translate(calc(-50% + var(--case-xp-bubble-dx)),calc(-50% + var(--case-xp-bubble-dy))) scale(.85); opacity:1; }
-    45% { transform:translate(calc(-50% + var(--case-xp-bubble-dx)),calc(-50% + var(--case-xp-bubble-dy))) scale(1.4); opacity:1; }
-    100% { transform:translate(calc(-50% + var(--case-xp-bubble-dx)),calc(-50% + var(--case-xp-bubble-dy))) scale(.2); opacity:0; }
+.case-xp-bubble { position:fixed; z-index:1090; display:grid; place-items:center; min-width:2.75rem; height:2.2rem; padding:0 .6rem; color:#fff; border:1px solid color-mix(in srgb,var(--case-xp,#8847ff) 45%,rgba(255,255,255,.6)); border-radius:999px; background:linear-gradient(155deg,color-mix(in srgb,var(--case-xp,#8847ff) 40%,rgba(255,255,255,.16)),color-mix(in srgb,var(--case-xp,#8847ff) 22%,rgba(255,255,255,.04))); backdrop-filter:blur(7px) saturate(160%); -webkit-backdrop-filter:blur(7px) saturate(160%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -.6rem .8rem -.6rem color-mix(in srgb,var(--case-xp,#8847ff) 65%,transparent),0 .45rem 1rem rgba(0,0,0,.28); font-size:.85rem; font-weight:750; letter-spacing:-.01em; line-height:1; text-shadow:0 1px 2px rgba(0,0,0,.35); pointer-events:none; transform:translate(-50%,-50%) scale(.7); opacity:0; animation:case-xp-bubble-dissipate 1.3s cubic-bezier(.2,.7,.3,1) forwards; }
+.case-xp-bubble.is-long { font-size:.7rem; }
+@keyframes case-xp-bubble-dissipate {
+    0% { transform:translate(-50%,-50%) scale(.7); opacity:0; }
+    14% { transform:translate(-50%,-60%) scale(1); opacity:1; }
+    70% { transform:translate(-50%,-115%) scale(1.03); opacity:1; }
+    100% { transform:translate(-50%,-175%) scale(.85); opacity:0; }
 }
-.case-xp-bar.is-hit { animation:case-xp-bar-hit .45s ease; }
-@keyframes case-xp-bar-hit {
-    0% { transform:scale(1); box-shadow:0 0 0 0 color-mix(in srgb,var(--case-xp,#8847ff) 55%,transparent); }
-    35% { transform:scale(1.015); box-shadow:0 0 0 .6rem color-mix(in srgb,var(--case-xp,#8847ff) 0%,transparent); }
-    100% { transform:scale(1); box-shadow:0 0 0 0 transparent; }
+@media (prefers-reduced-motion:reduce) {
+    .case-xp-bubble { animation:case-xp-bubble-dissipate-reduced .9s ease forwards; }
 }
-/* Under reduced motion the bubble still appears (a brief static pop, no flight - see
-   flyXpBubble in page-case-opening.js) so there is always some visual XP feedback. */
-@media (prefers-reduced-motion:reduce) { .case-xp-bubble { transition:opacity .2s ease; } .case-xp-bubble.is-landed, .case-xp-bar.is-hit { animation:none; } }
+@keyframes case-xp-bubble-dissipate-reduced {
+    0% { transform:translate(-50%,-50%) scale(.9); opacity:0; }
+    25% { transform:translate(-50%,-50%) scale(1); opacity:1; }
+    100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+}
 
 .case-level-up-toast { position:absolute; top:50%; left:50%; z-index:5; display:flex; align-items:center; gap:.7rem; padding:.65rem 1.1rem; color:#fff4c2; border:1px solid color-mix(in srgb,var(--case-xp) 55%,transparent); border-radius:999px; background:linear-gradient(135deg,color-mix(in srgb,var(--case-xp) 78%,#000),color-mix(in srgb,var(--case-gold) 45%,color-mix(in srgb,var(--case-xp) 78%,#000))); box-shadow:0 1rem 2.4rem rgba(0,0,0,.4); opacity:0; pointer-events:none; white-space:nowrap; transform:translate(-50%,-50%) scale(.9); transition:opacity .25s ease,transform .25s cubic-bezier(.2,.9,.3,1.3); }
 .case-level-up-toast.is-visible { opacity:1; transform:translate(-50%,-50%) scale(1); }

@@ -225,6 +225,36 @@ public sealed class CaseOpeningController : ControllerBase
         }
     }
 
+    [HttpGet("settings/xp-by-rarity")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
+    public Task<ActionResult<List<CaseOpeningXpByRarityObj>>> GetXpByRarity(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetXpByRarity(cancellationToken), "load xp by rarity", "all");
+    }
+
+    [HttpPut("settings/xp-by-rarity/{rarityKey}")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> UpdateXpByRarity(
+        string rarityKey,
+        [FromBody] CaseOpeningXpByRarityRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _caseOpening.SetXpByRarity(rarityKey, request.XpAwarded, cancellationToken);
+            return Ok(new ApiResponse(true, "XP reward saved."));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to update XP by rarity for {RarityKey}.", rarityKey);
+            return StatusCode(502, new ApiResponse(false, "This XP reward could not be saved. Please try again shortly."));
+        }
+    }
+
     // ---------- Testing overrides for your own account (the variable-tweak modal's "Your progress" tab) ----------
 
     [HttpPut("dev/progress")]
@@ -289,6 +319,7 @@ public sealed class CaseOpeningController : ControllerBase
 }
 
 public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int PurchaseCostStars, int XpRequirement);
+public sealed record CaseOpeningXpByRarityRequest(int XpAwarded);
 public sealed record CaseOpeningDevProgressRequest(int Stars, int Xp);
 public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel);
 public sealed record CaseOpeningDevCaseUnlockRequest(bool Unlock);

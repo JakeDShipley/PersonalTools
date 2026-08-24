@@ -42,6 +42,8 @@ public interface ICaseOpeningData
     Task SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
     Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default);
+    Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default);
     Task<CaseOpeningCasePurchaseResultObj?> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, int purchaseCostStars, CancellationToken cancellationToken = default);
     Task<CaseOpeningStoragePurchaseResultObj?> PurchaseCaseOpeningStorageContainer(Guid userId, Guid storageContainerId, int cost, int slots, int maximumContainers, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
@@ -483,6 +485,19 @@ public sealed class CaseOpeningData : ICaseOpeningData
             cancellationToken);
     }
 
+    public Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_xp_by_rarity_get_all", ReadXpByRarity, cancellationToken: cancellationToken);
+    }
+
+    public Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_xp_by_rarity_set",
+            Parameters(("p_rarity_key", rarityKey), ("p_xp_awarded", xpAwarded)),
+            cancellationToken);
+    }
+
     public Task<CaseOpeningCasePurchaseResultObj?> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, int purchaseCostStars, CancellationToken cancellationToken = default)
     {
         return _database.GetDataSP("sp_case_opening_cases_purchase", reader => new CaseOpeningCasePurchaseResultObj
@@ -669,6 +684,15 @@ public sealed class CaseOpeningData : ICaseOpeningData
             UnlockCostStars = reader.GetInt32("UnlockCostStars"),
             PurchaseCostStars = reader.GetInt32("PurchaseCostStars"),
             XpRequirement = reader.GetInt32("XpRequirement")
+        };
+    }
+
+    private static CaseOpeningXpByRarityObj ReadXpByRarity(MySqlDataReader reader)
+    {
+        return new CaseOpeningXpByRarityObj
+        {
+            RarityKey = reader.GetString("RarityKey"),
+            XpAwarded = reader.GetInt32("XpAwarded")
         };
     }
 

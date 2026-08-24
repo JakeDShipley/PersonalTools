@@ -274,6 +274,12 @@ public sealed class CaseOpeningCaseSettingsObj
     public int XpRequirement { get; set; }
 }
 
+public sealed class CaseOpeningXpByRarityObj
+{
+    public string RarityKey { get; set; } = string.Empty;
+    public int XpAwarded { get; set; }
+}
+
 public sealed class CaseOpeningCasePurchaseRequestObj
 {
     public int Quantity { get; set; } = 1;
