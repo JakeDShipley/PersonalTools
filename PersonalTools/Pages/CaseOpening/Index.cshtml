@@ -31,8 +31,6 @@
         "Your results are saved privately below. Select unwanted items and sell them for Stars, or turn them into stronger skins through Trade Up Contracts."
     })
 
-    <div class="alert alert-danger d-none" id="caseOpeningError" role="alert"></div>
-
     <div class="case-dock-row">
         <aside class="case-stars-dock shadow-sm" aria-label="Case-opening Stars balance" aria-live="polite">
             <span class="case-stars-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
@@ -122,6 +120,14 @@
                     <label class="form-label small fw-semibold mb-1" for="caseShopPageSize">Show</label>
                     <select class="form-select" id="caseShopPageSize"><option value="12">12</option><option value="24">24</option><option value="48">48</option></select>
                 </div>
+                <div class="col-12 col-md-auto">
+                    <div class="case-shop-group-toggle h-100 d-flex align-items-center px-3">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input pt-switch" id="caseShopGroupByLevel" type="checkbox" role="switch" checked />
+                            <label class="form-check-label small fw-semibold" for="caseShopGroupByLevel">Group by level</label>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                 <span class="small-muted" id="caseShopResultCount">0 cases</span>
@@ -142,6 +148,10 @@
                 </div>
                 <span class="case-shop-stars"><i class="fa-solid fa-star" aria-hidden="true"></i><strong id="caseUpgradeStarsBalance">0</strong> Stars</span>
             </div>
+            <div class="case-upgrade-section-heading mb-3">
+                <span class="case-shop-icon"><i class="fa-solid fa-server" aria-hidden="true"></i></span>
+                <div><p class="eyebrow mb-1">Workshop capacity</p><h3 class="h5 mb-1">Storage and automation</h3><p class="small-muted mb-0">Expand your inventory and build bot capacity for background openings.</p></div>
+            </div>
             <div class="row g-3">
                 <div class="col-12">
                     <article class="case-shop-storage" id="caseShopStorageCard">
@@ -152,15 +162,32 @@
                         </div>
                         <div class="text-lg-end">
                             <strong id="caseShopStorageStatus">0 / 0 owned</strong>
+                            <span class="case-upgrade-card-metric d-block mt-1" id="caseShopStorageCapacity">1,000 slots · 0 used</span>
                             <button class="btn btn-warning btn-sm d-block ms-lg-auto mt-2" id="purchaseStorageContainer" type="button">Buy storage</button>
                         </div>
                     </article>
                 </div>
                 <div class="col-12"><div class="row g-2">
-                    <div class="col-12 col-md-6"><article class="case-shop-row"><div><h3 class="h6 mb-1">Bot server</h3><p class="small-muted mb-0">Adds four bot bays to your workshop.</p></div><button class="btn btn-outline-warning btn-sm js-shop-buy-server" type="button">Buy server</button></article></div>
-                    <div class="col-12 col-md-6"><article class="case-shop-row"><div><h3 class="h6 mb-1">Opening bot</h3><p class="small-muted mb-0">Opens an owned case while the page is active.</p></div><button class="btn btn-outline-warning btn-sm js-shop-buy-bot" type="button">Buy bot</button></article></div>
+                    <div class="col-12 col-md-6"><article class="case-shop-row"><div><h3 class="h6 mb-1">Bot server</h3><p class="small-muted mb-0">Adds four bot bays to your workshop.</p></div><div class="case-upgrade-card-action"><span class="case-upgrade-card-metric" id="caseUpgradeServerOwnership">0 servers</span><button class="btn btn-outline-warning btn-sm js-shop-buy-server" type="button">Buy server</button></div></article></div>
+                    <div class="col-12 col-md-6"><article class="case-shop-row"><div><h3 class="h6 mb-1">Opening bot</h3><p class="small-muted mb-0">Opens an owned case while the page is active.</p></div><div class="case-upgrade-card-action"><span class="case-upgrade-card-metric" id="caseUpgradeBotOwnership">0/0 bots</span><button class="btn btn-outline-warning btn-sm js-shop-buy-bot" type="button">Buy bot</button></div></article></div>
                 </div></div>
-                <div class="col-12"><div class="row g-2" id="caseShopUpgradeGrid"></div><p class="small-muted mt-3 mb-0"><i class="fa-solid fa-sparkles me-1"></i>Special upgrades will appear here as the simulator expands.</p></div>
+                <div class="col-12">
+                    <div class="case-upgrade-section-heading mt-2 mb-3"><span class="case-shop-icon"><i class="fa-solid fa-warehouse" aria-hidden="true"></i></span><div><p class="eyebrow mb-1">Permanent capacity</p><h3 class="h5 mb-1">Workshop shelving</h3><p class="small-muted mb-0">Cases and skins both use one inventory slot. Add permanent shelving as your collection and case stock grow.</p></div></div>
+                    <div class="row g-3" id="caseCapacityUpgradeGrid"></div>
+                    <p class="case-upgrade-card-metric mt-2 mb-0" id="caseCapacityUpgradeStatus">0 bonus slots unlocked</p>
+                </div>
+                <div class="col-12">
+                    <div class="case-upgrade-section-heading mt-2 mb-3"><span class="case-shop-icon"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i></span><div><p class="eyebrow mb-1">Opening controls</p><h3 class="h5 mb-1">Opening quality of life</h3><p class="small-muted mb-0">Make repeat openings quicker and expand the number of cases opened together.</p></div></div>
+                    <div class="row g-2" id="caseShopUpgradeGrid"></div>
+                </div>
+                <div class="col-12">
+                    <div class="case-upgrade-section-heading mt-2 mb-3"><span class="case-shop-icon"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i></span><div><p class="eyebrow mb-1">Inventory throughput</p><h3 class="h5 mb-1">Bulk selling</h3><p class="small-muted mb-0">Bulk sales start at 100 items regardless of the visible page. Upgrade the secure server-side limit as your inventory grows.</p></div></div>
+                    <div class="row g-3" id="caseInventoryUpgradeGrid"></div>
+                    <div class="case-auto-sell-panel mt-3">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div><p class="eyebrow mb-1">Automatic selling</p><h3 class="h6 mb-1">Rarity control deck</h3><p class="small-muted mb-0">Enabled rarities are sold immediately after each opening. Common tiers cost more because they create the strongest passive Star income.</p></div><div class="case-preserve-stattrak-control" id="casePreserveStatTrakControl"><div class="form-check form-switch m-0"><input class="form-check-input pt-switch" id="casePreserveStatTrak" type="checkbox" checked disabled /><label class="form-check-label small fw-semibold" for="casePreserveStatTrak">Always keep StatTrak™</label></div><small id="casePreserveStatTrakHint">Unlock an auto-sell tier first</small></div></div>
+                        <div class="case-auto-sell-grid" id="caseAutoSellControls"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -236,6 +263,7 @@
                         <img id="caseImage" alt="Kilowatt Case" />
                         <span>Ready to open</span>
                     </div>
+                    <div class="d-none" id="caseMultiResults" aria-live="polite"></div>
                 </div>
 
                 <div class="case-result-slot" aria-live="polite">
@@ -258,7 +286,6 @@
                         <button class="btn btn-outline-warning" type="button" data-open-quantity="5" aria-pressed="false">5</button>
                     </div>
                 </div>
-                <div class="row g-2 mt-3 d-none" id="caseMultiResults" aria-live="polite"></div>
             </div>
         </div>
     </section>
@@ -548,13 +575,17 @@
         <div class="card-body p-3 p-lg-4">
             <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
                 <div><p class="eyebrow mb-1">Inventory crafting</p><h2 class="h4 mb-1" id="caseTradeUpWorkspaceTitle">Trade Up Contracts</h2><p class="small-muted mb-0">Choose ten matching skins. Collection odds follow the source of every input and output wear uses the average float.</p></div>
-                <span class="case-trade-up-count" id="caseTradeUpSelectedCount">0 / 10 selected</span>
+                <div class="case-trade-up-header-actions">
+                    <span class="case-trade-up-count" id="caseTradeUpSelectedCount">0 / 10 selected</span>
+                    <button class="btn btn-warning js-complete-trade-up" type="button" disabled>
+                        <i class="fa-solid fa-flask-vial me-1"></i>Complete contract
+                    </button>
+                </div>
             </div>
             <div class="case-trade-up-workspace-summary mb-3"><div class="case-trade-up-workspace-slots" id="caseTradeUpWorkspaceSlots" aria-label="Trade Up Contract slots"></div><div class="case-trade-up-workspace-copy"><strong id="caseTradeUpWorkspaceConversion">Choose ten eligible skins</strong><span id="caseTradeUpWorkspaceMeta">Mil-Spec, Restricted and Classified items can be upgraded.</span><div class="case-trade-up-workspace-chances" id="caseTradeUpWorkspaceChances"></div></div></div>
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div><h3 class="h6 mb-1">Choose contract inputs</h3><p class="small-muted mb-0" id="caseTradeUpCandidateCopy">Loading your eligible inventory…</p></div><button class="btn btn-outline-secondary btn-sm" id="clearTradeUpSelection" type="button" disabled><i class="fa-solid fa-rotate-left me-1"></i>Clear selection</button></div>
             <div class="row g-2 case-trade-up-candidates" id="caseTradeUpCandidates"></div>
-            <div class="case-trade-up-mobile-action"><button class="btn btn-warning w-100" id="completeTradeUpWorkspace" type="button" disabled><i class="fa-solid fa-flask-vial me-1"></i>Complete contract</button></div>
-            <div class="case-trade-up-workspace-result d-none" id="caseTradeUpWorkspaceResult" aria-live="polite"></div>
+            <div class="case-trade-up-mobile-action"><button class="btn btn-warning w-100 js-complete-trade-up" type="button" disabled><i class="fa-solid fa-flask-vial me-1"></i>Complete contract</button></div>
         </div>
     </section>
 
@@ -565,31 +596,25 @@
                 <h2 class="h4 mb-0" id="caseHistoryTitle">Inventory <span class="badge rounded-pill text-bg-secondary ms-1" id="caseHistoryCount">0</span></h2>
                 <p class="small-muted mb-0 mt-1" id="caseInventoryCapacity">0 / 1,000 slots used</p>
             </div>
+            <div class="btn-group case-inventory-kind-toggle" id="caseInventoryKindToggle" role="group" aria-label="Inventory contents">
+                <button class="btn btn-outline-secondary active" type="button" data-inventory-kind="skins" aria-pressed="true">
+                    <i class="fa-solid fa-gun me-1" aria-hidden="true"></i>Skins
+                </button>
+                <button class="btn btn-outline-secondary" type="button" data-inventory-kind="cases" aria-pressed="false">
+                    <i class="fa-solid fa-box me-1" aria-hidden="true"></i>Cases
+                </button>
+            </div>
         </div>
 
-        <div class="nav nav-pills case-history-tabs mb-3" id="caseHistoryTabs" role="tablist" aria-label="Opening history scope">
-            <button class="nav-link active" id="caseHistorySessionTab" type="button" role="tab" aria-selected="true" aria-controls="caseHistoryPanel" data-history-scope="session">
-                <i class="fa-solid fa-bolt me-1" aria-hidden="true"></i>This session
-                <span class="badge rounded-pill ms-1" id="caseHistorySessionCount">0</span>
-            </button>
-            <button class="nav-link" id="caseHistoryAllTab" type="button" role="tab" aria-selected="false" aria-controls="caseHistoryPanel" data-history-scope="all">
-                <i class="fa-solid fa-boxes-stacked me-1" aria-hidden="true"></i>Inventory
-                <span class="badge rounded-pill ms-1" id="caseHistoryAllCount">0</span>
-            </button>
-        </div>
-
-        <div id="caseHistoryPanel" role="tabpanel" aria-labelledby="caseHistorySessionTab">
+        <div id="caseHistoryPanel" role="region" aria-labelledby="caseHistoryTitle">
         <div class="case-inventory-actions d-none mb-3" id="caseInventoryActions">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <div class="form-check m-0">
                     <input class="form-check-input" id="caseInventorySelectPage" type="checkbox" />
-                    <label class="form-check-label small fw-semibold" for="caseInventorySelectPage">Select this page</label>
+                    <label class="form-check-label small fw-semibold" for="caseInventorySelectPage" id="caseInventorySelectLabel">Select up to 100</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="small-muted" id="caseInventorySelectionText">0 selected</span>
-                    <button class="btn btn-outline-primary btn-sm" id="openCaseTradeUp" type="button" disabled>
-                        <i class="fa-solid fa-flask-vial me-1"></i>Trade up
-                    </button>
                     <button class="btn btn-warning btn-sm" id="sellCaseInventory" type="button" disabled>
                         <i class="fa-solid fa-star me-1"></i>Sell selected
                     </button>
@@ -681,6 +706,33 @@
             </div>
         </div>
         </div>
+
+        <div class="d-none" id="caseOwnedCasesPanel" role="tabpanel" aria-labelledby="caseHistoryTitle">
+            <div class="card border-0 shadow-sm mb-3 case-history-toolbar">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md">
+                            <label class="form-label small fw-semibold" for="caseOwnedCaseSearch">Search owned cases</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                                <input class="form-control" id="caseOwnedCaseSearch" type="search" autocomplete="off" placeholder="Case, capsule or package" />
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <span class="case-owned-inventory-summary" id="caseOwnedCaseSummary">0 case types · 0 total cases</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3" id="caseOwnedCasesGrid" aria-live="polite"></div>
+            <div class="case-history-empty card border-0 shadow-sm d-none" id="caseOwnedCasesEmpty">
+                <div class="card-body p-4 text-center">
+                    <i class="fa-solid fa-box-open mb-3" aria-hidden="true"></i>
+                    <h3 class="h6 fw-semibold" id="caseOwnedCasesEmptyTitle">No cases owned</h3>
+                    <p class="small-muted mb-0" id="caseOwnedCasesEmptyCopy">Purchase an unlocked case from the Shop and it will appear here.</p>
+                </div>
+            </div>
+        </div>
     </section>
 
     <nav class="case-bottom-nav" id="caseBottomNav" aria-label="Case simulator sections">
@@ -709,6 +761,10 @@
         </div>
     </nav>
     <span class="visually-hidden" id="caseDestinationStatus" aria-live="polite"></span>
+</div>
+
+<div class="modal fade" id="caseSellConfirmModal" tabindex="-1" aria-labelledby="caseSellConfirmTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><div><p class="eyebrow mb-1">Inventory sale</p><h2 class="modal-title h5" id="caseSellConfirmTitle">Confirm bulk sale</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2" id="caseSellConfirmCopy"></p><div class="alert alert-warning mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Sold items leave your inventory permanently. Collection progress is kept.</div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep items</button><button class="btn btn-warning" id="confirmCaseInventorySale" type="button"><i class="fa-solid fa-star me-1"></i>Sell items</button></div></div></div>
 </div>
 
 <div class="modal fade" id="caseInspectModal" tabindex="-1" aria-labelledby="caseInspectTitle" aria-hidden="true">
@@ -792,7 +848,7 @@
             </div>
             <div class="modal-body">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                    <p class="small-muted mb-0">Select a case to update its contents, artwork and rarity odds.</p>
+                    <p class="small-muted mb-0">Choose from cases you have permanently unlocked. Use Buy more to open its Shop listing.</p>
                     <span class="small-muted" id="caseSelectorMatchCount" aria-live="polite"></span>
                 </div>
                 <div class="input-group case-selector-search mb-3">
@@ -801,7 +857,7 @@
                 </div>
                 <div class="row g-3 case-selector-grid" id="caseSelectorGrid"></div>
                 <div class="alert alert-secondary d-none mb-0" id="caseSelectorEmpty" role="status">
-                    No cases or capsules match that search.
+                    No unlocked cases or capsules match that search. Unlock more from the Shop.
                 </div>
             </div>
         </div>
@@ -813,34 +869,13 @@
         <div class="modal-content case-trade-up-modal">
             <div class="modal-header">
                 <div>
-                    <p class="eyebrow mb-1">Inventory contract</p>
-                    <h2 class="modal-title fs-5" id="caseTradeUpTitle">Trade Up Contract</h2>
+                    <p class="eyebrow mb-1">Contract complete</p>
+                    <h2 class="modal-title fs-5" id="caseTradeUpTitle">Your Trade Up result</h2>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="caseTradeUpForm">
-                    <div class="case-trade-up-intro mb-3">
-                        <i class="fa-solid fa-flask-vial" aria-hidden="true"></i>
-                        <div>
-                            <strong id="caseTradeUpConversion">10 skins → one upgraded skin</strong>
-                            <p class="small-muted mb-0">Collection chance follows the source of every selected skin. Output wear is calculated from the average input float.</p>
-                        </div>
-                    </div>
-                    <div class="case-trade-up-slots mb-3" id="caseTradeUpInputs"></div>
-                    <div class="case-trade-up-chances mb-4" id="caseTradeUpChances"></div>
-                    <div class="alert alert-secondary small mb-0">
-                        <i class="fa-solid fa-circle-info me-1" aria-hidden="true"></i>
-                        The selected skins are consumed when the contract is confirmed. This cannot be undone.
-                    </div>
-                </div>
                 <div class="case-trade-up-result d-none" id="caseTradeUpResult" aria-live="polite"></div>
-            </div>
-            <div class="modal-footer" id="caseTradeUpFooter">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-warning" id="confirmCaseTradeUp" type="button">
-                    <i class="fa-solid fa-flask-vial me-1" aria-hidden="true"></i>Complete contract
-                </button>
+                <p class="case-trade-up-dismiss-hint mb-0"><i class="fa-solid fa-computer-mouse me-1" aria-hidden="true"></i>Click anywhere to close. Select the skin image to view it in your inventory.</p>
             </div>
         </div>
     </div>
@@ -963,6 +998,7 @@
                     <div class="tab-pane fade" id="caseTweakSettingsPane" role="tabpanel" aria-labelledby="caseTweakSettingsTab">
                         <form id="caseTweakSettingsForm">
                             <div class="row g-3">
+                                <div class="col-12"><div class="case-tweak-setting-heading"><i class="fa-solid fa-chart-line" aria-hidden="true"></i><div><strong>Progression and opening</strong><span>XP rewards, opening limits and permanent opening upgrades.</span></div></div></div>
                                 <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakXpPerOpen">XP per case open</label>
                                     <input class="form-control" id="caseTweakXpPerOpen" type="number" min="0" step="1" />
@@ -991,6 +1027,7 @@
                                     <label class="form-label small fw-semibold" for="caseTweakMaxOpenQuantity">Maximum open quantity</label>
                                     <input class="form-control" id="caseTweakMaxOpenQuantity" type="number" min="1" step="1" />
                                 </div>
+                                <div class="col-12"><div class="case-tweak-setting-heading"><i class="fa-solid fa-robot" aria-hidden="true"></i><div><strong>Bot workshop</strong><span>Opening pace and the escalating costs of servers and bots.</span></div></div></div>
                                 <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakBotInterval">Bot opening interval (seconds)</label>
                                     <input class="form-control" id="caseTweakBotInterval" type="number" min="1" step="1" />
@@ -1011,6 +1048,7 @@
                                     <label class="form-label small fw-semibold" for="caseTweakBotGrowthRate">Bot cost growth rate</label>
                                     <input class="form-control" id="caseTweakBotGrowthRate" type="number" min="1" step="0.001" />
                                 </div>
+                                <div class="col-12"><div class="case-tweak-setting-heading"><i class="fa-solid fa-box-archive" aria-hidden="true"></i><div><strong>Inventory storage</strong><span>Container pricing, capacity and account limits.</span></div></div></div>
                                 <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakStorageBaseCost">Storage base cost (Stars)</label>
                                     <input class="form-control" id="caseTweakStorageBaseCost" type="number" min="0" step="1" />
@@ -1046,6 +1084,17 @@
                             </table>
                         </div>
                         <button class="btn btn-warning" type="button" id="saveCaseTweakXpByRarity">Save XP rewards</button>
+
+                        <hr class="my-4" />
+                        <h3 class="h6 mb-1">Inventory upgrade catalogue</h3>
+                        <p class="small-muted">Star costs and level requirements for bulk-selling and rarity auto-sell unlocks. Changes apply to every account.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle case-tweak-cases-table" id="caseTweakInventoryUpgradesTable">
+                                <thead><tr><th>Upgrade</th><th>Category</th><th>Cost (Stars)</th><th>Required level</th></tr></thead>
+                                <tbody id="caseTweakInventoryUpgradesTableBody"></tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-warning" type="button" id="saveCaseTweakInventoryUpgrades">Save inventory upgrades</button>
                     </div>
 
                     <div class="tab-pane fade" id="caseTweakCasesPane" role="tabpanel" aria-labelledby="caseTweakCasesTab">

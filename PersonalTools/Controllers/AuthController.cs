@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PersonalTools.Classes;
 using PersonalTools.Classes.CaseOpening;
+using PersonalTools.Entities;
 using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
@@ -25,6 +27,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
@@ -33,8 +36,17 @@ public sealed class AuthController : ControllerBase
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password))
                 return BadRequest(new LoginResponse(false, "Enter your email address and password.", string.Empty));
 
-            var user = await _auth.Authenticate(request.Email, request.Password);
+            AuthenticationResult authentication = await _auth.Authenticate(request.Email, request.Password);
 
+            if (authentication.IsLockedOut)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new LoginResponse(
+                    false,
+                    "Too many incorrect sign-in attempts. Try again in a few minutes or ask an administrator to unlock the account.",
+                    string.Empty));
+            }
+
+            AppUser? user = authentication.User;
             if (user is null)
             {
                 return Unauthorized(new LoginResponse(false, "Email or password is incorrect.", string.Empty));

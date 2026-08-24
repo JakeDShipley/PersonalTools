@@ -11,7 +11,9 @@ dotnet user-secrets set "ConnectionStrings:PersonalTools" "Server=YOUR_HOST;Port
 
 For deployment, set the `ConnectionStrings__PersonalTools` environment variable to the same value. Use `SslMode=Required` when MariaDB is accessed remotely and use a least-privilege database account.
 
-On the first visit, `/Setup` creates the owner account. It automatically closes once a user exists. Passwords are stored with PBKDF2-SHA512 and a unique random salt; sessions are stored server-side in MariaDB and represented in the browser by an encrypted, HttpOnly authentication cookie.
+Accounts are created and maintained from the administrator-only User management page. There is no anonymous first-account setup route. Passwords are stored with PBKDF2-SHA512 and a unique random salt; sessions are stored server-side in MariaDB and represented in the browser by an encrypted, HttpOnly authentication cookie.
+
+The login API applies a short per-IP request limit and records failed attempts against known accounts in MariaDB. Five incorrect passwords temporarily lock an account for 15 minutes. An administrator can clear that state from the User management editor without viewing or changing the account password.
 
 Forgot-password delivery is intentionally a placeholder until an email service is configured.
 

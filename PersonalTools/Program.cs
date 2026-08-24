@@ -30,6 +30,8 @@ using PersonalTools.Data.PasteBin;
 using Microsoft.AspNetCore.Http.Features;
 using PersonalTools.Classes.CaseOpening;
 using PersonalTools.Data.CaseOpening;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,36 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddMemoryCache();
+builder.Services.AddRateLimiter(options =>
+{
+    const string loginPolicy = "login";
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(loginPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 12,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.TotalSeconds).ToString();
+        }
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            success = false,
+            message = "Too many sign-in requests. Wait a moment before trying again.",
+            displayName = string.Empty,
+        }, cancellationToken);
+    };
+});
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 67_108_864);
 builder.Services.AddScoped<IMariaDbDataAccess, MariaDbDataAccess>();
 builder.Services.AddScoped<IAuthData, AuthData>();
@@ -253,6 +285,9 @@ app.UseMiddleware<ContentSecurityPolicyMiddleware>();
 
 app.UseRouting();
 
+// Endpoint rate limiting runs after route selection so only the anonymous login endpoint uses
+// the strict policy. Authenticated application requests are unaffected.
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

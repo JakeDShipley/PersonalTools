@@ -6,12 +6,13 @@ namespace PersonalTools.Data;
 
 public interface IAuthData
 {
-    Task<int> GetUserCount();
     Task<AppUserDbModel?> GetUserByEmail(string email);
     Task<AppUserDbModel?> GetUserById(Guid userId);
     Task<List<AdminUserDbModel>> GetUsers();
     Task<int> GetActiveAdminCount();
-    Task<Guid> CreateOwner(string email, string displayName, string passwordHash);
+    Task<LoginSecurityStateDbModel?> RecordFailedLogin(Guid userId, int maximumAttempts, int lockoutMinutes);
+    Task RecordSuccessfulLogin(Guid userId);
+    Task ResetLoginLockout(Guid userId);
     Task<Guid> CreateManagedUser(Guid userId, string email, string displayName, string passwordHash, AppRole role, bool isActive);
     Task UpdateManagedUser(Guid userId, string email, string displayName, string? passwordHash, AppRole role, bool isActive);
     Task CreateSession(Guid sessionId, Guid userId, string tokenHash, DateTime expiresUtc, string? userAgent);
@@ -26,7 +27,6 @@ public sealed class AuthData : IAuthData
 {
     private readonly IMariaDbDataAccess _database;
     public AuthData(IMariaDbDataAccess database) => _database = database;
-    public Task<int> GetUserCount() => _database.GetScalarSP<int>("sp_auth_user_count");
     /// <summary>
     /// Email is normalised by AuthFuncs before this lookup. Keeping the database call here makes
     /// the query parameterised and keeps password-hash material out of controllers.
@@ -39,8 +39,24 @@ public sealed class AuthData : IAuthData
     public async Task<List<AdminUserDbModel>> GetUsers() =>
         await _database.GetBulkDataSP("sp_auth_users_get_all", ReadAdminUserDbModel, []);
     public Task<int> GetActiveAdminCount() => _database.GetScalarSP<int>("sp_auth_active_admin_count");
-    public Task<Guid> CreateOwner(string email, string displayName, string passwordHash) { Guid id = Guid.NewGuid(); return CreateOwnerCore(id, email, displayName, passwordHash); }
-    private async Task<Guid> CreateOwnerCore(Guid userId, string email, string displayName, string passwordHash) { await _database.ExecuteSP("sp_auth_owner_create", Parameters(("p_user_id", userId.ToString("D")), ("p_email", email), ("p_display_name", displayName), ("p_password_hash", passwordHash))); return userId; }
+    public Task<LoginSecurityStateDbModel?> RecordFailedLogin(Guid userId, int maximumAttempts, int lockoutMinutes) =>
+        _database.GetDataSP(
+            "sp_auth_login_failure_record",
+            ReadLoginSecurityStateDbModel,
+            Parameters(
+                ("p_user_id", userId.ToString("D")),
+                ("p_maximum_attempts", maximumAttempts),
+                ("p_lockout_minutes", lockoutMinutes)));
+
+    public Task RecordSuccessfulLogin(Guid userId) =>
+        _database.ExecuteSP(
+            "sp_auth_login_success_record",
+            Parameters(("p_user_id", userId.ToString("D"))));
+
+    public Task ResetLoginLockout(Guid userId) =>
+        _database.ExecuteSP(
+            "sp_auth_login_lockout_reset",
+            Parameters(("p_user_id", userId.ToString("D"))));
     public async Task<Guid> CreateManagedUser(Guid userId, string email, string displayName, string passwordHash, AppRole role, bool isActive)
     {
         await _database.ExecuteSP("sp_auth_user_create", Parameters(("p_user_id", userId.ToString("D")), ("p_email", email), ("p_display_name", displayName), ("p_password_hash", passwordHash), ("p_role", (byte)role), ("p_is_active", isActive)));
@@ -68,6 +84,9 @@ public sealed class AuthData : IAuthData
         IsActive = reader.GetBoolean("IsActive"),
         SteamId = reader.IsDBNull(reader.GetOrdinal("SteamId")) ? null : reader.GetString("SteamId"),
         Role = (AppRole)reader.GetByte("Role"),
+        FailedLoginAttempts = reader.GetInt32("FailedLoginAttempts"),
+        LockoutUntilUtc = UtcDateTimeOrNull(reader, "LockoutUntilUtc"),
+        LastFailedLoginUtc = UtcDateTimeOrNull(reader, "LastFailedLoginUtc"),
     };
     private static AdminUserDbModel ReadAdminUserDbModel(MySqlDataReader reader) => new()
     {
@@ -80,5 +99,21 @@ public sealed class AuthData : IAuthData
         LastLoginUtc = reader.IsDBNull(reader.GetOrdinal("LastLoginUtc"))
             ? null
             : DateTime.SpecifyKind(reader.GetDateTime("LastLoginUtc"), DateTimeKind.Utc),
+        FailedLoginAttempts = reader.GetInt32("FailedLoginAttempts"),
+        LockoutUntilUtc = UtcDateTimeOrNull(reader, "LockoutUntilUtc"),
+        LastFailedLoginUtc = UtcDateTimeOrNull(reader, "LastFailedLoginUtc"),
     };
+
+    private static LoginSecurityStateDbModel ReadLoginSecurityStateDbModel(MySqlDataReader reader) => new()
+    {
+        UserId = reader.GetGuid("UserId"),
+        FailedLoginAttempts = reader.GetInt32("FailedLoginAttempts"),
+        LockoutUntilUtc = UtcDateTimeOrNull(reader, "LockoutUntilUtc"),
+        LastFailedLoginUtc = UtcDateTimeOrNull(reader, "LastFailedLoginUtc"),
+    };
+
+    private static DateTime? UtcDateTimeOrNull(MySqlDataReader reader, string columnName) =>
+        reader.IsDBNull(reader.GetOrdinal(columnName))
+            ? null
+            : DateTime.SpecifyKind(reader.GetDateTime(columnName), DateTimeKind.Utc);
 }

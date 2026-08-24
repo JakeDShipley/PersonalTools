@@ -106,6 +106,24 @@ public sealed class CaseOpeningController : ControllerBase
             "selected");
     }
 
+    [HttpGet("inventory/upgrades")]
+    public Task<ActionResult<CaseOpeningInventoryUpgradeObj>> GetInventoryUpgrades(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningInventoryUpgrades(UserId, cancellationToken), "load inventory upgrades", "all");
+    }
+
+    [HttpPost("inventory/upgrades/{upgradeKey}/unlock")]
+    public Task<ActionResult<CaseOpeningInventoryUpgradeObj>> UnlockInventoryUpgrade(string upgradeKey, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UnlockCaseOpeningInventoryUpgrade(UserId, upgradeKey, cancellationToken), "unlock inventory upgrade", upgradeKey);
+    }
+
+    [HttpPut("inventory/auto-sell")]
+    public Task<ActionResult<CaseOpeningInventoryUpgradeObj>> SetAutoSell([FromBody] CaseOpeningAutoSellPreferenceRequestObj request, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.SetCaseOpeningAutoSellPreference(UserId, request.RarityKey, request.Enabled, request.PreserveStatTrak, cancellationToken), "update auto sell", request.RarityKey);
+    }
+
     [HttpPost("cases/{caseKey}/purchase")]
     public Task<ActionResult<CaseOpeningCasePurchaseResultObj>> PurchaseCases(string caseKey, [FromBody] CaseOpeningCasePurchaseRequestObj? request, CancellationToken cancellationToken)
     {
@@ -145,6 +163,12 @@ public sealed class CaseOpeningController : ControllerBase
     public Task<ActionResult<CaseOpeningBotProgressObj>> PurchaseBot(CancellationToken cancellationToken)
     {
         return Execute(() => _caseOpening.PurchaseCaseOpeningBot(UserId, cancellationToken), "purchase bot", "all");
+    }
+
+    [HttpPost("bots/servers/{serverId:guid}/speed")]
+    public Task<ActionResult<CaseOpeningBotProgressObj>> UpgradeBotServerSpeed(Guid serverId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UpgradeCaseOpeningBotServer(UserId, serverId, cancellationToken), "upgrade bot server speed", serverId.ToString());
     }
 
     [HttpPost("bots/{botId:guid}/open")]
@@ -230,6 +254,36 @@ public sealed class CaseOpeningController : ControllerBase
     public Task<ActionResult<List<CaseOpeningXpByRarityObj>>> GetXpByRarity(CancellationToken cancellationToken)
     {
         return Execute(() => _caseOpening.GetXpByRarity(cancellationToken), "load xp by rarity", "all");
+    }
+
+    [HttpGet("settings/inventory-upgrades")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
+    public Task<ActionResult<List<CaseOpeningUpgradeDefinitionObj>>> GetInventoryUpgradeSettings(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetInventoryUpgradeSettings(cancellationToken), "load inventory upgrade settings", "all");
+    }
+
+    [HttpPut("settings/inventory-upgrades/{upgradeKey}")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> UpdateInventoryUpgradeSettings(
+        string upgradeKey,
+        [FromBody] CaseOpeningInventoryUpgradeSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _caseOpening.SetInventoryUpgradeSettings(upgradeKey, request.CostStars, request.RequiredLevel, cancellationToken);
+            return Ok(new ApiResponse(true, "Inventory upgrade settings saved."));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to update inventory upgrade settings for {UpgradeKey}.", upgradeKey);
+            return StatusCode(502, new ApiResponse(false, "The inventory upgrade settings could not be saved."));
+        }
     }
 
     [HttpPut("settings/xp-by-rarity/{rarityKey}")]
@@ -319,6 +373,7 @@ public sealed class CaseOpeningController : ControllerBase
 }
 
 public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int PurchaseCostStars, int XpRequirement);
+public sealed record CaseOpeningInventoryUpgradeSettingsRequest(int CostStars, int RequiredLevel);
 public sealed record CaseOpeningXpByRarityRequest(int XpAwarded);
 public sealed record CaseOpeningDevProgressRequest(int Stars, int Xp);
 public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel);

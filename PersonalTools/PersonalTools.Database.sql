@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS CaseOpeningTradeUps;
 DROP TABLE IF EXISTS CaseOpeningHistory;
 DROP TABLE IF EXISTS CaseOpeningBots;
 DROP TABLE IF EXISTS CaseOpeningBotServers;
+DROP TABLE IF EXISTS CaseOpeningUserInventoryUpgrades;
+DROP TABLE IF EXISTS CaseOpeningUpgradeDefinitions;
 DROP TABLE IF EXISTS CaseOpeningCollection;
 DROP TABLE IF EXISTS CaseOpeningUnlockedCases;
 DROP TABLE IF EXISTS CaseOpeningProgress;
@@ -35,7 +37,7 @@ DROP TABLE IF EXISTS UserSessions;
 DROP TABLE IF EXISTS Users;
 SET FOREIGN_KEY_CHECKS=1;
 
-CREATE TABLE Users (UserId CHAR(36) NOT NULL,Email VARCHAR(254) NOT NULL,DisplayName VARCHAR(100) NOT NULL,PasswordHash VARCHAR(512) NOT NULL,SteamId CHAR(17) NULL,IsActive TINYINT(1) NOT NULL DEFAULT 1,UserRole TINYINT UNSIGNED NOT NULL DEFAULT 1,CreatedUtc DATETIME NOT NULL,PRIMARY KEY(UserId),UNIQUE KEY UX_Users_Email(Email),UNIQUE KEY UX_Users_SteamId(SteamId));
+CREATE TABLE Users (UserId CHAR(36) NOT NULL,Email VARCHAR(254) NOT NULL,DisplayName VARCHAR(100) NOT NULL,PasswordHash VARCHAR(512) NOT NULL,SteamId CHAR(17) NULL,IsActive TINYINT(1) NOT NULL DEFAULT 1,UserRole TINYINT UNSIGNED NOT NULL DEFAULT 1,FailedLoginAttempts INT UNSIGNED NOT NULL DEFAULT 0,LockoutUntilUtc DATETIME(6) NULL,LastFailedLoginUtc DATETIME(6) NULL,CreatedUtc DATETIME NOT NULL,PRIMARY KEY(UserId),UNIQUE KEY UX_Users_Email(Email),UNIQUE KEY UX_Users_SteamId(SteamId),KEY IX_Users_LockoutUntilUtc(LockoutUntilUtc));
 CREATE TABLE UserSessions (SessionId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,TokenHash CHAR(64) NOT NULL,ExpiresUtc DATETIME NOT NULL,UserAgent VARCHAR(512) NOT NULL,CreatedUtc DATETIME NOT NULL,PRIMARY KEY(SessionId),KEY IX_UserSessions_UserId(UserId),KEY IX_UserSessions_ExpiresUtc(ExpiresUtc),CONSTRAINT FK_UserSessions_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE QuickLinks (QuickLinkId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,Title VARCHAR(100) NOT NULL,Url VARCHAR(2048) NOT NULL,IconClass VARCHAR(100) NULL,SortOrder INT NOT NULL DEFAULT 0,CreatedUtc DATETIME NOT NULL,UpdatedUtc DATETIME NOT NULL,PRIMARY KEY(QuickLinkId),KEY IX_QuickLinks_UserId_SortOrder(UserId,SortOrder),CONSTRAINT FK_QuickLinks_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE Notes (NoteId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,Title VARCHAR(200) NOT NULL,Body MEDIUMTEXT NOT NULL,SortOrder INT NOT NULL DEFAULT 0,CreatedUtc DATETIME NOT NULL,UpdatedUtc DATETIME NOT NULL,PRIMARY KEY(NoteId),KEY IX_Notes_UserId_SortOrder(UserId,SortOrder),CONSTRAINT FK_Notes_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
@@ -60,7 +62,9 @@ CREATE TABLE CaseOpeningHistory (OpeningId CHAR(36) NOT NULL,UserId CHAR(36) NOT
 CREATE TABLE CaseOpeningTradeUps (TradeUpId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,InputRarityKey VARCHAR(30) NOT NULL,OutputRarityKey VARCHAR(30) NOT NULL,OutputOpeningId CHAR(36) NOT NULL,OutputCaseKey VARCHAR(80) NOT NULL,AverageInputFloat DECIMAL(9,6) NOT NULL,CreatedUtc DATETIME(6) NOT NULL,PRIMARY KEY(TradeUpId),KEY IX_CaseOpeningTradeUps_User_Created(UserId,CreatedUtc),CONSTRAINT FK_CaseOpeningTradeUps_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE CaseOpeningTradeUpInputs (TradeUpInputId CHAR(36) NOT NULL,TradeUpId CHAR(36) NOT NULL,InputOpeningId CHAR(36) NOT NULL,CaseKey VARCHAR(80) NOT NULL,SourceItemId VARCHAR(160) NOT NULL,RarityKey VARCHAR(30) NOT NULL,FloatValue DECIMAL(9,6) NULL,IsStatTrak TINYINT(1) NOT NULL DEFAULT 0,PRIMARY KEY(TradeUpInputId),KEY IX_CaseOpeningTradeUpInputs_TradeUpId(TradeUpId),CONSTRAINT FK_CaseOpeningTradeUpInputs_TradeUps FOREIGN KEY(TradeUpId) REFERENCES CaseOpeningTradeUps(TradeUpId) ON DELETE CASCADE);
 CREATE TABLE CaseOpeningCollection (CollectionId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,CaseKey VARCHAR(80) NOT NULL,SourceItemId VARCHAR(160) NOT NULL,FirstObtainedUtc DATETIME(6) NOT NULL,PRIMARY KEY(CollectionId),UNIQUE KEY UX_CaseOpeningCollection_UserCaseItem(UserId,CaseKey,SourceItemId),KEY IX_CaseOpeningCollection_UserCase(UserId,CaseKey),CONSTRAINT FK_CaseOpeningCollection_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
-CREATE TABLE CaseOpeningBotServers (ServerId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,CreatedUtc DATETIME(6) NOT NULL,PRIMARY KEY(ServerId),KEY IX_CaseOpeningBotServers_User(UserId,CreatedUtc),CONSTRAINT FK_CaseOpeningBotServers_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
+CREATE TABLE CaseOpeningBotServers (ServerId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,SpeedLevel TINYINT UNSIGNED NOT NULL DEFAULT 0,CreatedUtc DATETIME(6) NOT NULL,PRIMARY KEY(ServerId),KEY IX_CaseOpeningBotServers_User(UserId,CreatedUtc),CONSTRAINT FK_CaseOpeningBotServers_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
+CREATE TABLE CaseOpeningUpgradeDefinitions (UpgradeKey VARCHAR(50) NOT NULL,Name VARCHAR(100) NOT NULL,Description VARCHAR(300) NOT NULL,Category VARCHAR(30) NOT NULL,CostStars INT NOT NULL,RequiredLevel INT NOT NULL DEFAULT 0,SortOrder INT NOT NULL,IsActive TINYINT(1) NOT NULL DEFAULT 1,PRIMARY KEY(UpgradeKey));
+CREATE TABLE CaseOpeningUserInventoryUpgrades (UserId CHAR(36) NOT NULL,BulkSellLimit INT NOT NULL DEFAULT 100,BonusInventorySlots INT UNSIGNED NOT NULL DEFAULT 0,AutoSellCovertUnlocked TINYINT(1) NOT NULL DEFAULT 0,AutoSellCovertEnabled TINYINT(1) NOT NULL DEFAULT 0,AutoSellClassifiedUnlocked TINYINT(1) NOT NULL DEFAULT 0,AutoSellClassifiedEnabled TINYINT(1) NOT NULL DEFAULT 0,AutoSellRestrictedUnlocked TINYINT(1) NOT NULL DEFAULT 0,AutoSellRestrictedEnabled TINYINT(1) NOT NULL DEFAULT 0,AutoSellMilSpecUnlocked TINYINT(1) NOT NULL DEFAULT 0,AutoSellMilSpecEnabled TINYINT(1) NOT NULL DEFAULT 0,PreserveStatTrak TINYINT(1) NOT NULL DEFAULT 1,UpdatedUtc DATETIME(6) NOT NULL,PRIMARY KEY(UserId),CONSTRAINT FK_CaseOpeningUserInventoryUpgrades_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE CaseOpeningBots (BotId CHAR(36) NOT NULL,ServerId CHAR(36) NOT NULL,UserId CHAR(36) NOT NULL,CreatedUtc DATETIME(6) NOT NULL,LastOpenedUtc DATETIME(6) NULL,PRIMARY KEY(BotId),KEY IX_CaseOpeningBots_UserServer(UserId,ServerId),KEY IX_CaseOpeningBots_Cycle(BotId,UserId,LastOpenedUtc),CONSTRAINT FK_CaseOpeningBots_Servers FOREIGN KEY(ServerId) REFERENCES CaseOpeningBotServers(ServerId) ON DELETE CASCADE,CONSTRAINT FK_CaseOpeningBots_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE CaseOpeningProgress (UserId CHAR(36) NOT NULL,Stars INT UNSIGNED NOT NULL DEFAULT 0,Xp INT NOT NULL DEFAULT 0,SkipAnimationUnlocked TINYINT(1) NOT NULL DEFAULT 0,MultiOpenUnlocked TINYINT(1) NOT NULL DEFAULT 0,MultiOpenLevel TINYINT UNSIGNED NOT NULL DEFAULT 0,UpdatedUtc DATETIME NOT NULL,PRIMARY KEY(UserId),CONSTRAINT FK_CaseOpeningProgress_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
 CREATE TABLE CaseOpeningUnlockedCases (UserId CHAR(36) NOT NULL,CaseKey VARCHAR(80) NOT NULL,UnlockedUtc DATETIME NOT NULL,PRIMARY KEY(UserId,CaseKey),CONSTRAINT FK_CaseOpeningUnlockedCases_Users FOREIGN KEY(UserId) REFERENCES Users(UserId) ON DELETE CASCADE);
@@ -69,15 +73,32 @@ CREATE TABLE CaseOpeningCaseSettings (CaseKey VARCHAR(80) NOT NULL,UnlockCostSta
 CREATE TABLE CaseOpeningXpByRarity (RarityKey VARCHAR(30) NOT NULL,XpAwarded INT NOT NULL DEFAULT 5,UpdatedUtc DATETIME NOT NULL,PRIMARY KEY(RarityKey));
 INSERT INTO CaseOpeningGameSettings (Id,UpdatedUtc) VALUES (1,UTC_TIMESTAMP());
 INSERT INTO CaseOpeningXpByRarity (RarityKey,XpAwarded,UpdatedUtc) VALUES ('mil-spec',5,UTC_TIMESTAMP()),('high-grade',5,UTC_TIMESTAMP()),('restricted',10,UTC_TIMESTAMP()),('remarkable',10,UTC_TIMESTAMP()),('classified',15,UTC_TIMESTAMP()),('exotic',15,UTC_TIMESTAMP()),('covert',20,UTC_TIMESTAMP()),('rare-special',25,UTC_TIMESTAMP());
+INSERT INTO CaseOpeningUpgradeDefinitions (UpgradeKey,Name,Description,Category,CostStars,RequiredLevel,SortOrder,IsActive) VALUES ('bulk-sell-200','Bulk sale: 200','Raise the maximum items in one confirmed sale to 200.','bulk-sale',750,3,10,1),('bulk-sell-300','Bulk sale: 300','Raise the maximum items in one confirmed sale to 300.','bulk-sale',1500,5,20,1),('bulk-sell-400','Bulk sale: 400','Raise the maximum items in one confirmed sale to 400.','bulk-sale',2750,7,30,1),('bulk-sell-500','Bulk sale: 500','Raise the maximum items in one confirmed sale to 500.','bulk-sale',4500,9,40,1),('auto-sell-covert','Auto-sell Covert','Automatically convert red drops into Stars.','auto-sell',600,3,100,1),('auto-sell-classified','Auto-sell Classified','Automatically convert pink drops into Stars.','auto-sell',1250,5,110,1),('auto-sell-restricted','Auto-sell Restricted','Automatically convert purple drops into Stars.','auto-sell',2500,7,120,1),('auto-sell-mil-spec','Auto-sell Mil-Spec','Automatically convert the most common blue drops into Stars.','auto-sell',5000,10,130,1),('inventory-slots-250','Compact shelving','Add 250 permanent slots for cases and skins.','capacity',750,5,200,1),('inventory-slots-500','Reinforced racks','Add another 500 permanent slots for cases and skins.','capacity',2000,12,210,1),('inventory-slots-1000','Armory extension','Add another 1,000 permanent slots for cases and skins.','capacity',5000,25,220,1);
 INSERT INTO CaseOpeningCaseSettings (CaseKey,UnlockCostStars,PurchaseCostStars,XpRequirement,UpdatedUtc) VALUES ('kilowatt',0,1,0,UTC_TIMESTAMP()),('fever',10,1,0,UTC_TIMESTAMP()),('gallery',10,1,0,UTC_TIMESTAMP()),('fracture',10,1,0,UTC_TIMESTAMP()),('austin-2025-legends',10,1,0,UTC_TIMESTAMP()),('snakebite',25,2,1,UTC_TIMESTAMP()),('revolution',25,2,1,UTC_TIMESTAMP()),('prisma-2',25,2,1,UTC_TIMESTAMP()),('copenhagen-2024-legends',25,2,1,UTC_TIMESTAMP()),('dreams-and-nightmares',25,2,1,UTC_TIMESTAMP()),('recoil',25,2,1,UTC_TIMESTAMP()),('prisma',25,2,1,UTC_TIMESTAMP()),('paris-2023-legends',50,3,2,UTC_TIMESTAMP()),('clutch',50,3,2,UTC_TIMESTAMP()),('shattered-web',50,3,2,UTC_TIMESTAMP()),('chroma-2',50,3,2,UTC_TIMESTAMP()),('antwerp-2022-legends',100,5,3,UTC_TIMESTAMP()),('broken-fang',100,5,3,UTC_TIMESTAMP()),('breakout',100,5,3,UTC_TIMESTAMP()),('cs20',100,5,3,UTC_TIMESTAMP()),('stockholm-2021-legends',175,8,4,UTC_TIMESTAMP()),('gamma-2',175,8,4,UTC_TIMESTAMP()),('riptide',175,8,4,UTC_TIMESTAMP()),('spectrum-2',175,8,4,UTC_TIMESTAMP()),('atlanta-2017-legends',300,12,5,UTC_TIMESTAMP()),('hydra',300,12,5,UTC_TIMESTAMP()),('glove',300,12,5,UTC_TIMESTAMP()),('esports-2013',500,18,6,UTC_TIMESTAMP()),('weapon-case-3',500,18,6,UTC_TIMESTAMP()),('esports-2014-summer',500,18,6,UTC_TIMESTAMP()),('esports-2013-winter',500,18,6,UTC_TIMESTAMP()),('weapon-case-1',800,25,8,UTC_TIMESTAMP()),('weapon-case-2',800,25,8,UTC_TIMESTAMP()),('cologne-2014-legends',1500,40,10,UTC_TIMESTAMP()),('katowice-2014-challengers',1500,40,10,UTC_TIMESTAMP()),('katowice-2014-legends',1500,40,10,UTC_TIMESTAMP()),('cologne-2014-cobblestone-souvenir',1500,40,10,UTC_TIMESTAMP());
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS sp_auth_user_count$$ DROP PROCEDURE IF EXISTS sp_auth_user_get_by_email$$ DROP PROCEDURE IF EXISTS sp_auth_user_get_by_id$$ DROP PROCEDURE IF EXISTS sp_auth_owner_create$$ DROP PROCEDURE IF EXISTS sp_auth_users_get_all$$ DROP PROCEDURE IF EXISTS sp_auth_active_admin_count$$ DROP PROCEDURE IF EXISTS sp_auth_user_create$$ DROP PROCEDURE IF EXISTS sp_auth_user_update$$ DROP PROCEDURE IF EXISTS sp_auth_session_create$$ DROP PROCEDURE IF EXISTS sp_auth_session_valid$$ DROP PROCEDURE IF EXISTS sp_auth_session_delete$$ DROP PROCEDURE IF EXISTS sp_auth_user_set_steam_id$$ DROP PROCEDURE IF EXISTS sp_auth_user_clear_steam_id$$ DROP PROCEDURE IF EXISTS sp_auth_user_change_password$$
-CREATE PROCEDURE sp_auth_user_count() SELECT COUNT(*) FROM Users$$
-CREATE PROCEDURE sp_auth_user_get_by_email(IN p_email VARCHAR(254)) SELECT UserId,Email,DisplayName,PasswordHash,IsActive,SteamId,UserRole AS Role FROM Users WHERE Email=p_email LIMIT 1$$
-CREATE PROCEDURE sp_auth_user_get_by_id(IN p_user_id CHAR(36)) SELECT UserId,Email,DisplayName,PasswordHash,IsActive,SteamId,UserRole AS Role FROM Users WHERE UserId=p_user_id LIMIT 1$$
-CREATE PROCEDURE sp_auth_owner_create(IN p_user_id CHAR(36),IN p_email VARCHAR(254),IN p_display_name VARCHAR(100),IN p_password_hash VARCHAR(512)) INSERT INTO Users(UserId,Email,DisplayName,PasswordHash,UserRole,CreatedUtc) VALUES(p_user_id,p_email,p_display_name,p_password_hash,2,UTC_TIMESTAMP())$$
-CREATE PROCEDURE sp_auth_users_get_all() SELECT u.UserId,u.Email,u.DisplayName,u.IsActive,u.UserRole AS Role,u.CreatedUtc,MAX(s.CreatedUtc) AS LastLoginUtc FROM Users u LEFT JOIN UserSessions s ON s.UserId=u.UserId GROUP BY u.UserId,u.Email,u.DisplayName,u.IsActive,u.UserRole,u.CreatedUtc ORDER BY u.DisplayName,u.Email$$
+DROP PROCEDURE IF EXISTS sp_auth_user_count$$ DROP PROCEDURE IF EXISTS sp_auth_owner_create$$ DROP PROCEDURE IF EXISTS sp_auth_user_get_by_email$$ DROP PROCEDURE IF EXISTS sp_auth_user_get_by_id$$ DROP PROCEDURE IF EXISTS sp_auth_users_get_all$$ DROP PROCEDURE IF EXISTS sp_auth_login_failure_record$$ DROP PROCEDURE IF EXISTS sp_auth_login_success_record$$ DROP PROCEDURE IF EXISTS sp_auth_login_lockout_reset$$ DROP PROCEDURE IF EXISTS sp_auth_active_admin_count$$ DROP PROCEDURE IF EXISTS sp_auth_user_create$$ DROP PROCEDURE IF EXISTS sp_auth_user_update$$ DROP PROCEDURE IF EXISTS sp_auth_session_create$$ DROP PROCEDURE IF EXISTS sp_auth_session_valid$$ DROP PROCEDURE IF EXISTS sp_auth_session_delete$$ DROP PROCEDURE IF EXISTS sp_auth_user_set_steam_id$$ DROP PROCEDURE IF EXISTS sp_auth_user_clear_steam_id$$ DROP PROCEDURE IF EXISTS sp_auth_user_change_password$$
+CREATE PROCEDURE sp_auth_user_get_by_email(IN p_email VARCHAR(254)) SELECT UserId,Email,DisplayName,PasswordHash,IsActive,SteamId,UserRole AS Role,FailedLoginAttempts,LockoutUntilUtc,LastFailedLoginUtc FROM Users WHERE Email=p_email LIMIT 1$$
+CREATE PROCEDURE sp_auth_user_get_by_id(IN p_user_id CHAR(36)) SELECT UserId,Email,DisplayName,PasswordHash,IsActive,SteamId,UserRole AS Role,FailedLoginAttempts,LockoutUntilUtc,LastFailedLoginUtc FROM Users WHERE UserId=p_user_id LIMIT 1$$
+CREATE PROCEDURE sp_auth_users_get_all() SELECT u.UserId,u.Email,u.DisplayName,u.IsActive,u.UserRole AS Role,u.CreatedUtc,u.FailedLoginAttempts,u.LockoutUntilUtc,u.LastFailedLoginUtc,MAX(s.CreatedUtc) AS LastLoginUtc FROM Users u LEFT JOIN UserSessions s ON s.UserId=u.UserId GROUP BY u.UserId,u.Email,u.DisplayName,u.IsActive,u.UserRole,u.CreatedUtc,u.FailedLoginAttempts,u.LockoutUntilUtc,u.LastFailedLoginUtc ORDER BY u.DisplayName,u.Email$$
+CREATE PROCEDURE sp_auth_login_failure_record(IN p_user_id CHAR(36),IN p_maximum_attempts INT,IN p_lockout_minutes INT)
+BEGIN
+    DECLARE v_failed_attempts INT DEFAULT 0;
+    DECLARE v_lockout_until DATETIME(6) DEFAULT NULL;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+    START TRANSACTION;
+    SELECT FailedLoginAttempts,LockoutUntilUtc INTO v_failed_attempts,v_lockout_until FROM Users WHERE UserId=p_user_id FOR UPDATE;
+    IF v_lockout_until IS NULL OR v_lockout_until<=UTC_TIMESTAMP(6) THEN
+        IF v_lockout_until IS NOT NULL THEN SET v_failed_attempts=0; END IF;
+        SET v_failed_attempts=v_failed_attempts+1;
+        IF v_failed_attempts>=p_maximum_attempts THEN SET v_lockout_until=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL p_lockout_minutes MINUTE); END IF;
+        UPDATE Users SET FailedLoginAttempts=v_failed_attempts,LockoutUntilUtc=v_lockout_until,LastFailedLoginUtc=UTC_TIMESTAMP(6) WHERE UserId=p_user_id;
+    END IF;
+    COMMIT;
+    SELECT UserId,FailedLoginAttempts,LockoutUntilUtc,LastFailedLoginUtc FROM Users WHERE UserId=p_user_id;
+END$$
+CREATE PROCEDURE sp_auth_login_success_record(IN p_user_id CHAR(36)) UPDATE Users SET FailedLoginAttempts=0,LockoutUntilUtc=NULL WHERE UserId=p_user_id$$
+CREATE PROCEDURE sp_auth_login_lockout_reset(IN p_user_id CHAR(36)) UPDATE Users SET FailedLoginAttempts=0,LockoutUntilUtc=NULL WHERE UserId=p_user_id$$
 CREATE PROCEDURE sp_auth_active_admin_count() SELECT COUNT(*) FROM Users WHERE IsActive=1 AND UserRole=2$$
 CREATE PROCEDURE sp_auth_user_create(IN p_user_id CHAR(36),IN p_email VARCHAR(254),IN p_display_name VARCHAR(100),IN p_password_hash VARCHAR(512),IN p_role TINYINT UNSIGNED,IN p_is_active TINYINT) BEGIN IF p_role NOT IN (1,2) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='A valid user role is required.'; END IF; INSERT INTO Users(UserId,Email,DisplayName,PasswordHash,IsActive,UserRole,CreatedUtc) VALUES(p_user_id,p_email,p_display_name,p_password_hash,p_is_active,p_role,UTC_TIMESTAMP()); END$$
 CREATE PROCEDURE sp_auth_user_update(IN p_user_id CHAR(36),IN p_email VARCHAR(254),IN p_display_name VARCHAR(100),IN p_password_hash VARCHAR(512),IN p_role TINYINT UNSIGNED,IN p_is_active TINYINT) BEGIN IF p_role NOT IN (1,2) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='A valid user role is required.'; END IF; UPDATE Users SET Email=p_email,DisplayName=p_display_name,PasswordHash=CASE WHEN NULLIF(p_password_hash,'') IS NULL THEN PasswordHash ELSE p_password_hash END,UserRole=p_role,IsActive=p_is_active WHERE UserId=p_user_id; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='The selected user account does not exist.'; END IF; END$$
@@ -219,7 +240,37 @@ CREATE PROCEDURE sp_case_opening_case_settings_get_all() BEGIN SELECT CaseKey,Un
 DROP PROCEDURE IF EXISTS sp_case_opening_case_settings_set//
 CREATE PROCEDURE sp_case_opening_case_settings_set(IN p_case_key VARCHAR(80),IN p_unlock_cost_stars INT,IN p_purchase_cost_stars INT,IN p_xp_requirement INT) BEGIN INSERT INTO CaseOpeningCaseSettings(CaseKey,UnlockCostStars,PurchaseCostStars,XpRequirement,UpdatedUtc) VALUES(p_case_key,p_unlock_cost_stars,p_purchase_cost_stars,p_xp_requirement,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE UnlockCostStars=VALUES(UnlockCostStars),PurchaseCostStars=VALUES(PurchaseCostStars),XpRequirement=VALUES(XpRequirement),UpdatedUtc=UTC_TIMESTAMP(); END//
 DROP PROCEDURE IF EXISTS sp_case_opening_cases_purchase//
-CREATE PROCEDURE sp_case_opening_cases_purchase(IN p_user_id CHAR(36),IN p_case_key VARCHAR(80),IN p_quantity INT,IN p_purchase_cost_stars INT) BEGIN DECLARE v_total_cost INT DEFAULT 0; DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END; SET v_total_cost=p_quantity*p_purchase_cost_stars; START TRANSACTION; IF p_quantity<1 OR p_quantity>500 OR p_purchase_cost_stars<0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Buy between 1 and 500 cases at a time.'; END IF; IF NOT EXISTS(SELECT 1 FROM CaseOpeningUnlockedCases WHERE UserId=p_user_id AND CaseKey=p_case_key) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Unlock this case before buying copies from the Shop.'; END IF; INSERT IGNORE INTO CaseOpeningProgress(UserId,Stars,Xp,SkipAnimationUnlocked,MultiOpenLevel,UpdatedUtc) VALUES(p_user_id,0,0,0,0,UTC_TIMESTAMP()); UPDATE CaseOpeningProgress SET Stars=Stars-v_total_cost,UpdatedUtc=UTC_TIMESTAMP() WHERE UserId=p_user_id AND Stars>=v_total_cost; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There are not enough Stars to buy these cases.'; END IF; INSERT INTO CaseOpeningOwnedCases(UserId,CaseKey,Quantity,UpdatedUtc) VALUES(p_user_id,p_case_key,p_quantity,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE Quantity=Quantity+VALUES(Quantity),UpdatedUtc=UTC_TIMESTAMP(6); COMMIT; SELECT p_case_key AS CaseKey,p_quantity AS PurchasedQuantity,Quantity AS OwnedQuantity,v_total_cost AS StarsSpent,(SELECT Stars FROM CaseOpeningProgress WHERE UserId=p_user_id) AS StarsBalance FROM CaseOpeningOwnedCases WHERE UserId=p_user_id AND CaseKey=p_case_key; END//
+CREATE PROCEDURE sp_case_opening_cases_purchase(IN p_user_id CHAR(36),IN p_case_key VARCHAR(80),IN p_quantity INT,IN p_purchase_cost_stars INT)
+BEGIN
+    DECLARE v_total_cost INT DEFAULT 0;
+    DECLARE v_base_capacity INT DEFAULT 1000;
+    DECLARE v_storage_slots INT DEFAULT 0;
+    DECLARE v_upgrade_slots INT DEFAULT 0;
+    DECLARE v_skin_slots INT DEFAULT 0;
+    DECLARE v_case_slots INT DEFAULT 0;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
+
+    SET v_total_cost=p_quantity*p_purchase_cost_stars;
+    START TRANSACTION;
+    IF p_quantity<1 OR p_quantity>500 OR p_purchase_cost_stars<0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Buy between 1 and 500 cases at a time.'; END IF;
+    IF NOT EXISTS(SELECT 1 FROM CaseOpeningUnlockedCases WHERE UserId=p_user_id AND CaseKey=p_case_key) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Unlock this case before buying copies from the Shop.'; END IF;
+
+    INSERT IGNORE INTO CaseOpeningInventoryCapacity(UserId,BaseCapacity,UpdatedUtc) VALUES(p_user_id,1000,UTC_TIMESTAMP(6));
+    INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc) VALUES(p_user_id,UTC_TIMESTAMP(6));
+    SELECT BaseCapacity INTO v_base_capacity FROM CaseOpeningInventoryCapacity WHERE UserId=p_user_id FOR UPDATE;
+    SELECT COALESCE(SUM(AddedSlots),0) INTO v_storage_slots FROM CaseOpeningStorageContainers WHERE UserId=p_user_id;
+    SELECT BonusInventorySlots INTO v_upgrade_slots FROM CaseOpeningUserInventoryUpgrades WHERE UserId=p_user_id;
+    SELECT COUNT(*) INTO v_skin_slots FROM CaseOpeningHistory WHERE UserId=p_user_id;
+    SELECT COALESCE(SUM(Quantity),0) INTO v_case_slots FROM CaseOpeningOwnedCases WHERE UserId=p_user_id;
+    IF p_quantity>GREATEST(v_base_capacity+v_storage_slots+v_upgrade_slots-v_skin_slots-v_case_slots,0) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There is not enough inventory space for these cases. Sell skins or unlock more storage.'; END IF;
+
+    INSERT IGNORE INTO CaseOpeningProgress(UserId,Stars,Xp,SkipAnimationUnlocked,MultiOpenLevel,UpdatedUtc) VALUES(p_user_id,0,0,0,0,UTC_TIMESTAMP());
+    UPDATE CaseOpeningProgress SET Stars=Stars-v_total_cost,UpdatedUtc=UTC_TIMESTAMP() WHERE UserId=p_user_id AND Stars>=v_total_cost;
+    IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There are not enough Stars to buy these cases.'; END IF;
+    INSERT INTO CaseOpeningOwnedCases(UserId,CaseKey,Quantity,UpdatedUtc) VALUES(p_user_id,p_case_key,p_quantity,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE Quantity=Quantity+VALUES(Quantity),UpdatedUtc=UTC_TIMESTAMP(6);
+    COMMIT;
+    SELECT p_case_key AS CaseKey,p_quantity AS PurchasedQuantity,Quantity AS OwnedQuantity,v_total_cost AS StarsSpent,(SELECT Stars FROM CaseOpeningProgress WHERE UserId=p_user_id) AS StarsBalance FROM CaseOpeningOwnedCases WHERE UserId=p_user_id AND CaseKey=p_case_key;
+END//
 DROP PROCEDURE IF EXISTS sp_case_opening_storage_container_purchase//
 CREATE PROCEDURE sp_case_opening_storage_container_purchase(IN p_user_id CHAR(36),IN p_storage_container_id CHAR(36),IN p_cost INT,IN p_slots INT,IN p_maximum_containers INT) BEGIN DECLARE v_count INT DEFAULT 0; DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END; START TRANSACTION; IF p_cost<0 OR p_slots<1 OR p_maximum_containers<0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='The storage configuration is not valid.'; END IF; INSERT IGNORE INTO CaseOpeningInventoryCapacity(UserId,BaseCapacity,UpdatedUtc) VALUES(p_user_id,1000,UTC_TIMESTAMP(6)); SELECT COUNT(*) INTO v_count FROM CaseOpeningStorageContainers WHERE UserId=p_user_id; IF v_count>=p_maximum_containers THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='You already own the maximum number of storage containers.'; END IF; INSERT IGNORE INTO CaseOpeningProgress(UserId,Stars,Xp,SkipAnimationUnlocked,MultiOpenLevel,UpdatedUtc) VALUES(p_user_id,0,0,0,0,UTC_TIMESTAMP()); UPDATE CaseOpeningProgress SET Stars=Stars-p_cost,UpdatedUtc=UTC_TIMESTAMP() WHERE UserId=p_user_id AND Stars>=p_cost; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There are not enough Stars to purchase this storage container.'; END IF; INSERT INTO CaseOpeningStorageContainers(StorageContainerId,UserId,AddedSlots,AcquiredUtc) VALUES(p_storage_container_id,p_user_id,p_slots,UTC_TIMESTAMP(6)); COMMIT; SELECT v_count+1 AS StorageContainerCount,p_slots AS AddedSlots,(SELECT BaseCapacity FROM CaseOpeningInventoryCapacity WHERE UserId=p_user_id)+(v_count+1)*p_slots AS TotalCapacity,p_cost AS StarsSpent,(SELECT Stars FROM CaseOpeningProgress WHERE UserId=p_user_id) AS StarsBalance; END//
 DELIMITER ;
@@ -283,14 +334,21 @@ BEGIN
     INSERT IGNORE INTO CaseOpeningInventoryCapacity(UserId,BaseCapacity,UpdatedUtc)
     VALUES(p_user_id,1000,UTC_TIMESTAMP(6));
 
+    INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc)
+    VALUES(p_user_id,UTC_TIMESTAMP(6));
+
     SELECT
-        (SELECT COUNT(*) FROM CaseOpeningHistory WHERE UserId=p_user_id) AS UsedSlots,
+        (SELECT COUNT(*) FROM CaseOpeningHistory WHERE UserId=p_user_id) AS SkinSlots,
+        (SELECT COALESCE(SUM(Quantity),0) FROM CaseOpeningOwnedCases WHERE UserId=p_user_id) AS CaseSlots,
+        (SELECT COUNT(*) FROM CaseOpeningHistory WHERE UserId=p_user_id)+(SELECT COALESCE(SUM(Quantity),0) FROM CaseOpeningOwnedCases WHERE UserId=p_user_id) AS UsedSlots,
         c.BaseCapacity,
         (SELECT COUNT(*) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id) AS StorageContainerCount,
         (SELECT COALESCE(SUM(AddedSlots),0) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id) AS StorageSlots,
-        c.BaseCapacity+(SELECT COALESCE(SUM(AddedSlots),0) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id) AS TotalCapacity,
-        GREATEST(c.BaseCapacity+(SELECT COALESCE(SUM(AddedSlots),0) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id)-(SELECT COUNT(*) FROM CaseOpeningHistory WHERE UserId=p_user_id),0) AS AvailableSlots
+        u.BonusInventorySlots AS UpgradeSlots,
+        c.BaseCapacity+(SELECT COALESCE(SUM(AddedSlots),0) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id)+u.BonusInventorySlots AS TotalCapacity,
+        GREATEST(c.BaseCapacity+(SELECT COALESCE(SUM(AddedSlots),0) FROM CaseOpeningStorageContainers WHERE UserId=p_user_id)+u.BonusInventorySlots-(SELECT COUNT(*) FROM CaseOpeningHistory WHERE UserId=p_user_id)-(SELECT COALESCE(SUM(Quantity),0) FROM CaseOpeningOwnedCases WHERE UserId=p_user_id),0) AS AvailableSlots
     FROM CaseOpeningInventoryCapacity c
+    INNER JOIN CaseOpeningUserInventoryUpgrades u ON u.UserId=c.UserId
     WHERE c.UserId=p_user_id;
 END//
 
@@ -298,9 +356,7 @@ DROP PROCEDURE IF EXISTS sp_case_opening_history_create//
 CREATE PROCEDURE sp_case_opening_history_create(IN p_user_id CHAR(36),IN p_opening_id CHAR(36),IN p_case_key VARCHAR(80),IN p_source_item_id VARCHAR(160),IN p_item_name VARCHAR(255),IN p_market_hash_name VARCHAR(300),IN p_image_url VARCHAR(2048),IN p_description TEXT,IN p_weapon_name VARCHAR(100),IN p_pattern_name VARCHAR(150),IN p_paint_index VARCHAR(20),IN p_phase VARCHAR(50),IN p_rarity_key VARCHAR(30),IN p_rarity_name VARCHAR(80),IN p_rarity_color CHAR(7),IN p_wear VARCHAR(40),IN p_is_stat_trak TINYINT(1),IN p_is_rare_special TINYINT(1),IN p_supports_stat_trak TINYINT(1),IN p_min_float DECIMAL(9,6),IN p_max_float DECIMAL(9,6),IN p_float_value DECIMAL(9,6),IN p_pattern_seed INT,IN p_estimated_price DECIMAL(12,2))
 BEGIN
     DECLARE v_owned_quantity INT DEFAULT 0;
-    DECLARE v_base_capacity INT DEFAULT 1000;
-    DECLARE v_storage_slots INT DEFAULT 0;
-    DECLARE v_used_slots INT DEFAULT 0;
+    DECLARE v_capacity_lock INT DEFAULT 0;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
 
     START TRANSACTION;
@@ -308,13 +364,8 @@ BEGIN
     INSERT IGNORE INTO CaseOpeningOwnedCases(UserId,CaseKey,Quantity,UpdatedUtc)
     SELECT p_user_id,'kilowatt',25,UTC_TIMESTAMP(6) WHERE p_case_key='kilowatt';
 
-    -- Lock capacity before a case-specific row, preventing different case types from using the same final slot.
-    SELECT BaseCapacity INTO v_base_capacity FROM CaseOpeningInventoryCapacity WHERE UserId=p_user_id FOR UPDATE;
-    SELECT COALESCE(SUM(AddedSlots),0) INTO v_storage_slots FROM CaseOpeningStorageContainers WHERE UserId=p_user_id;
-    SELECT COUNT(*) INTO v_used_slots FROM CaseOpeningHistory WHERE UserId=p_user_id;
-    IF v_used_slots>=v_base_capacity+v_storage_slots THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Your inventory is full. Sell items or add storage before opening another case.';
-    END IF;
+    -- Opening exchanges one case slot for one skin slot, so it remains valid at full capacity.
+    SELECT BaseCapacity INTO v_capacity_lock FROM CaseOpeningInventoryCapacity WHERE UserId=p_user_id FOR UPDATE;
 
     SELECT COALESCE(Quantity,0) INTO v_owned_quantity FROM CaseOpeningOwnedCases WHERE UserId=p_user_id AND CaseKey=p_case_key FOR UPDATE;
     IF v_owned_quantity<1 THEN
@@ -412,4 +463,28 @@ BEGIN
     ON DUPLICATE KEY UPDATE Stars=0,Xp=0,SkipAnimationUnlocked=0,MultiOpenLevel=0,UpdatedUtc=UTC_TIMESTAMP();
     COMMIT;
 END//
+DELIMITER ;
+
+-- Inventory progression and per-server speed upgrades.
+DELIMITER //
+DROP PROCEDURE IF EXISTS sp_case_opening_collection_item_exists//
+CREATE PROCEDURE sp_case_opening_collection_item_exists(IN p_user_id CHAR(36),IN p_case_key VARCHAR(80),IN p_source_item_id VARCHAR(160)) BEGIN SELECT COUNT(*) FROM CaseOpeningCollection WHERE UserId=p_user_id AND CaseKey=p_case_key AND SourceItemId=p_source_item_id; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_inventory_upgrades_get//
+CREATE PROCEDURE sp_case_opening_inventory_upgrades_get(IN p_user_id CHAR(36)) BEGIN INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc) VALUES(p_user_id,UTC_TIMESTAMP(6)); SELECT * FROM CaseOpeningUserInventoryUpgrades WHERE UserId=p_user_id; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_upgrade_definitions_get//
+CREATE PROCEDURE sp_case_opening_upgrade_definitions_get(IN p_user_id CHAR(36)) BEGIN INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc) VALUES(p_user_id,UTC_TIMESTAMP(6)); SELECT d.UpgradeKey,d.Name,d.Description,d.Category,d.CostStars,d.RequiredLevel,d.SortOrder,CASE d.UpgradeKey WHEN 'bulk-sell-200' THEN u.BulkSellLimit>=200 WHEN 'bulk-sell-300' THEN u.BulkSellLimit>=300 WHEN 'bulk-sell-400' THEN u.BulkSellLimit>=400 WHEN 'bulk-sell-500' THEN u.BulkSellLimit>=500 WHEN 'auto-sell-covert' THEN u.AutoSellCovertUnlocked WHEN 'auto-sell-classified' THEN u.AutoSellClassifiedUnlocked WHEN 'auto-sell-restricted' THEN u.AutoSellRestrictedUnlocked WHEN 'auto-sell-mil-spec' THEN u.AutoSellMilSpecUnlocked WHEN 'inventory-slots-250' THEN u.BonusInventorySlots>=250 WHEN 'inventory-slots-500' THEN u.BonusInventorySlots>=750 WHEN 'inventory-slots-1000' THEN u.BonusInventorySlots>=1750 ELSE 0 END IsUnlocked FROM CaseOpeningUpgradeDefinitions d CROSS JOIN CaseOpeningUserInventoryUpgrades u WHERE u.UserId=p_user_id AND d.IsActive=1 ORDER BY d.SortOrder; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_inventory_upgrade_unlock//
+CREATE PROCEDURE sp_case_opening_inventory_upgrade_unlock(IN p_user_id CHAR(36),IN p_upgrade_key VARCHAR(50),IN p_cost INT) BEGIN DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END; START TRANSACTION; INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc) VALUES(p_user_id,UTC_TIMESTAMP(6)); UPDATE CaseOpeningProgress SET Stars=Stars-p_cost,UpdatedUtc=UTC_TIMESTAMP() WHERE UserId=p_user_id AND Stars>=p_cost; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There are not enough Stars to purchase this upgrade.'; END IF; UPDATE CaseOpeningUserInventoryUpgrades SET BulkSellLimit=CASE p_upgrade_key WHEN 'bulk-sell-200' THEN GREATEST(BulkSellLimit,200) WHEN 'bulk-sell-300' THEN GREATEST(BulkSellLimit,300) WHEN 'bulk-sell-400' THEN GREATEST(BulkSellLimit,400) WHEN 'bulk-sell-500' THEN GREATEST(BulkSellLimit,500) ELSE BulkSellLimit END,BonusInventorySlots=CASE p_upgrade_key WHEN 'inventory-slots-250' THEN GREATEST(BonusInventorySlots,250) WHEN 'inventory-slots-500' THEN GREATEST(BonusInventorySlots,750) WHEN 'inventory-slots-1000' THEN GREATEST(BonusInventorySlots,1750) ELSE BonusInventorySlots END,AutoSellCovertUnlocked=IF(p_upgrade_key='auto-sell-covert',1,AutoSellCovertUnlocked),AutoSellClassifiedUnlocked=IF(p_upgrade_key='auto-sell-classified',1,AutoSellClassifiedUnlocked),AutoSellRestrictedUnlocked=IF(p_upgrade_key='auto-sell-restricted',1,AutoSellRestrictedUnlocked),AutoSellMilSpecUnlocked=IF(p_upgrade_key='auto-sell-mil-spec',1,AutoSellMilSpecUnlocked),UpdatedUtc=UTC_TIMESTAMP(6) WHERE UserId=p_user_id; COMMIT; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_auto_sell_set//
+CREATE PROCEDURE sp_case_opening_auto_sell_set(IN p_user_id CHAR(36),IN p_rarity_key VARCHAR(30),IN p_enabled TINYINT,IN p_preserve_stat_trak TINYINT) BEGIN INSERT IGNORE INTO CaseOpeningUserInventoryUpgrades(UserId,UpdatedUtc) VALUES(p_user_id,UTC_TIMESTAMP(6)); UPDATE CaseOpeningUserInventoryUpgrades SET AutoSellCovertEnabled=IF(p_rarity_key='covert' AND AutoSellCovertUnlocked=1,p_enabled,AutoSellCovertEnabled),AutoSellClassifiedEnabled=IF(p_rarity_key='classified' AND AutoSellClassifiedUnlocked=1,p_enabled,AutoSellClassifiedEnabled),AutoSellRestrictedEnabled=IF(p_rarity_key='restricted' AND AutoSellRestrictedUnlocked=1,p_enabled,AutoSellRestrictedEnabled),AutoSellMilSpecEnabled=IF(p_rarity_key='mil-spec' AND AutoSellMilSpecUnlocked=1,p_enabled,AutoSellMilSpecEnabled),PreserveStatTrak=p_preserve_stat_trak,UpdatedUtc=UTC_TIMESTAMP(6) WHERE UserId=p_user_id; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_bot_servers_get//
+CREATE PROCEDURE sp_case_opening_bot_servers_get(IN p_user_id CHAR(36)) BEGIN SELECT ServerId,UserId,SpeedLevel,CreatedUtc FROM CaseOpeningBotServers WHERE UserId=p_user_id ORDER BY CreatedUtc,ServerId; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_bot_server_speed_upgrade//
+CREATE PROCEDURE sp_case_opening_bot_server_speed_upgrade(IN p_user_id CHAR(36),IN p_server_id CHAR(36),IN p_cost INT,IN p_maximum_level INT) BEGIN DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END; START TRANSACTION; UPDATE CaseOpeningBotServers SET SpeedLevel=SpeedLevel+1 WHERE ServerId=p_server_id AND UserId=p_user_id AND SpeedLevel<p_maximum_level; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='The bot server is already at maximum speed or could not be found.'; END IF; UPDATE CaseOpeningProgress SET Stars=Stars-p_cost,UpdatedUtc=UTC_TIMESTAMP() WHERE UserId=p_user_id AND Stars>=p_cost; IF ROW_COUNT()=0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='There are not enough Stars for this speed upgrade.'; END IF; COMMIT; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_bot_cycle_claim//
+CREATE PROCEDURE sp_case_opening_bot_cycle_claim(IN p_user_id CHAR(36),IN p_bot_id CHAR(36)) BEGIN DECLARE v_interval INT DEFAULT 12; DECLARE v_level INT DEFAULT 0; DECLARE v_effective INT DEFAULT 12; SELECT g.BotOpeningIntervalSeconds,s.SpeedLevel INTO v_interval,v_level FROM CaseOpeningBots b INNER JOIN CaseOpeningBotServers s ON s.ServerId=b.ServerId CROSS JOIN CaseOpeningGameSettings g WHERE g.Id=1 AND b.BotId=p_bot_id AND b.UserId=p_user_id; SET v_effective=GREATEST(1,CEILING(v_interval*(0.5/(0.5+(LEAST(v_level,20)*0.025))))); UPDATE CaseOpeningBots SET LastOpenedUtc=UTC_TIMESTAMP(6) WHERE BotId=p_bot_id AND UserId=p_user_id AND (LastOpenedUtc IS NULL OR LastOpenedUtc<=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL GREATEST(1,v_effective-1) SECOND)); SELECT ROW_COUNT(); END//
+DROP PROCEDURE IF EXISTS sp_case_opening_upgrade_settings_get//
+CREATE PROCEDURE sp_case_opening_upgrade_settings_get() BEGIN SELECT UpgradeKey,Name,Description,Category,CostStars,RequiredLevel,SortOrder,0 AS IsUnlocked FROM CaseOpeningUpgradeDefinitions WHERE IsActive=1 ORDER BY SortOrder,UpgradeKey; END//
+DROP PROCEDURE IF EXISTS sp_case_opening_upgrade_settings_set//
+CREATE PROCEDURE sp_case_opening_upgrade_settings_set(IN p_upgrade_key VARCHAR(50),IN p_cost_stars INT,IN p_required_level INT) BEGIN UPDATE CaseOpeningUpgradeDefinitions SET CostStars=GREATEST(0,p_cost_stars),RequiredLevel=GREATEST(0,p_required_level) WHERE UpgradeKey=p_upgrade_key AND IsActive=1; IF ROW_COUNT()=0 AND NOT EXISTS(SELECT 1 FROM CaseOpeningUpgradeDefinitions WHERE UpgradeKey=p_upgrade_key AND IsActive=1) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='The inventory upgrade could not be found.'; END IF; END//
 DELIMITER ;

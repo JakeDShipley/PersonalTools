@@ -79,6 +79,9 @@ public sealed class CaseOpeningResultObj
     public int Level { get; set; }
     public bool LeveledUp { get; set; }
     public int LevelRewardStars { get; set; }
+    public bool IsAutoSold { get; set; }
+    public int AutoSoldStars { get; set; }
+    public bool IsNewCollectionItem { get; set; }
 }
 
 public sealed class CaseOpeningOpenRequestObj
@@ -100,10 +103,13 @@ public sealed class CaseOpeningOwnedCaseDbModel
 
 public class CaseOpeningInventoryCapacityDbModel
 {
+    public int SkinSlots { get; set; }
+    public int CaseSlots { get; set; }
     public int UsedSlots { get; set; }
     public int BaseCapacity { get; set; }
     public int StorageContainerCount { get; set; }
     public int StorageSlots { get; set; }
+    public int UpgradeSlots { get; set; }
     public int TotalCapacity { get; set; }
     public int AvailableSlots { get; set; }
 }
@@ -319,6 +325,47 @@ public sealed class CaseOpeningSellResultDbModel : CaseOpeningSellResultObj
 {
 }
 
+public class CaseOpeningInventoryUpgradeDbModel
+{
+    public Guid UserId { get; set; }
+    public int BulkSellLimit { get; set; } = 100;
+    public int BonusInventorySlots { get; set; }
+    public bool AutoSellCovertUnlocked { get; set; }
+    public bool AutoSellCovertEnabled { get; set; }
+    public bool AutoSellClassifiedUnlocked { get; set; }
+    public bool AutoSellClassifiedEnabled { get; set; }
+    public bool AutoSellRestrictedUnlocked { get; set; }
+    public bool AutoSellRestrictedEnabled { get; set; }
+    public bool AutoSellMilSpecUnlocked { get; set; }
+    public bool AutoSellMilSpecEnabled { get; set; }
+    public bool PreserveStatTrak { get; set; } = true;
+}
+
+public sealed class CaseOpeningInventoryUpgradeObj : CaseOpeningInventoryUpgradeDbModel
+{
+    public int Stars { get; set; }
+    public List<CaseOpeningUpgradeDefinitionObj> AvailableUpgrades { get; set; } = [];
+}
+
+public sealed class CaseOpeningUpgradeDefinitionObj
+{
+    public string UpgradeKey { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public int CostStars { get; set; }
+    public int RequiredLevel { get; set; }
+    public int SortOrder { get; set; }
+    public bool IsUnlocked { get; set; }
+}
+
+public sealed class CaseOpeningAutoSellPreferenceRequestObj
+{
+    public string RarityKey { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public bool? PreserveStatTrak { get; set; }
+}
+
 public sealed class CaseOpeningTradeUpRequestObj
 {
     public List<Guid> OpeningIds { get; set; } = [];
@@ -358,6 +405,7 @@ public class CaseOpeningBotServerDbModel
     public Guid ServerId { get; set; }
     public Guid UserId { get; set; }
     public DateTime CreatedUtc { get; set; }
+    public int SpeedLevel { get; set; }
 }
 
 public sealed class CaseOpeningBotDbModel
@@ -372,6 +420,10 @@ public sealed class CaseOpeningBotDbModel
 public sealed class CaseOpeningBotServerObj : CaseOpeningBotServerDbModel
 {
     public List<CaseOpeningBotDbModel> Bots { get; set; } = [];
+    public decimal SpeedMultiplier { get; set; }
+    public int OpeningIntervalSeconds { get; set; }
+    public int NextSpeedUpgradeCost { get; set; }
+    public bool MaximumSpeedReached { get; set; }
 }
 
 public sealed class CaseOpeningBotProgressObj
@@ -381,6 +433,7 @@ public sealed class CaseOpeningBotProgressObj
     public int OpeningIntervalSeconds { get; set; }
     public int NextServerCost { get; set; }
     public int NextBotCost { get; set; }
+    public int MaximumSpeedLevel { get; set; }
     public List<CaseOpeningBotServerObj> Servers { get; set; } = [];
 }
 

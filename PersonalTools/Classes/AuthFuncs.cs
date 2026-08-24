@@ -8,9 +8,7 @@ namespace PersonalTools.Classes;
 
 public interface IAuthFuncs
 {
-    Task<bool> HasUsers();
-    Task<AppUser?> Authenticate(string email, string password);
-    Task<Guid> CreateOwner(string email, string displayName, string password);
+    Task<AuthenticationResult> Authenticate(string email, string password);
     Task<AuthSession> CreateSession(Guid userId, bool rememberMe, string? userAgent);
     Task<bool> IsSessionValid(Guid sessionId, Guid userId);
     Task DeleteSession(Guid sessionId);
@@ -21,22 +19,54 @@ public interface IAuthFuncs
     Task<List<AdminUserObj>> GetManagedUsers();
     Task<AdminUserObj> CreateManagedUser(string email, string displayName, string password, string confirmPassword, AppRole role, bool isActive);
     Task<AdminUserObj> UpdateManagedUser(Guid actingUserId, Guid userId, string email, string displayName, string? password, string? confirmPassword, AppRole role, bool isActive);
+    Task<AdminUserObj> ResetManagedUserLoginLockout(Guid userId);
 }
 
 public sealed class AuthFuncs : IAuthFuncs
 {
+    private const int MaximumFailedLoginAttempts = 5;
+    private const int LoginLockoutMinutes = 15;
     private readonly IAuthData _data;
     public AuthFuncs(IAuthData data) => _data = data;
-    public async Task<bool> HasUsers() => await _data.GetUserCount() > 0;
-    public async Task<AppUser?> Authenticate(string email, string password)
+    public async Task<AuthenticationResult> Authenticate(string email, string password)
     {
         AppUser? user = (await _data.GetUserByEmail(email.Trim().ToLowerInvariant()))?.Adapt<AppUser>();
 
         // Return the same generic result for an unknown email, inactive account, or bad password.
         // That avoids leaking which email addresses are registered to a caller.
-        return user is not null && user.IsActive && Verify(password, user.PasswordHash) ? user : null;
+        if (user is null || !user.IsActive)
+            return new();
+
+        DateTime utcNow = DateTime.UtcNow;
+        if (user.LockoutUntilUtc is DateTime lockoutUntilUtc && lockoutUntilUtc > utcNow)
+        {
+            return new AuthenticationResult
+            {
+                IsLockedOut = true,
+                LockoutUntilUtc = lockoutUntilUtc,
+            };
+        }
+
+        if (!Verify(password, user.PasswordHash))
+        {
+            LoginSecurityStateDbModel? state = await _data.RecordFailedLogin(
+                user.UserId,
+                MaximumFailedLoginAttempts,
+                LoginLockoutMinutes);
+
+            bool locked = state?.LockoutUntilUtc is DateTime failedLockout && failedLockout > utcNow;
+            return new AuthenticationResult
+            {
+                IsLockedOut = locked,
+                LockoutUntilUtc = locked ? state!.LockoutUntilUtc : null,
+            };
+        }
+
+        // A successful password clears stale attempts before the new session is issued. This
+        // keeps occasional typing mistakes from accumulating indefinitely across sign-ins.
+        await _data.RecordSuccessfulLogin(user.UserId);
+        return new AuthenticationResult { User = user };
     }
-    public async Task<Guid> CreateOwner(string email, string displayName, string password) { if (await HasUsers()) throw new InvalidOperationException("An owner account already exists."); Validate(email, displayName, password); return await _data.CreateOwner(email.Trim().ToLowerInvariant(), displayName.Trim(), Hash(password)); }
     public async Task<AuthSession> CreateSession(Guid userId, bool rememberMe, string? userAgent) { Guid id = Guid.NewGuid(); string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)); DateTime expiry = DateTime.UtcNow.AddDays(rememberMe ? 14 : 1); await _data.CreateSession(id, userId, Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token))), expiry, userAgent); return new AuthSession { SessionId = id, UserId = userId, ExpiresUtc = expiry }; }
     public Task<bool> IsSessionValid(Guid sessionId, Guid userId) => _data.IsSessionValid(sessionId, userId);
     public Task DeleteSession(Guid sessionId) => _data.DeleteSession(sessionId);
@@ -101,6 +131,14 @@ public sealed class AuthFuncs : IAuthFuncs
         await _data.UpdateManagedUser(userId, normalisedEmail, displayName.Trim(), replacementHash, role, isActive);
         return (await _data.GetUsers()).First(user => user.UserId == userId).Adapt<AdminUserObj>();
     }
+    public async Task<AdminUserObj> ResetManagedUserLoginLockout(Guid userId)
+    {
+        if (userId == Guid.Empty || await _data.GetUserById(userId) is null)
+            throw new InvalidOperationException("That user account no longer exists.");
+
+        await _data.ResetLoginLockout(userId);
+        return (await _data.GetUsers()).First(user => user.UserId == userId).Adapt<AdminUserObj>();
+    }
     private static string Hash(string password) { byte[] salt = RandomNumberGenerator.GetBytes(16); byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA512, 32); return $"PBKDF2-SHA512$600000${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}"; }
     private static bool Verify(string password, string stored)
     {
@@ -121,7 +159,6 @@ public sealed class AuthFuncs : IAuthFuncs
             return false;
         }
     }
-    private static void Validate(string email, string name, string password) { ValidateProfile(email, name); if (password.Length < 12) throw new InvalidOperationException("Use a password with at least 12 characters."); }
     private static void ValidateProfile(string email, string name)
     {
         if (!System.Net.Mail.MailAddress.TryCreate(email, out _)) throw new InvalidOperationException("Enter a valid email address.");

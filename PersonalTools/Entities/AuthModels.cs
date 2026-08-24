@@ -11,6 +11,9 @@ public sealed class AppUser
     public bool IsActive { get; init; }
     public string? SteamId { get; init; }
     public AppRole Role { get; init; } = AppRole.User;
+    public int FailedLoginAttempts { get; init; }
+    public DateTime? LockoutUntilUtc { get; init; }
+    public DateTime? LastFailedLoginUtc { get; init; }
 }
 
 /// <summary>
@@ -27,6 +30,28 @@ public sealed class AppUserDbModel
     public bool IsActive { get; set; }
     public string? SteamId { get; set; }
     public AppRole Role { get; set; } = AppRole.User;
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntilUtc { get; set; }
+    public DateTime? LastFailedLoginUtc { get; set; }
+}
+
+/// <summary>
+/// Internal result from password authentication. This keeps account lockout state out of the
+/// public user model while still allowing the controller to return a useful generic response.
+/// </summary>
+public sealed class AuthenticationResult
+{
+    public AppUser? User { get; init; }
+    public bool IsLockedOut { get; init; }
+    public DateTime? LockoutUntilUtc { get; init; }
+}
+
+public sealed class LoginSecurityStateDbModel
+{
+    public Guid UserId { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntilUtc { get; set; }
+    public DateTime? LastFailedLoginUtc { get; set; }
 }
 
 public sealed class AuthSession
@@ -49,6 +74,9 @@ public sealed class AdminUserDbModel
     public AppRole Role { get; set; } = AppRole.User;
     public DateTime CreatedUtc { get; set; }
     public DateTime? LastLoginUtc { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntilUtc { get; set; }
+    public DateTime? LastFailedLoginUtc { get; set; }
 }
 
 public sealed class AdminUserObj
@@ -60,4 +88,7 @@ public sealed class AdminUserObj
     public AppRole Role { get; set; } = AppRole.User;
     public DateTime CreatedUtc { get; set; }
     public DateTime? LastLoginUtc { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutUntilUtc { get; set; }
+    public DateTime? LastFailedLoginUtc { get; set; }
 }

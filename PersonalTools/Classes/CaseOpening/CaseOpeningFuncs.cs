@@ -15,6 +15,7 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningBotProgressObj> GetCaseOpeningBotProgress(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningBotProgressObj> PurchaseCaseOpeningBotServer(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningBotProgressObj> PurchaseCaseOpeningBot(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningBotProgressObj> UpgradeCaseOpeningBotServer(Guid userId, Guid serverId, CancellationToken cancellationToken = default);
     Task<CaseOpeningResultObj> OpenCaseWithBot(Guid userId, Guid botId, string caseKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningInventoryCapacityObj> GetCaseOpeningInventoryCapacity(Guid userId, CancellationToken cancellationToken = default);
@@ -26,6 +27,9 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningStoragePurchaseResultObj> PurchaseCaseOpeningStorageContainer(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningSellResultObj> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryUpgradeObj> GetCaseOpeningInventoryUpgrades(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryUpgradeObj> UnlockCaseOpeningInventoryUpgrade(Guid userId, string upgradeKey, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryUpgradeObj> SetCaseOpeningAutoSellPreference(Guid userId, string rarityKey, bool enabled, bool? preserveStatTrak, CancellationToken cancellationToken = default);
     Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
@@ -37,6 +41,8 @@ public interface ICaseOpeningFuncs
     Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default);
     Task SetXpByRarity(string rarityKey, int xpAwarded, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningUpgradeDefinitionObj>> GetInventoryUpgradeSettings(CancellationToken cancellationToken = default);
+    Task SetInventoryUpgradeSettings(string upgradeKey, int costStars, int requiredLevel, CancellationToken cancellationToken = default);
 
     // Testing overrides for the caller's own account only.
     Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
@@ -48,6 +54,9 @@ public interface ICaseOpeningFuncs
 public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
 {
     private const int BotServerCapacity = 4;
+    private const int MaximumBotSpeedLevel = 20;
+    private const int BotSpeedUpgradeBaseCost = 300;
+    private const int BotSpeedUpgradeIncrement = 100;
     private const string StarterCaseKey = "kilowatt";
 
     // Higher unlock tiers pay more when their simulated items are sold. This does not depend on
@@ -256,6 +265,23 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return await GetCaseOpeningBotProgress(userId, cancellationToken);
     }
 
+    public async Task<CaseOpeningBotProgressObj> UpgradeCaseOpeningBotServer(Guid userId, Guid serverId, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningBotProgressObj current = await GetCaseOpeningBotProgress(userId, cancellationToken);
+        CaseOpeningBotServerObj server = current.Servers.FirstOrDefault(item => item.ServerId == serverId)
+            ?? throw new InvalidOperationException("The selected bot server could not be found.");
+        if (server.MaximumSpeedReached)
+        {
+            throw new InvalidOperationException("This bot server is already running at 1.0× speed.");
+        }
+        if (current.Stars < server.NextSpeedUpgradeCost)
+        {
+            throw new InvalidOperationException($"You need {server.NextSpeedUpgradeCost} Stars for the next server speed level.");
+        }
+        await _data.UpgradeCaseOpeningBotServer(userId, serverId, server.NextSpeedUpgradeCost, MaximumBotSpeedLevel, cancellationToken);
+        return await GetCaseOpeningBotProgress(userId, cancellationToken);
+    }
+
     public async Task<CaseOpeningResultObj> OpenCaseWithBot(
         Guid userId,
         Guid botId,
@@ -274,12 +300,6 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         if (ownedQuantity < 1)
         {
             throw new InvalidOperationException("This bot needs an owned case to open. Buy more from the Shop when it is available.");
-        }
-
-        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
-        if (capacity.AvailableSlots < 1)
-        {
-            throw new InvalidOperationException("Your inventory is full. Sell items or add storage before assigning another bot opening.");
         }
 
         if (!await _data.ClaimCaseOpeningBotCycle(userId, botId, cancellationToken))
@@ -465,9 +485,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("Select at least one inventory item to sell.");
         }
 
-        if (selectedIds.Count > 100)
+        CaseOpeningInventoryUpgradeDbModel inventoryUpgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        if (selectedIds.Count > inventoryUpgrades.BulkSellLimit)
         {
-            throw new InvalidOperationException("Sell no more than 100 inventory items at once.");
+            throw new InvalidOperationException($"Your current bulk-sale limit is {inventoryUpgrades.BulkSellLimit} items.");
         }
 
         List<CaseOpeningHistoryDbModel> inventory = await _data.GetCaseOpeningHistory(userId, cancellationToken);
@@ -502,6 +523,80 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return result.Adapt<CaseOpeningSellResultObj>();
     }
 
+    public async Task<CaseOpeningInventoryUpgradeObj> GetCaseOpeningInventoryUpgrades(Guid userId, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningInventoryUpgradeObj result = (await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken))
+            .Adapt<CaseOpeningInventoryUpgradeObj>();
+        result.Stars = (await _data.GetCaseOpeningProgress(userId, cancellationToken)).Stars;
+        result.AvailableUpgrades = await _data.GetCaseOpeningUpgradeDefinitions(userId, cancellationToken);
+        return result;
+    }
+
+    public async Task<CaseOpeningInventoryUpgradeObj> UnlockCaseOpeningInventoryUpgrade(Guid userId, string upgradeKey, CancellationToken cancellationToken = default)
+    {
+        List<CaseOpeningUpgradeDefinitionObj> definitions = await _data.GetCaseOpeningUpgradeDefinitions(userId, cancellationToken);
+        CaseOpeningUpgradeDefinitionObj? definition = definitions
+            .FirstOrDefault(item => item.UpgradeKey.Equals(upgradeKey, StringComparison.OrdinalIgnoreCase));
+        if (definition is null || definition.IsUnlocked)
+        {
+            throw new InvalidOperationException(definition is null ? "That inventory upgrade is not available." : "That inventory upgrade is already unlocked.");
+        }
+
+        CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
+        if (CaseOpeningXpLevels.GetLevel(progress.Xp) < definition.RequiredLevel)
+        {
+            throw new InvalidOperationException($"Reach level {definition.RequiredLevel} to unlock {definition.Name}.");
+        }
+        if (progress.Stars < definition.CostStars)
+        {
+            throw new InvalidOperationException($"You need {definition.CostStars} Stars to unlock {definition.Name}.");
+        }
+
+        // Capacity tiers are cumulative. Requiring the previous tier keeps the upgrade path
+        // understandable and prevents a high-balance account from skipping the progression.
+        string? requiredUpgradeKey = definition.UpgradeKey.ToLowerInvariant() switch
+        {
+            "inventory-slots-500" => "inventory-slots-250",
+            "inventory-slots-1000" => "inventory-slots-500",
+            _ => null
+        };
+        if (requiredUpgradeKey is not null && !definitions.Any(item =>
+                item.UpgradeKey.Equals(requiredUpgradeKey, StringComparison.OrdinalIgnoreCase) && item.IsUnlocked))
+        {
+            CaseOpeningUpgradeDefinitionObj? requiredUpgrade = definitions.FirstOrDefault(item =>
+                item.UpgradeKey.Equals(requiredUpgradeKey, StringComparison.OrdinalIgnoreCase));
+            throw new InvalidOperationException($"Unlock {requiredUpgrade?.Name ?? "the previous capacity tier"} first.");
+        }
+
+        await _data.UnlockCaseOpeningInventoryUpgrade(userId, definition.UpgradeKey, definition.CostStars, cancellationToken);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
+        return await GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningInventoryUpgradeObj> SetCaseOpeningAutoSellPreference(Guid userId, string rarityKey, bool enabled, bool? preserveStatTrak, CancellationToken cancellationToken = default)
+    {
+        string normalized = rarityKey.Trim().ToLowerInvariant();
+        if (normalized is not ("covert" or "classified" or "restricted" or "mil-spec"))
+        {
+            throw new InvalidOperationException("That rarity cannot be configured for automatic selling.");
+        }
+        CaseOpeningInventoryUpgradeDbModel current = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        bool unlocked = normalized switch
+        {
+            "covert" => current.AutoSellCovertUnlocked,
+            "classified" => current.AutoSellClassifiedUnlocked,
+            "restricted" => current.AutoSellRestrictedUnlocked,
+            _ => current.AutoSellMilSpecUnlocked
+        };
+        if (enabled && !unlocked)
+        {
+            throw new InvalidOperationException("Unlock this automatic-sale tier before enabling it.");
+        }
+        await _data.SetCaseOpeningAutoSellPreference(userId, normalized, enabled, preserveStatTrak ?? current.PreserveStatTrak, cancellationToken);
+        return await GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+    }
+
     public async Task<CaseOpeningCasePurchaseResultObj> PurchaseCaseOpeningCases(
         Guid userId,
         string caseKey,
@@ -528,6 +623,14 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         if (!settings.TryGetValue(caseKey, out CaseOpeningCaseSettingsObj? caseSettings) || caseSettings.PurchaseCostStars < 0)
         {
             throw new InvalidOperationException("This case does not have a purchase price configured yet.");
+        }
+
+        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
+        if (quantity > capacity.AvailableSlots)
+        {
+            throw new InvalidOperationException(capacity.AvailableSlots == 0
+                ? "Your inventory is full. Sell skins or unlock more storage before buying cases."
+                : $"Only {capacity.AvailableSlots:N0} inventory slots are available. Reduce the quantity or unlock more storage.");
         }
 
         CaseOpeningCasePurchaseResultObj? result = await _data.PurchaseCaseOpeningCases(userId, caseKey, quantity, caseSettings.PurchaseCostStars, cancellationToken);
@@ -714,17 +817,15 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException($"You own {ownedQuantity} {caseKey} case{(ownedQuantity == 1 ? string.Empty : "s")}. Buy more from the Shop when it is available.");
         }
 
-        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
-        if (capacity.AvailableSlots < quantity)
-        {
-            throw new InvalidOperationException($"You need {quantity} free inventory slots to open this batch, but only {capacity.AvailableSlots} are available.");
-        }
-
+        // Each result replaces the owned case that produced it, so opening is capacity-neutral.
+        // The stored procedure performs that exchange atomically for every item in the batch.
         Dictionary<string, int> xpByRarity = await GetXpByRarityByKey(cancellationToken);
+        CaseOpeningInventoryUpgradeDbModel autoSellSettings = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        Dictionary<string, CaseOpeningCaseSettingsObj> saleSettings = await GetCaseSettingsByKey(cancellationToken);
         List<CaseOpeningResultObj> results = [];
         for (int index = 0; index < quantity; index++)
         {
-            results.Add(await OpenCase(userId, caseKey, cancellationToken, xpByRarity, settings.XpPerCaseOpen));
+            results.Add(await OpenCase(userId, caseKey, cancellationToken, xpByRarity, settings.XpPerCaseOpen, autoSellSettings, saleSettings));
         }
 
         int remainingQuantity = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
@@ -747,7 +848,9 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         string caseKey,
         CancellationToken cancellationToken,
         Dictionary<string, int>? xpByRarity = null,
-        int fallbackXp = 5)
+        int fallbackXp = 5,
+        CaseOpeningInventoryUpgradeDbModel? autoSellSettings = null,
+        Dictionary<string, CaseOpeningCaseSettingsObj>? caseSaleSettings = null)
     {
         ValidateCaseKey(caseKey);
         CaseOpeningCaseObj caseData = await _referenceData.GetCase(caseKey, cancellationToken);
@@ -768,6 +871,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         history.UserId = userId;
         history.CaseKey = caseKey;
         history.OpenedUtc = DateTime.UtcNow;
+        bool isNewCollectionItem = !await _data.CaseOpeningCollectionItemExists(userId, caseKey, history.SourceItemId, cancellationToken);
         await _data.SaveCaseOpening(userId, history, cancellationToken);
         await RecordPlayerActivity(userId, casesOpened: 1, skinsObtained: 1, cancellationToken: cancellationToken);
         await RecordCollectionMilestones(userId, caseData, cancellationToken);
@@ -791,6 +895,26 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             }
         }
 
+        CaseOpeningInventoryUpgradeDbModel autoSell = autoSellSettings ?? await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        string autoSellKey = rarityKey is "high-grade" ? "mil-spec" : rarityKey is "remarkable" ? "restricted" : rarityKey is "exotic" ? "classified" : rarityKey;
+        bool autoSellEnabled = autoSellKey switch
+        {
+            "covert" => autoSell.AutoSellCovertUnlocked && autoSell.AutoSellCovertEnabled,
+            "classified" => autoSell.AutoSellClassifiedUnlocked && autoSell.AutoSellClassifiedEnabled,
+            "restricted" => autoSell.AutoSellRestrictedUnlocked && autoSell.AutoSellRestrictedEnabled,
+            "mil-spec" => autoSell.AutoSellMilSpecUnlocked && autoSell.AutoSellMilSpecEnabled,
+            _ => false
+        };
+        bool isAutoSold = autoSellEnabled && (!winner.IsStatTrak || !autoSell.PreserveStatTrak);
+        int autoSoldStars = 0;
+        if (isAutoSold)
+        {
+            Dictionary<string, CaseOpeningCaseSettingsObj> saleSettings = caseSaleSettings ?? await GetCaseSettingsByKey(cancellationToken);
+            (int unlockCost, _, _) = GetCaseSettings(saleSettings, caseKey);
+            autoSoldStars = GetSaleValue(rarityKey) * GetCaseSaleMultiplier(unlockCost);
+            await _data.SellCaseOpeningInventory(userId, [history.OpeningId], autoSoldStars, cancellationToken);
+        }
+
         const int winnerIndex = 31;
         List<CaseOpeningItemObj> reel = Enumerable.Range(0, 38)
             // The visible reel must resemble the published rarity odds. Choosing uniformly from
@@ -811,7 +935,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             TotalXp = totalXp,
             Level = newLevel,
             LeveledUp = newLevel > previousLevel,
-            LevelRewardStars = levelRewardStars
+            LevelRewardStars = levelRewardStars,
+            IsAutoSold = isAutoSold,
+            AutoSoldStars = autoSoldStars,
+            IsNewCollectionItem = isNewCollectionItem
         };
     }
 
@@ -957,6 +1084,27 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         return _data.SetCaseSettings(caseKey, unlockCostStars, purchaseCostStars, xpRequirement, cancellationToken);
+    }
+
+    public Task<List<CaseOpeningUpgradeDefinitionObj>> GetInventoryUpgradeSettings(CancellationToken cancellationToken = default)
+    {
+        return _data.GetInventoryUpgradeSettings(cancellationToken);
+    }
+
+    public async Task SetInventoryUpgradeSettings(string upgradeKey, int costStars, int requiredLevel, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(upgradeKey) || costStars < 0 || requiredLevel < 0)
+        {
+            throw new InvalidOperationException("Upgrade costs and level requirements must be valid non-negative values.");
+        }
+
+        List<CaseOpeningUpgradeDefinitionObj> definitions = await _data.GetInventoryUpgradeSettings(cancellationToken);
+        if (!definitions.Any(item => string.Equals(item.UpgradeKey, upgradeKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("This inventory upgrade could not be found.");
+        }
+
+        await _data.SetInventoryUpgradeSettings(upgradeKey, costStars, requiredLevel, cancellationToken);
     }
 
     public Task<List<CaseOpeningXpByRarityObj>> GetXpByRarity(CancellationToken cancellationToken = default)
@@ -1139,6 +1287,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
                     .Where(bot => bot.ServerId == server.ServerId)
                     .OrderBy(bot => bot.CreatedUtc)
                     .ToList();
+                result.SpeedMultiplier = .5m + (Math.Min(server.SpeedLevel, MaximumBotSpeedLevel) * .025m);
+                result.OpeningIntervalSeconds = Math.Max(1, (int)Math.Ceiling(settings.BotOpeningIntervalSeconds * (.5m / result.SpeedMultiplier)));
+                result.NextSpeedUpgradeCost = BotSpeedUpgradeBaseCost + (server.SpeedLevel * BotSpeedUpgradeIncrement);
+                result.MaximumSpeedReached = server.SpeedLevel >= MaximumBotSpeedLevel;
                 return result;
             })
             .ToList();
@@ -1150,6 +1302,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             OpeningIntervalSeconds = settings.BotOpeningIntervalSeconds,
             NextServerCost = GetNextBotServerCost(serverObjs.Count, settings),
             NextBotCost = GetNextBotCost(bots.Count, settings),
+            MaximumSpeedLevel = MaximumBotSpeedLevel,
             Servers = serverObjs
         };
     }

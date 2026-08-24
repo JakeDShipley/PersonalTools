@@ -72,6 +72,26 @@ public sealed class AdminUsersController : ControllerBase
             return StatusCode(500, new ApiResponse(false, "The user account could not be updated. Please try again."));
         }
     }
+
+    [HttpPost("{userId:guid}/login-lockout/reset")]
+    public async Task<ActionResult<AdminUserObj>> ResetLoginLockout(Guid userId)
+    {
+        try
+        {
+            AdminUserObj user = await _auth.ResetManagedUserLoginLockout(userId);
+            _logger.LogInformation("Administrator {UserId} cleared the sign-in lockout for {ManagedUserId}.", UserId, userId);
+            return Ok(user);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ApiResponse(false, exception.Message));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Administrator {UserId} could not clear the sign-in lockout for {ManagedUserId}.", UserId, userId);
+            return StatusCode(500, new ApiResponse(false, "The account lockout could not be cleared. Please try again."));
+        }
+    }
 }
 
 public sealed record AdminUserSaveRequest(
