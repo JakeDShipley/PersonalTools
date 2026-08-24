@@ -25,11 +25,15 @@ public sealed class ApplicationLogProvider : ILoggerProvider
     {
         private readonly string _categoryName;
         private readonly IApplicationLogStore _store;
+        private readonly bool _isApplicationCategory;
+        private readonly bool _isUnhandledRequestCategory;
 
         public ApplicationLogLogger(string categoryName, IApplicationLogStore store)
         {
             _categoryName = categoryName;
             _store = store;
+            _isApplicationCategory = categoryName.Equals("PersonalTools", StringComparison.Ordinal) ||categoryName.StartsWith("PersonalTools.", StringComparison.Ordinal);
+            _isUnhandledRequestCategory = categoryName.StartsWith("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware", StringComparison.Ordinal);
         }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
@@ -39,7 +43,10 @@ public sealed class ApplicationLogProvider : ILoggerProvider
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return logLevel != LogLevel.None;
+            // The database viewer is for events produced by Personal Tools code. Framework and
+            // hosting diagnostics remain available through console/systemd without filling the
+            // application table with request, SignalR and hosting lifecycle noise.
+            return (_isApplicationCategory && logLevel >= LogLevel.Information) || (_isUnhandledRequestCategory && logLevel >= LogLevel.Error);
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)

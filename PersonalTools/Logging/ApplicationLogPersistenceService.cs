@@ -9,8 +9,10 @@ namespace PersonalTools.Logging;
 public sealed class ApplicationLogPersistenceService : BackgroundService
 {
     private const int BatchSize = 50;
+    private static readonly TimeSpan FailureReportInterval = TimeSpan.FromMinutes(1);
     private readonly IApplicationLogStore _store;
     private readonly IServiceScopeFactory _scopeFactory;
+    private DateTime _lastFailureReportedUtc = DateTime.MinValue;
 
     public ApplicationLogPersistenceService(IApplicationLogStore store, IServiceScopeFactory scopeFactory)
     {
@@ -43,10 +45,20 @@ public sealed class ApplicationLogPersistenceService : BackgroundService
                 IApplicationLogsData data = scope.ServiceProvider.GetRequiredService<IApplicationLogsData>();
                 await data.SaveLogs(batch, stoppingToken);
             }
-            catch when (!stoppingToken.IsCancellationRequested)
+            catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
                 // GUID keys make retrying safe even if MariaDB accepted part of the previous call.
                 _store.Requeue(batch);
+
+                // ILogger feeds this same persistence queue, so using it here would cause an
+                // endless loop. A throttled stderr message remains visible through systemd and
+                // gives the server administrator the real stored-procedure or connection error.
+                if (DateTime.UtcNow - _lastFailureReportedUtc >= FailureReportInterval)
+                {
+                    _lastFailureReportedUtc = DateTime.UtcNow;
+                    Console.Error.WriteLine($"[{DateTime.UtcNow:O}] Application log persistence failed: {exception}");
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }

@@ -56,7 +56,7 @@ BEGIN
             EventName VARCHAR(250) PATH '$.EventName' NULL ON EMPTY,
             Category VARCHAR(500) PATH '$.Category',
             Message VARCHAR(10000) PATH '$.Message',
-            ExceptionText VARCHAR(30000) PATH '$.Exception' NULL ON EMPTY
+            ExceptionText TEXT PATH '$.Exception' NULL ON EMPTY
         )
     ) AS selected;
 

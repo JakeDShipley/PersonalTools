@@ -22,15 +22,14 @@ $(function () {
     let loading = false;
     let reloadAfterCurrent = false;
     let searchTimer = null;
-    let fallbackTimer = null;
-    let signalRConnected = false;
+    let refreshTimer = null;
     let firstRender = true;
     let selectedEntry = null;
 
     $detailsModal.appendTo(document.body);
     revealPage();
     loadLogs();
-    connectSignalR();
+    startAutoRefresh();
 
     // One request returns only the selected page. MariaDB performs the search and level filter,
     // which keeps the viewer responsive even after the log table has grown substantially.
@@ -295,59 +294,21 @@ $(function () {
             .catch(() => window.personalToolsToast?.error('The log entry could not be copied.'));
     }
 
-    function connectSignalR() {
-        if (typeof signalR === 'undefined') {
-            startFallbackPolling();
-            return;
-        }
-
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl('/hubs/monitoring')
-            .withAutomaticReconnect()
-            .build();
-
-        connection.on('monitoringPulse', function (scope) {
-            if (scope === 'logs' && $autoRefresh.is(':checked')) {
-                loadLogs();
-            }
-        });
-        connection.onreconnecting(() => setConnection('Reconnecting', false));
-        connection.onreconnected(function () {
-            signalRConnected = true;
-            stopFallbackPolling();
-            setConnection('Live', true);
-            loadLogs();
-        });
-        connection.onclose(function () {
-            signalRConnected = false;
-            startFallbackPolling();
-        });
-        connection.start()
-            .then(function () {
-                signalRConnected = true;
-                stopFallbackPolling();
-                setConnection('Live', true);
-            })
-            .catch(startFallbackPolling);
-    }
-
-    function startFallbackPolling() {
+    // Log changes originate on the server and are inexpensive to request as one paged AJAX call.
+    // A single polling path avoids maintaining a WebSocket solely to send a five-second refresh
+    // signal, and works consistently behind Nginx, Cloudflare and local development servers.
+    function startAutoRefresh() {
         if ($autoRefresh.is(':checked')) {
-            setConnection('Polling', true);
+            setConnection('Auto refresh', true);
         }
 
-        if (!fallbackTimer) {
-            fallbackTimer = window.setInterval(function () {
+        if (!refreshTimer) {
+            refreshTimer = window.setInterval(function () {
                 if ($autoRefresh.is(':checked')) {
                     loadLogs();
                 }
             }, 5000);
         }
-    }
-
-    function stopFallbackPolling() {
-        window.clearInterval(fallbackTimer);
-        fallbackTimer = null;
     }
 
     function setConnection(label, live) {
@@ -430,7 +391,7 @@ $(function () {
         }, 300);
     });
     $autoRefresh.on('change', function () {
-        setConnection($(this).is(':checked') ? (signalRConnected ? 'Live' : 'Polling') : 'Paused', $(this).is(':checked'));
+        setConnection($(this).is(':checked') ? 'Auto refresh' : 'Paused', $(this).is(':checked'));
         if ($(this).is(':checked')) loadLogs();
     });
 });

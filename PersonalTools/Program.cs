@@ -16,7 +16,6 @@ using PersonalTools.Data.Skins;
 using PersonalTools.Data;
 using PersonalTools.Classes.Monitoring;
 using PersonalTools.Data.Monitoring;
-using PersonalTools.Hubs;
 using PersonalTools.Classes.CSStats;
 using PersonalTools.Data.CSStats;
 using PersonalTools.Classes.CSDemos;
@@ -56,7 +55,6 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddMemoryCache();
@@ -84,7 +82,6 @@ builder.Services.AddScoped<ITrackedSkinsData, TrackedSkinsData>();
 builder.Services.AddScoped<IApplicationLogsData, ApplicationLogsData>();
 builder.Services.AddScoped<ILogsViewerFuncs, LogsViewerFuncs>();
 builder.Services.AddHostedService<ApplicationLogPersistenceService>();
-builder.Services.AddHostedService<MonitoringPulseService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -261,6 +258,5 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapControllers();
-app.MapHub<MonitoringHub>("/hubs/monitoring");
 
 app.Run();

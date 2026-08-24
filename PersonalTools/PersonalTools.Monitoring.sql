@@ -24,7 +24,7 @@ CREATE PROCEDURE sp_application_logs_write_bulk(IN p_logs JSON)
 BEGIN
     INSERT IGNORE INTO ApplicationLogs(LogId,CapturedUtc,LogLevel,EventId,EventName,Category,Message,ExceptionText)
     SELECT selected.LogId,selected.CapturedUtc,selected.LogLevel,selected.EventId,NULLIF(selected.EventName,''),selected.Category,selected.Message,NULLIF(selected.ExceptionText,'')
-    FROM JSON_TABLE(p_logs,'$[*]' COLUMNS(LogId CHAR(36) PATH '$.LogId',CapturedUtc DATETIME(6) PATH '$.CapturedUtc',LogLevel TINYINT PATH '$.Level',EventId INT PATH '$.EventId',EventName VARCHAR(250) PATH '$.EventName' NULL ON EMPTY,Category VARCHAR(500) PATH '$.Category',Message VARCHAR(10000) PATH '$.Message',ExceptionText VARCHAR(30000) PATH '$.Exception' NULL ON EMPTY)) AS selected;
+    FROM JSON_TABLE(p_logs,'$[*]' COLUMNS(LogId CHAR(36) PATH '$.LogId',CapturedUtc DATETIME(6) PATH '$.CapturedUtc',LogLevel TINYINT PATH '$.Level',EventId INT PATH '$.EventId',EventName VARCHAR(250) PATH '$.EventName' NULL ON EMPTY,Category VARCHAR(500) PATH '$.Category',Message VARCHAR(10000) PATH '$.Message',ExceptionText TEXT PATH '$.Exception' NULL ON EMPTY)) AS selected;
     DELETE FROM ApplicationLogs WHERE CapturedUtc < UTC_TIMESTAMP(6) - INTERVAL 30 DAY;
 END//
 
