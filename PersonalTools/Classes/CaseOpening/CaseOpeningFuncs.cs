@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Mapster;
+using Microsoft.Extensions.Logging;
 using PersonalTools.Data.CaseOpening;
 using PersonalTools.Entities.CaseOpening;
 
@@ -8,7 +9,7 @@ namespace PersonalTools.Classes.CaseOpening;
 public interface ICaseOpeningFuncs
 {
     Task<List<CaseOpeningCaseSummaryObj>> GetCaseOpeningCases(Guid userId, CancellationToken cancellationToken = default);
-    Task<CaseOpeningCaseObj> GetCaseOpeningCase(string caseKey, CancellationToken cancellationToken = default);
+    Task<CaseOpeningCaseObj> GetCaseOpeningCase(Guid userId, string caseKey, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningHistoryObj>> GetCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningCollectionObj> GetCaseOpeningCollection(Guid userId, string caseKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningBotProgressObj> GetCaseOpeningBotProgress(Guid userId, CancellationToken cancellationToken = default);
@@ -16,9 +17,16 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningBotProgressObj> PurchaseCaseOpeningBot(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningResultObj> OpenCaseWithBot(Guid userId, Guid botId, string caseKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryCapacityObj> GetCaseOpeningInventoryCapacity(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningPlayerStatsObj> GetCaseOpeningPlayerStats(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningAchievementSummaryObj> GetCaseOpeningAchievements(Guid userId, CancellationToken cancellationToken = default);
+    Task RecordCaseOpeningLogin(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> UnlockCaseOpeningCase(Guid userId, string caseKey, CancellationToken cancellationToken = default);
+    Task<CaseOpeningCasePurchaseResultObj> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
+    Task<CaseOpeningStoragePurchaseResultObj> PurchaseCaseOpeningStorageContainer(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningSellResultObj> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
     Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
@@ -27,7 +35,7 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default);
     Task<CaseOpeningGameSettingsObj> SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
-    Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default);
 
     // Testing overrides for the caller's own account only.
     Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
@@ -55,24 +63,43 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         ["rare-special"] = 16
     };
 
+    // Only weapon finishes can enter a contract. Sticker capsules and souvenir packages have
+    // different item ladders, so treating them as normal weapon collections would be misleading.
+    private static readonly Dictionary<string, string> TradeUpRarityLadder = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["mil-spec"] = "restricted",
+        ["restricted"] = "classified",
+        ["classified"] = "covert"
+    };
+
     private readonly ICaseOpeningReferenceData _referenceData;
     private readonly ICaseOpeningData _data;
     private readonly ICS2ItemPriceData _prices;
+    private readonly ILogger<CaseOpeningFuncs> _logger;
 
     public CaseOpeningFuncs(
         ICaseOpeningReferenceData referenceData,
         ICaseOpeningData data,
-        ICS2ItemPriceData prices)
+        ICS2ItemPriceData prices,
+        ILogger<CaseOpeningFuncs> logger)
     {
         _referenceData = referenceData;
         _data = data;
         _prices = prices;
+        _logger = logger;
     }
 
-    public Task<CaseOpeningCaseObj> GetCaseOpeningCase(string caseKey, CancellationToken cancellationToken = default)
+    public async Task<CaseOpeningCaseObj> GetCaseOpeningCase(
+        Guid userId,
+        string caseKey,
+        CancellationToken cancellationToken = default)
     {
         ValidateCaseKey(caseKey);
-        return _referenceData.GetCase(caseKey, cancellationToken);
+        CaseOpeningCaseObj caseData = await _referenceData.GetCase(caseKey, cancellationToken);
+        CaseOpeningOwnedCaseDbModel? ownedCase = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
+            .FirstOrDefault(item => item.CaseKey.Equals(caseKey, StringComparison.OrdinalIgnoreCase));
+        caseData.OwnedQuantity = ownedCase?.Quantity ?? 0;
+        return caseData;
     }
 
     public async Task<List<CaseOpeningCaseSummaryObj>> GetCaseOpeningCases(Guid userId, CancellationToken cancellationToken = default)
@@ -81,14 +108,18 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         // endpoint so opening the page does not transfer every skin across all curated cases.
         List<CaseOpeningCaseObj> cases = await _referenceData.GetCuratedCases(cancellationToken);
         List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
+        Dictionary<string, int> ownedQuantities = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
+            .ToDictionary(item => item.CaseKey, item => item.Quantity, StringComparer.OrdinalIgnoreCase);
         Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings = await GetCaseSettingsByKey(cancellationToken);
         cases.ForEach(caseData =>
         {
-            (int cost, int xpRequirement) = GetCaseSettings(caseSettings, caseData.CaseKey);
+            (int cost, int purchaseCost, int xpRequirement) = GetCaseSettings(caseSettings, caseData.CaseKey);
             caseData.UnlockCostStars = cost;
+            caseData.PurchaseCostStars = purchaseCost;
             caseData.XpRequirement = xpRequirement;
             caseData.SaleMultiplier = GetCaseSaleMultiplier(cost);
             caseData.IsUnlocked = unlockedCaseKeys.Contains(caseData.CaseKey, StringComparer.OrdinalIgnoreCase);
+            caseData.OwnedQuantity = ownedQuantities.GetValueOrDefault(caseData.CaseKey);
         });
         return cases
             .OrderBy(caseData => caseData.UnlockCostStars)
@@ -199,6 +230,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         await _data.PurchaseCaseOpeningBotServer(userId, Guid.NewGuid(), current.NextServerCost, cancellationToken);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
         return await GetCaseOpeningBotProgress(userId, cancellationToken);
     }
 
@@ -217,6 +250,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         await _data.PurchaseCaseOpeningBot(userId, server.ServerId, Guid.NewGuid(), current.NextBotCost, cancellationToken);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
         return await GetCaseOpeningBotProgress(userId, cancellationToken);
     }
 
@@ -231,6 +266,19 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         if (!unlockedCaseKeys.Contains(caseKey, StringComparer.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Unlock this case before assigning it to a bot.");
+        }
+
+        int ownedQuantity = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
+            .FirstOrDefault(item => item.CaseKey.Equals(caseKey, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
+        if (ownedQuantity < 1)
+        {
+            throw new InvalidOperationException("This bot needs an owned case to open. Buy more from the Shop when it is available.");
+        }
+
+        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
+        if (capacity.AvailableSlots < 1)
+        {
+            throw new InvalidOperationException("Your inventory is full. Sell items or add storage before assigning another bot opening.");
         }
 
         if (!await _data.ClaimCaseOpeningBotCycle(userId, botId, cancellationToken))
@@ -249,6 +297,60 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             settings,
             await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken),
             cancellationToken);
+    }
+
+    public async Task<CaseOpeningInventoryCapacityObj> GetCaseOpeningInventoryCapacity(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return (await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken))
+            .Adapt<CaseOpeningInventoryCapacityObj>();
+    }
+
+    public async Task<CaseOpeningPlayerStatsObj> GetCaseOpeningPlayerStats(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return (await _data.GetCaseOpeningPlayerStats(userId, cancellationToken))
+            .Adapt<CaseOpeningPlayerStatsObj>();
+    }
+
+    public async Task<CaseOpeningAchievementSummaryObj> GetCaseOpeningAchievements(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EvaluateAchievements(userId, cancellationToken);
+
+        CaseOpeningPlayerStatsDbModel stats = await _data.GetCaseOpeningPlayerStats(userId, cancellationToken);
+        List<CaseOpeningAchievementObj> achievements = (await _data.GetCaseOpeningAchievements(userId, cancellationToken))
+            .Select(achievement =>
+            {
+                CaseOpeningAchievementObj result = achievement.Adapt<CaseOpeningAchievementObj>();
+                result.CurrentValue = GetAchievementMetricValue(stats, achievement.MetricKey);
+                return result;
+            })
+            .OrderBy(achievement => achievement.SortOrder)
+            .ToList();
+
+        return new CaseOpeningAchievementSummaryObj
+        {
+            Stats = stats.Adapt<CaseOpeningPlayerStatsObj>(),
+            UnlockedCount = achievements.Count(achievement => achievement.IsUnlocked),
+            TotalCount = achievements.Count,
+            EarnedStars = achievements
+                .Where(achievement => achievement.IsUnlocked)
+                .Sum(achievement => achievement.RewardStars),
+            Achievements = achievements
+        };
+    }
+
+    /// <summary>
+    /// Login activity is recorded separately from authentication. A failure here must not stop a
+    /// valid account signing in, so the caller deliberately treats it as best-effort telemetry.
+    /// </summary>
+    public Task RecordCaseOpeningLogin(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return RecordLoginAndEvaluateAchievements(userId, cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> UnlockCaseOpeningCase(
@@ -289,8 +391,14 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         unlockedCaseKeys.Add(caseKey);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
         CaseOpeningGameSettingsObj gameSettings = await _data.GetGameSettings(cancellationToken);
-        return await BuildProgress(updated, gameSettings, unlockedCaseKeys, cancellationToken);
+        return await BuildProgress(
+            await _data.GetCaseOpeningProgress(userId, cancellationToken),
+            gameSettings,
+            unlockedCaseKeys,
+            cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> UnlockCaseOpeningUpgrade(
@@ -334,7 +442,13 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("The upgrade could not be unlocked because your Stars balance changed. Please try again.");
         }
 
-        return await BuildProgress(updated, gameSettings, null, cancellationToken);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
+        return await BuildProgress(
+            await _data.GetCaseOpeningProgress(userId, cancellationToken),
+            gameSettings,
+            null,
+            cancellationToken);
     }
 
     public async Task<CaseOpeningSellResultObj> SellCaseOpeningInventory(
@@ -369,7 +483,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         // here rather than trusted from the browser, so a user cannot inflate their reward.
         int starsAwarded = selectedItems.Sum(item =>
         {
-            (int cost, _) = GetCaseSettings(caseSettings, item.CaseKey);
+            (int cost, _, _) = GetCaseSettings(caseSettings, item.CaseKey);
             return GetSaleValue(item.RarityKey) * GetCaseSaleMultiplier(cost);
         });
         CaseOpeningSellResultDbModel? result = await _data.SellCaseOpeningInventory(
@@ -383,6 +497,182 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
 
         return result.Adapt<CaseOpeningSellResultObj>();
+    }
+
+    public async Task<CaseOpeningCasePurchaseResultObj> PurchaseCaseOpeningCases(
+        Guid userId,
+        string caseKey,
+        int quantity,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateCaseKey(caseKey);
+        await _referenceData.GetCase(caseKey, cancellationToken);
+        // One transaction can add a useful batch to the player's stock without turning the
+        // Shop into hundreds of small requests. The limit is still enforced here because the
+        // browser quantity control is only a convenience and cannot be trusted.
+        if (quantity < 1 || quantity > 500)
+        {
+            throw new InvalidOperationException("Buy between 1 and 500 cases at a time.");
+        }
+
+        List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
+        if (!unlockedCaseKeys.Contains(caseKey, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Unlock this case before buying copies from the Shop.");
+        }
+
+        Dictionary<string, CaseOpeningCaseSettingsObj> settings = await GetCaseSettingsByKey(cancellationToken);
+        if (!settings.TryGetValue(caseKey, out CaseOpeningCaseSettingsObj? caseSettings) || caseSettings.PurchaseCostStars < 0)
+        {
+            throw new InvalidOperationException("This case does not have a purchase price configured yet.");
+        }
+
+        CaseOpeningCasePurchaseResultObj? result = await _data.PurchaseCaseOpeningCases(userId, caseKey, quantity, caseSettings.PurchaseCostStars, cancellationToken);
+        return result ?? throw new InvalidOperationException("The case purchase could not be completed. Please try again.");
+    }
+
+    public async Task<CaseOpeningStoragePurchaseResultObj> PurchaseCaseOpeningStorageContainer(Guid userId, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
+        if (capacity.StorageContainerCount >= settings.MaximumStorageContainers)
+        {
+            throw new InvalidOperationException("You already own the maximum number of storage containers.");
+        }
+
+        int cost = settings.StorageContainerBaseCostStars + (capacity.StorageContainerCount * settings.StorageContainerCostIncrementStars);
+        CaseOpeningStoragePurchaseResultObj? result = await _data.PurchaseCaseOpeningStorageContainer(
+            userId, Guid.NewGuid(), cost, settings.StorageContainerSlots, settings.MaximumStorageContainers, cancellationToken);
+        return result ?? throw new InvalidOperationException("The storage container could not be purchased. Please try again.");
+    }
+
+    /// <summary>
+    /// Converts ten owned skins into one next-rarity output. Collection chance is determined by
+    /// how many of the ten inputs came from each case, matching the in-game contract principle.
+    /// </summary>
+    public async Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(
+        Guid userId,
+        List<Guid> openingIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<Guid> selectedIds = openingIds.Distinct().ToList();
+        if (selectedIds.Count != 10)
+        {
+            throw new InvalidOperationException("Select exactly 10 eligible skins for a Trade Up Contract.");
+        }
+
+        List<CaseOpeningHistoryDbModel> inventory = await _data.GetCaseOpeningHistory(userId, cancellationToken);
+        List<CaseOpeningHistoryDbModel> inputs = inventory
+            .Where(item => selectedIds.Contains(item.OpeningId))
+            .ToList();
+
+        if (inputs.Count != selectedIds.Count)
+        {
+            throw new InvalidOperationException("One or more selected skins are no longer in your inventory. Refresh and try again.");
+        }
+
+        string inputRarityKey = inputs[0].RarityKey;
+        if (!TradeUpRarityLadder.TryGetValue(inputRarityKey, out string? outputRarityKey))
+        {
+            throw new InvalidOperationException("Only Mil-Spec, Restricted and Classified weapon skins can be used in a Trade Up Contract.");
+        }
+
+        if (inputs.Any(item => item.IsRareSpecial || item.RarityKey != inputRarityKey || item.FloatValue is null))
+        {
+            throw new InvalidOperationException("All 10 contract skins must be standard weapon skins with the same rarity.");
+        }
+
+        bool isStatTrakContract = inputs[0].IsStatTrak;
+        if (inputs.Any(item => item.IsStatTrak != isStatTrakContract))
+        {
+            throw new InvalidOperationException("A Trade Up Contract must use either 10 StatTrak™ skins or 10 standard skins.");
+        }
+
+        Dictionary<string, CaseOpeningCaseObj> casesByKey = (await _referenceData.GetCuratedCases(cancellationToken))
+            .ToDictionary(item => item.CaseKey, StringComparer.OrdinalIgnoreCase);
+        List<IGrouping<string, CaseOpeningHistoryDbModel>> groups = inputs
+            .GroupBy(item => item.CaseKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (IGrouping<string, CaseOpeningHistoryDbModel> group in groups)
+        {
+            if (!casesByKey.TryGetValue(group.Key, out CaseOpeningCaseObj? sourceCase)
+                || sourceCase.Type is "Sticker Capsule" or "Souvenir Package"
+                || !sourceCase.Items.Any(item => item.RarityKey == outputRarityKey
+                    && !item.IsRareSpecial
+                    && (!isStatTrakContract || item.SupportsStatTrak)))
+            {
+                throw new InvalidOperationException("One of the selected collections has no valid next-rarity contract output.");
+            }
+        }
+
+        // Every input has one equal share of the resulting collection chance. A 5/5 split is
+        // therefore 50/50, while ten different source collections each receive 10%.
+        int collectionRoll = RandomNumberGenerator.GetInt32(inputs.Count);
+        int runningTotal = 0;
+        IGrouping<string, CaseOpeningHistoryDbModel> selectedCollection = groups
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .First();
+        foreach (IGrouping<string, CaseOpeningHistoryDbModel> group in groups.OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            runningTotal += group.Count();
+            if (collectionRoll < runningTotal)
+            {
+                selectedCollection = group;
+                break;
+            }
+        }
+
+        CaseOpeningCaseObj outputCase = casesByKey[selectedCollection.Key];
+        List<CaseOpeningItemObj> eligibleOutputs = outputCase.Items
+            .Where(item => item.RarityKey == outputRarityKey
+                && !item.IsRareSpecial
+                && (!isStatTrakContract || item.SupportsStatTrak))
+            .ToList();
+        CaseOpeningItemObj outputItem = Clone(eligibleOutputs[RandomNumberGenerator.GetInt32(eligibleOutputs.Count)]);
+        decimal averageInputFloat = decimal.Round(inputs.Average(item => item.FloatValue!.Value), 6);
+        await ApplyTradeUpCondition(userId, outputItem, averageInputFloat, isStatTrakContract, cancellationToken);
+        outputItem.EstimatedPrice = await _prices.GetEstimatedPrice(outputItem.MarketHashName, cancellationToken);
+
+        CaseOpeningHistoryDbModel output = outputItem.Adapt<CaseOpeningHistoryDbModel>();
+        output.OpeningId = Guid.NewGuid();
+        output.UserId = userId;
+        output.CaseKey = outputCase.CaseKey;
+        output.OpenedUtc = DateTime.UtcNow;
+
+        CaseOpeningTradeUpDbModel tradeUp = new()
+        {
+            TradeUpId = Guid.NewGuid(),
+            UserId = userId,
+            InputRarityKey = inputRarityKey,
+            OutputRarityKey = outputRarityKey,
+            OutputOpeningId = output.OpeningId,
+            OutputCaseKey = output.CaseKey,
+            AverageInputFloat = averageInputFloat
+        };
+        await _data.ExecuteCaseOpeningTradeUp(userId, tradeUp, selectedIds, output, cancellationToken);
+        await RecordPlayerActivity(userId, skinsObtained: 1, tradeUpsCompleted: 1, cancellationToken: cancellationToken);
+        await RecordCollectionMilestones(userId, outputCase, cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
+
+        return new CaseOpeningTradeUpResultObj
+        {
+            TradeUpId = tradeUp.TradeUpId,
+            InputRarityName = inputs[0].RarityName,
+            OutputRarityName = output.RarityName,
+            AverageInputFloat = averageInputFloat,
+            Output = output.Adapt<CaseOpeningHistoryObj>(),
+            SourceChances = groups
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new CaseOpeningTradeUpSourceChanceObj
+                {
+                    CaseKey = group.Key,
+                    CaseName = casesByKey[group.Key].Name,
+                    InputCount = group.Count(),
+                    Percentage = group.Count() * 10m
+                })
+                .ToList()
+        };
     }
 
     /// <summary>
@@ -414,13 +704,32 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("Unlock this case before opening it.");
         }
 
+        int ownedQuantity = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
+            .FirstOrDefault(item => item.CaseKey.Equals(caseKey, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
+        if (ownedQuantity < quantity)
+        {
+            throw new InvalidOperationException($"You own {ownedQuantity} {caseKey} case{(ownedQuantity == 1 ? string.Empty : "s")}. Buy more from the Shop when it is available.");
+        }
+
+        CaseOpeningInventoryCapacityDbModel capacity = await _data.GetCaseOpeningInventoryCapacity(userId, cancellationToken);
+        if (capacity.AvailableSlots < quantity)
+        {
+            throw new InvalidOperationException($"You need {quantity} free inventory slots to open this batch, but only {capacity.AvailableSlots} are available.");
+        }
+
         List<CaseOpeningResultObj> results = [];
         for (int index = 0; index < quantity; index++)
         {
             results.Add(await OpenCase(userId, caseKey, cancellationToken, settings.XpPerCaseOpen));
         }
 
-        return new CaseOpeningOpenBatchResultObj { Results = results };
+        int remainingQuantity = (await _data.GetCaseOpeningOwnedCases(userId, cancellationToken))
+            .FirstOrDefault(item => item.CaseKey.Equals(caseKey, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
+        return new CaseOpeningOpenBatchResultObj
+        {
+            Results = results,
+            RemainingCaseQuantity = remainingQuantity
+        };
     }
 
     private async Task<CaseOpeningResultObj> OpenCase(
@@ -449,12 +758,26 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         history.CaseKey = caseKey;
         history.OpenedUtc = DateTime.UtcNow;
         await _data.SaveCaseOpening(userId, history, cancellationToken);
+        await RecordPlayerActivity(userId, casesOpened: 1, skinsObtained: 1, cancellationToken: cancellationToken);
+        await RecordCollectionMilestones(userId, caseData, cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
 
         int xpAward = xpPerCaseOpen ?? (await _data.GetGameSettings(cancellationToken)).XpPerCaseOpen;
         CaseOpeningProgressDbModel? afterXp = await _data.AddCaseOpeningXp(userId, xpAward, cancellationToken);
         int totalXp = afterXp?.Xp ?? 0;
         int newLevel = CaseOpeningXpLevels.GetLevel(totalXp);
         int previousLevel = CaseOpeningXpLevels.GetLevel(totalXp - xpAward);
+        int levelRewardStars = 0;
+        if (newLevel > previousLevel)
+        {
+            // Only reward levels crossed by this opening. This avoids retroactively awarding a
+            // large balance to existing accounts when the progression foundation first ships.
+            int reward = CaseOpeningXpLevels.GetRewardStarsBetween(previousLevel, newLevel);
+            if (reward > 0 && await _data.ClaimCaseOpeningLevelReward(userId, newLevel, reward, cancellationToken))
+            {
+                levelRewardStars = reward;
+            }
+        }
 
         const int winnerIndex = 31;
         List<CaseOpeningItemObj> reel = Enumerable.Range(0, 38)
@@ -475,7 +798,124 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             XpAwarded = xpAward,
             TotalXp = totalXp,
             Level = newLevel,
-            LeveledUp = newLevel > previousLevel
+            LeveledUp = newLevel > previousLevel,
+            LevelRewardStars = levelRewardStars
+        };
+    }
+
+    /// <summary>
+    /// Collection milestones represent permanent progress, not the current inventory. A sold
+    /// skin therefore remains collected and can still contribute to completion achievements.
+    /// </summary>
+    private async Task RecordCollectionMilestones(
+        Guid userId,
+        CaseOpeningCaseObj caseData,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            List<CaseOpeningCollectionDbModel> collectedItems = await _data.GetCaseOpeningCollection(
+                userId,
+                caseData.CaseKey,
+                cancellationToken);
+            HashSet<string> collectedSourceIds = collectedItems
+                .Select(item => item.SourceItemId)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (IGrouping<string, CaseOpeningItemObj> rarity in caseData.Items.GroupBy(item => item.RarityKey))
+            {
+                bool rarityComplete = rarity.Key.Equals("rare-special", StringComparison.OrdinalIgnoreCase)
+                    ? rarity.Any(item => collectedSourceIds.Contains(item.SourceItemId))
+                    : rarity.All(item => collectedSourceIds.Contains(item.SourceItemId));
+
+                if (rarityComplete)
+                {
+                    await _data.RecordCompletedCaseOpeningRarity(userId, caseData.CaseKey, rarity.Key, cancellationToken);
+                }
+            }
+
+            bool normalItemsComplete = caseData.Items
+                .Where(item => !item.IsRareSpecial)
+                .All(item => collectedSourceIds.Contains(item.SourceItemId));
+            bool rareObjectiveComplete = !caseData.Items.Any(item => item.IsRareSpecial)
+                || caseData.Items.Any(item => item.IsRareSpecial && collectedSourceIds.Contains(item.SourceItemId));
+
+            if (normalItemsComplete && rareObjectiveComplete)
+            {
+                await _data.RecordCompletedCaseOpeningCollection(userId, caseData.CaseKey, cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            // The skin is already safely stored. Do not turn a successful opening into a browser
+            // error solely because an optional milestone update needs a retry on a future pull.
+            _logger.LogWarning(
+                exception,
+                "Case-opening collection milestone update failed for {UserId} and {CaseKey}.",
+                userId,
+                caseData.CaseKey);
+        }
+    }
+
+    private async Task RecordPlayerActivity(
+        Guid userId,
+        int casesOpened = 0,
+        int skinsObtained = 0,
+        int tradeUpsCompleted = 0,
+        int unlocksEarned = 0,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _data.RecordCaseOpeningPlayerActivity(
+                userId,
+                casesOpened,
+                skinsObtained,
+                tradeUpsCompleted,
+                unlocksEarned,
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            // Opening, selling and unlocking already completed in their own stored procedure.
+            // Keep the simulator responsive and retain a clear server log for the missed metric.
+            _logger.LogWarning(exception, "Case-opening progression activity could not be recorded for {UserId}.", userId);
+        }
+    }
+
+    private async Task RecordLoginAndEvaluateAchievements(Guid userId, CancellationToken cancellationToken)
+    {
+        await _data.RecordCaseOpeningLogin(userId, cancellationToken);
+        await EvaluateAchievements(userId, cancellationToken);
+    }
+
+    private async Task EvaluateAchievements(Guid userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _data.EvaluateCaseOpeningAchievements(userId, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            // Achievements are an enhancement over the completed opening/login operation. Keep
+            // that primary action successful while retaining enough context to retry and diagnose.
+            _logger.LogWarning(exception, "Case-opening achievements could not be evaluated for {UserId}.", userId);
+        }
+    }
+
+    private static int GetAchievementMetricValue(CaseOpeningPlayerStatsDbModel stats, string metricKey)
+    {
+        return metricKey switch
+        {
+            "cases-opened" => stats.TotalCasesOpened,
+            "skins-obtained" => stats.TotalSkinsObtained,
+            "trade-ups-completed" => stats.TotalTradeUpsCompleted,
+            "unlocks" => stats.TotalUnlocks,
+            "login-days" => stats.TotalLoginDays,
+            "login-streak" => stats.CurrentLoginStreak,
+            "collections-completed" => stats.CompletedCollections,
+            "rarity-sets-completed" => stats.CompletedRaritySets,
+            _ => 0
         };
     }
 
@@ -501,15 +941,15 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return _data.GetCaseSettings(cancellationToken);
     }
 
-    public Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default)
+    public Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default)
     {
         ValidateCaseKey(caseKey);
-        if (unlockCostStars < 0 || xpRequirement < 0)
+        if (unlockCostStars < 0 || purchaseCostStars < 0 || xpRequirement < 0)
         {
             throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
         }
 
-        return _data.SetCaseSettings(caseKey, unlockCostStars, xpRequirement, cancellationToken);
+        return _data.SetCaseSettings(caseKey, unlockCostStars, purchaseCostStars, xpRequirement, cancellationToken);
     }
 
     public async Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)
@@ -575,11 +1015,11 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return settings.ToDictionary(item => item.CaseKey, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static (int Cost, int XpRequirement) GetCaseSettings(Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings, string caseKey)
+    private static (int Cost, int PurchaseCost, int XpRequirement) GetCaseSettings(Dictionary<string, CaseOpeningCaseSettingsObj> caseSettings, string caseKey)
     {
         return caseSettings.TryGetValue(caseKey, out CaseOpeningCaseSettingsObj? settings)
-            ? (settings.UnlockCostStars, settings.XpRequirement)
-            : (0, 0);
+            ? (settings.UnlockCostStars, settings.PurchaseCostStars, settings.XpRequirement)
+            : (0, 0, 0);
     }
 
     private async Task<CaseOpeningProgressObj> BuildProgress(
@@ -618,6 +1058,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             MultiOpenXpRequirement = settings.MultiOpenXpRequirement,
             MaximumMultiOpenLevel = settings.MaximumMultiOpenLevel,
             MaximumOpenQuantity = settings.MaximumOpenQuantity,
+            StorageContainerBaseCostStars = settings.StorageContainerBaseCostStars,
+            StorageContainerCostIncrementStars = settings.StorageContainerCostIncrementStars,
+            StorageContainerSlots = settings.StorageContainerSlots,
+            MaximumStorageContainers = settings.MaximumStorageContainers,
             SaleValues = new Dictionary<string, int>(SaleValues, StringComparer.OrdinalIgnoreCase),
             UnlockedCaseKeys = unlockedCaseKeys ?? []
         };
@@ -805,6 +1249,59 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         item.MarketHashName = $"{star}{statTrak}{item.Name} ({item.Wear})";
     }
 
+    /// <summary>
+    /// CS trade-up output float is derived from the average input float and the output skin's
+    /// available range. Unlike a case opening, no random output float is rolled here.
+    /// </summary>
+    private async Task ApplyTradeUpCondition(
+        Guid userId,
+        CaseOpeningItemObj item,
+        decimal averageInputFloat,
+        bool isStatTrak,
+        CancellationToken cancellationToken)
+    {
+        decimal minimum = item.MinFloat ?? 0m;
+        decimal maximum = item.MaxFloat ?? 1m;
+        if (maximum < minimum)
+        {
+            maximum = minimum;
+        }
+
+        decimal normalisedAverage = decimal.Clamp(averageInputFloat, 0m, 1m);
+        decimal outputFloat = decimal.Round(minimum + ((maximum - minimum) * normalisedAverage), 6);
+        const int maximumAttempts = 12;
+
+        for (int attempt = 0; attempt < maximumAttempts; attempt++)
+        {
+            int patternSeed = RandomNumberGenerator.GetInt32(1_001);
+            bool conditionExists = await _data.CaseOpeningConditionExists(
+                userId,
+                item.SourceItemId,
+                outputFloat,
+                patternSeed,
+                cancellationToken);
+
+            if (conditionExists)
+            {
+                continue;
+            }
+
+            item.FloatValue = outputFloat;
+            item.PatternSeed = patternSeed;
+            break;
+        }
+
+        if (item.FloatValue is null || item.PatternSeed is null)
+        {
+            throw new InvalidOperationException("A unique condition could not be generated for this Trade Up Contract. Please try again.");
+        }
+
+        item.Wear = WearFromFloat(item.FloatValue.Value);
+        item.IsStatTrak = isStatTrak;
+        string statTrak = item.IsStatTrak ? "StatTrak™ " : string.Empty;
+        item.MarketHashName = $"{statTrak}{item.Name} ({item.Wear})";
+    }
+
     private static string WearFromFloat(decimal value)
     {
         if (value < .07m) return "Factory New";
@@ -824,14 +1321,15 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         if (settings.XpPerCaseOpen < 0 || settings.SkipAnimationCostStars < 0 || settings.MultiOpenCostStars < 0
             || settings.SkipAnimationXpRequirement < 0 || settings.MultiOpenXpRequirement < 0
             || settings.BotServerBaseCostStars < 0 || settings.BotServerCostIncrementStars < 0
-            || settings.BotBaseCostStars < 0)
+            || settings.BotBaseCostStars < 0 || settings.StorageContainerBaseCostStars < 0
+            || settings.StorageContainerCostIncrementStars < 0 || settings.StorageContainerSlots < 1)
         {
             throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
         }
 
-        if (settings.MaximumMultiOpenLevel < 1 || settings.MaximumOpenQuantity < 1)
+        if (settings.MaximumMultiOpenLevel < 1 || settings.MaximumOpenQuantity < 1 || settings.MaximumStorageContainers < 0)
         {
-            throw new InvalidOperationException("Maximum multi-open level and open quantity must be at least 1.");
+            throw new InvalidOperationException("Maximum multi-open level and open quantity must be at least 1, and storage limits cannot be negative.");
         }
 
         if (settings.BotOpeningIntervalSeconds < 1)

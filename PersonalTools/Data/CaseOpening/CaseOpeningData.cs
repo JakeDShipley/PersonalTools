@@ -9,10 +9,26 @@ public interface ICaseOpeningData
     Task<List<CaseOpeningHistoryDbModel>> GetCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCollectionDbModel>> GetCaseOpeningCollection(Guid userId, string caseKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel> GetCaseOpeningProgress(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningOwnedCaseDbModel>> GetCaseOpeningOwnedCases(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryCapacityDbModel> GetCaseOpeningInventoryCapacity(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningPlayerStatsDbModel> GetCaseOpeningPlayerStats(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningAchievementDbModel>> GetCaseOpeningAchievements(Guid userId, CancellationToken cancellationToken = default);
+    Task EvaluateCaseOpeningAchievements(Guid userId, CancellationToken cancellationToken = default);
+    Task RecordCaseOpeningPlayerActivity(Guid userId, int casesOpened, int skinsObtained, int tradeUpsCompleted, int unlocksEarned, CancellationToken cancellationToken = default);
+    Task RecordCaseOpeningLogin(Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> ClaimCaseOpeningLevelReward(Guid userId, int level, int starsAwarded, CancellationToken cancellationToken = default);
+    Task<bool> RecordCompletedCaseOpeningCollection(Guid userId, string caseKey, CancellationToken cancellationToken = default);
+    Task<bool> RecordCompletedCaseOpeningRarity(Guid userId, string caseKey, string rarityKey, CancellationToken cancellationToken = default);
     Task<List<string>> GetCaseOpeningUnlockedCases(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningCase(Guid userId, string caseKey, int cost, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, int maximumMultiOpenLevel, CancellationToken cancellationToken = default);
     Task<CaseOpeningSellResultDbModel?> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, int starsAwarded, CancellationToken cancellationToken = default);
+    Task ExecuteCaseOpeningTradeUp(
+        Guid userId,
+        CaseOpeningTradeUpDbModel tradeUp,
+        List<Guid> openingIds,
+        CaseOpeningHistoryDbModel output,
+        CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotServerDbModel>> GetCaseOpeningBotServers(Guid userId, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotDbModel>> GetCaseOpeningBots(Guid userId, CancellationToken cancellationToken = default);
     Task PurchaseCaseOpeningBotServer(Guid userId, Guid serverId, int cost, CancellationToken cancellationToken = default);
@@ -26,7 +42,9 @@ public interface ICaseOpeningData
     Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default);
     Task SetGameSettings(CaseOpeningGameSettingsObj settings, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCaseSettingsObj>> GetCaseSettings(CancellationToken cancellationToken = default);
-    Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default);
+    Task<CaseOpeningCasePurchaseResultObj?> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, int purchaseCostStars, CancellationToken cancellationToken = default);
+    Task<CaseOpeningStoragePurchaseResultObj?> PurchaseCaseOpeningStorageContainer(Guid userId, Guid storageContainerId, int cost, int slots, int maximumContainers, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
     Task SetCaseOpeningCaseUnlockDev(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
@@ -70,6 +88,35 @@ public sealed class CaseOpeningData : ICaseOpeningData
             ReadProgress,
             Parameters(("p_user_id", userId)),
             cancellationToken) ?? new CaseOpeningProgressDbModel { UserId = userId };
+    }
+
+    public Task<List<CaseOpeningOwnedCaseDbModel>> GetCaseOpeningOwnedCases(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_owned_cases_get",
+            reader => new CaseOpeningOwnedCaseDbModel
+            {
+                CaseKey = reader.GetString("CaseKey"),
+                Quantity = reader.GetInt32("Quantity")
+            },
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public async Task<CaseOpeningInventoryCapacityDbModel> GetCaseOpeningInventoryCapacity(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _database.GetDataSP(
+            "sp_case_opening_inventory_capacity_get",
+            ReadInventoryCapacity,
+            Parameters(("p_user_id", userId)),
+            cancellationToken) ?? new CaseOpeningInventoryCapacityDbModel
+        {
+            BaseCapacity = 1000,
+            TotalCapacity = 1000,
+            AvailableSlots = 1000
+        };
     }
 
     public Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(
@@ -126,6 +173,144 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_opening_ids", JsonSerializer.Serialize(openingIds)),
                 ("p_item_count", openingIds.Count),
                 ("p_stars_awarded", starsAwarded)),
+            cancellationToken);
+    }
+
+    public async Task<CaseOpeningPlayerStatsDbModel> GetCaseOpeningPlayerStats(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _database.GetDataSP(
+            "sp_case_opening_player_stats_get",
+            ReadPlayerStats,
+            Parameters(("p_user_id", userId)),
+            cancellationToken) ?? new CaseOpeningPlayerStatsDbModel { UserId = userId };
+    }
+
+    public Task<List<CaseOpeningAchievementDbModel>> GetCaseOpeningAchievements(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP(
+            "sp_case_opening_achievements_get",
+            ReadAchievement,
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public Task EvaluateCaseOpeningAchievements(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_achievements_evaluate",
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public Task RecordCaseOpeningPlayerActivity(
+        Guid userId,
+        int casesOpened,
+        int skinsObtained,
+        int tradeUpsCompleted,
+        int unlocksEarned,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_player_stats_add",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_cases_opened", casesOpened),
+                ("p_skins_obtained", skinsObtained),
+                ("p_trade_ups_completed", tradeUpsCompleted),
+                ("p_unlocks_earned", unlocksEarned)),
+            cancellationToken);
+    }
+
+    public Task RecordCaseOpeningLogin(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_login_record",
+            Parameters(("p_user_id", userId)),
+            cancellationToken);
+    }
+
+    public async Task<bool> ClaimCaseOpeningLevelReward(
+        Guid userId,
+        int level,
+        int starsAwarded,
+        CancellationToken cancellationToken = default)
+    {
+        int claimed = await _database.GetScalarSP<int>(
+            "sp_case_opening_level_reward_claim",
+            Parameters(("p_user_id", userId), ("p_level", level), ("p_stars_awarded", starsAwarded)),
+            cancellationToken);
+
+        return claimed == 1;
+    }
+
+    public async Task<bool> RecordCompletedCaseOpeningCollection(Guid userId, string caseKey, CancellationToken cancellationToken = default)
+    {
+        int recorded = await _database.GetScalarSP<int>(
+            "sp_case_opening_collection_completion_record",
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey)),
+            cancellationToken);
+
+        return recorded == 1;
+    }
+
+    public async Task<bool> RecordCompletedCaseOpeningRarity(
+        Guid userId,
+        string caseKey,
+        string rarityKey,
+        CancellationToken cancellationToken = default)
+    {
+        int recorded = await _database.GetScalarSP<int>(
+            "sp_case_opening_collection_rarity_completion_record",
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey), ("p_rarity_key", rarityKey)),
+            cancellationToken);
+
+        return recorded == 1;
+    }
+
+    /// <summary>
+    /// Saves a completed contract as one database transaction. The procedure validates that all
+    /// input rows still belong to this user before it removes them and adds the server-selected output.
+    /// </summary>
+    public Task ExecuteCaseOpeningTradeUp(
+        Guid userId,
+        CaseOpeningTradeUpDbModel tradeUp,
+        List<Guid> openingIds,
+        CaseOpeningHistoryDbModel output,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_execute",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_trade_up_id", tradeUp.TradeUpId),
+                ("p_opening_ids", JsonSerializer.Serialize(openingIds)),
+                ("p_input_rarity_key", tradeUp.InputRarityKey),
+                ("p_output_rarity_key", tradeUp.OutputRarityKey),
+                ("p_output_opening_id", output.OpeningId),
+                ("p_output_case_key", output.CaseKey),
+                ("p_output_source_item_id", output.SourceItemId),
+                ("p_output_item_name", output.Name),
+                ("p_output_market_hash_name", output.MarketHashName),
+                ("p_output_image_url", output.ImageUrl),
+                ("p_output_description", output.Description),
+                ("p_output_weapon_name", output.WeaponName),
+                ("p_output_pattern_name", output.PatternName),
+                ("p_output_paint_index", output.PaintIndex),
+                ("p_output_phase", output.Phase),
+                ("p_output_rarity_name", output.RarityName),
+                ("p_output_rarity_color", output.RarityColor),
+                ("p_output_wear", output.Wear),
+                ("p_output_is_stat_trak", output.IsStatTrak),
+                ("p_output_is_rare_special", output.IsRareSpecial),
+                ("p_output_supports_stat_trak", output.SupportsStatTrak),
+                ("p_output_min_float", output.MinFloat ?? (object)DBNull.Value),
+                ("p_output_max_float", output.MaxFloat ?? (object)DBNull.Value),
+                ("p_output_float_value", output.FloatValue ?? (object)DBNull.Value),
+                ("p_output_pattern_seed", output.PatternSeed ?? (object)DBNull.Value),
+                ("p_output_estimated_price", output.EstimatedPrice ?? (object)DBNull.Value),
+                ("p_average_input_float", tradeUp.AverageInputFloat)),
             cancellationToken);
     }
 
@@ -286,7 +471,11 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_bot_server_base_cost_stars", settings.BotServerBaseCostStars),
                 ("p_bot_server_cost_increment_stars", settings.BotServerCostIncrementStars),
                 ("p_bot_base_cost_stars", settings.BotBaseCostStars),
-                ("p_bot_cost_growth_rate", settings.BotCostGrowthRate)),
+                ("p_bot_cost_growth_rate", settings.BotCostGrowthRate),
+                ("p_storage_container_base_cost_stars", settings.StorageContainerBaseCostStars),
+                ("p_storage_container_cost_increment_stars", settings.StorageContainerCostIncrementStars),
+                ("p_storage_container_slots", settings.StorageContainerSlots),
+                ("p_maximum_storage_containers", settings.MaximumStorageContainers)),
             cancellationToken);
     }
 
@@ -295,12 +484,30 @@ public sealed class CaseOpeningData : ICaseOpeningData
         return _database.GetBulkDataSP("sp_case_opening_case_settings_get_all", ReadCaseSettings, cancellationToken: cancellationToken);
     }
 
-    public Task SetCaseSettings(string caseKey, int unlockCostStars, int xpRequirement, CancellationToken cancellationToken = default)
+    public Task SetCaseSettings(string caseKey, int unlockCostStars, int purchaseCostStars, int xpRequirement, CancellationToken cancellationToken = default)
     {
         return _database.ExecuteSP(
             "sp_case_opening_case_settings_set",
-            Parameters(("p_case_key", caseKey), ("p_unlock_cost_stars", unlockCostStars), ("p_xp_requirement", xpRequirement)),
+            Parameters(("p_case_key", caseKey), ("p_unlock_cost_stars", unlockCostStars), ("p_purchase_cost_stars", purchaseCostStars), ("p_xp_requirement", xpRequirement)),
             cancellationToken);
+    }
+
+    public Task<CaseOpeningCasePurchaseResultObj?> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, int purchaseCostStars, CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP("sp_case_opening_cases_purchase", reader => new CaseOpeningCasePurchaseResultObj
+        {
+            CaseKey = reader.GetString("CaseKey"), PurchasedQuantity = reader.GetInt32("PurchasedQuantity"), OwnedQuantity = reader.GetInt32("OwnedQuantity"),
+            StarsSpent = reader.GetInt32("StarsSpent"), StarsBalance = reader.GetInt32("StarsBalance")
+        }, Parameters(("p_user_id", userId), ("p_case_key", caseKey), ("p_quantity", quantity), ("p_purchase_cost_stars", purchaseCostStars)), cancellationToken);
+    }
+
+    public Task<CaseOpeningStoragePurchaseResultObj?> PurchaseCaseOpeningStorageContainer(Guid userId, Guid storageContainerId, int cost, int slots, int maximumContainers, CancellationToken cancellationToken = default)
+    {
+        return _database.GetDataSP("sp_case_opening_storage_container_purchase", reader => new CaseOpeningStoragePurchaseResultObj
+        {
+            StorageContainerCount = reader.GetInt32("StorageContainerCount"), AddedSlots = reader.GetInt32("AddedSlots"), TotalCapacity = reader.GetInt32("TotalCapacity"),
+            StarsSpent = reader.GetInt32("StarsSpent"), StarsBalance = reader.GetInt32("StarsBalance")
+        }, Parameters(("p_user_id", userId), ("p_storage_container_id", storageContainerId), ("p_cost", cost), ("p_slots", slots), ("p_maximum_containers", maximumContainers)), cancellationToken);
     }
 
     public Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default)
@@ -388,6 +595,58 @@ public sealed class CaseOpeningData : ICaseOpeningData
         };
     }
 
+    private static CaseOpeningPlayerStatsDbModel ReadPlayerStats(MySqlDataReader reader)
+    {
+        return new CaseOpeningPlayerStatsDbModel
+        {
+            UserId = reader.GetGuid("UserId"),
+            TotalCasesOpened = reader.GetInt32("TotalCasesOpened"),
+            TotalSkinsObtained = reader.GetInt32("TotalSkinsObtained"),
+            TotalTradeUpsCompleted = reader.GetInt32("TotalTradeUpsCompleted"),
+            TotalUnlocks = reader.GetInt32("TotalUnlocks"),
+            TotalLoginDays = reader.GetInt32("TotalLoginDays"),
+            CurrentLoginStreak = reader.GetInt32("CurrentLoginStreak"),
+            LongestLoginStreak = reader.GetInt32("LongestLoginStreak"),
+            CompletedCollections = reader.GetInt32("CompletedCollections"),
+            CompletedRaritySets = reader.GetInt32("CompletedRaritySets"),
+            HighestRewardedLevel = reader.GetInt32("HighestRewardedLevel"),
+            LastLoginUtcDate = reader.IsDBNull(reader.GetOrdinal("LastLoginUtcDate"))
+                ? null
+                : DateOnly.FromDateTime(reader.GetDateTime("LastLoginUtcDate"))
+        };
+    }
+
+    private static CaseOpeningAchievementDbModel ReadAchievement(MySqlDataReader reader)
+    {
+        return new CaseOpeningAchievementDbModel
+        {
+            AchievementKey = reader.GetString("AchievementKey"),
+            Name = reader.GetString("Name"),
+            Description = reader.GetString("Description"),
+            MetricKey = reader.GetString("MetricKey"),
+            TargetValue = reader.GetInt32("TargetValue"),
+            RewardStars = reader.GetInt32("RewardStars"),
+            SortOrder = reader.GetInt32("SortOrder"),
+            IsUnlocked = reader.GetBoolean("IsUnlocked"),
+            UnlockedUtc = reader.IsDBNull(reader.GetOrdinal("UnlockedUtc"))
+                ? null
+                : DateTime.SpecifyKind(reader.GetDateTime("UnlockedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningInventoryCapacityDbModel ReadInventoryCapacity(MySqlDataReader reader)
+    {
+        return new CaseOpeningInventoryCapacityDbModel
+        {
+            UsedSlots = reader.GetInt32("UsedSlots"),
+            BaseCapacity = reader.GetInt32("BaseCapacity"),
+            StorageContainerCount = reader.GetInt32("StorageContainerCount"),
+            StorageSlots = reader.GetInt32("StorageSlots"),
+            TotalCapacity = reader.GetInt32("TotalCapacity"),
+            AvailableSlots = reader.GetInt32("AvailableSlots")
+        };
+    }
+
     private static CaseOpeningGameSettingsObj ReadGameSettings(MySqlDataReader reader)
     {
         return new CaseOpeningGameSettingsObj
@@ -403,7 +662,11 @@ public sealed class CaseOpeningData : ICaseOpeningData
             BotServerBaseCostStars = reader.GetInt32("BotServerBaseCostStars"),
             BotServerCostIncrementStars = reader.GetInt32("BotServerCostIncrementStars"),
             BotBaseCostStars = reader.GetInt32("BotBaseCostStars"),
-            BotCostGrowthRate = reader.GetDecimal("BotCostGrowthRate")
+            BotCostGrowthRate = reader.GetDecimal("BotCostGrowthRate"),
+            StorageContainerBaseCostStars = reader.GetInt32("StorageContainerBaseCostStars"),
+            StorageContainerCostIncrementStars = reader.GetInt32("StorageContainerCostIncrementStars"),
+            StorageContainerSlots = reader.GetInt32("StorageContainerSlots"),
+            MaximumStorageContainers = reader.GetInt32("MaximumStorageContainers")
         };
     }
 
@@ -413,6 +676,7 @@ public sealed class CaseOpeningData : ICaseOpeningData
         {
             CaseKey = reader.GetString("CaseKey"),
             UnlockCostStars = reader.GetInt32("UnlockCostStars"),
+            PurchaseCostStars = reader.GetInt32("PurchaseCostStars"),
             XpRequirement = reader.GetInt32("XpRequirement")
         };
     }

@@ -32,7 +32,7 @@ public sealed class CaseOpeningController : ControllerBase
     [HttpGet("cases/{caseKey}")]
     public Task<ActionResult<CaseOpeningCaseObj>> GetCase(string caseKey, CancellationToken cancellationToken)
     {
-        return Execute(() => _caseOpening.GetCaseOpeningCase(caseKey, cancellationToken), "load", caseKey);
+        return Execute(() => _caseOpening.GetCaseOpeningCase(UserId, caseKey, cancellationToken), "load", caseKey);
     }
 
     [HttpGet("history")]
@@ -64,6 +64,24 @@ public sealed class CaseOpeningController : ControllerBase
         return Execute(() => _caseOpening.GetCaseOpeningProgress(UserId, cancellationToken), "load progress", "all");
     }
 
+    [HttpGet("inventory-capacity")]
+    public Task<ActionResult<CaseOpeningInventoryCapacityObj>> GetInventoryCapacity(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningInventoryCapacity(UserId, cancellationToken), "load inventory capacity", "all");
+    }
+
+    [HttpGet("player-stats")]
+    public Task<ActionResult<CaseOpeningPlayerStatsObj>> GetPlayerStats(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningPlayerStats(UserId, cancellationToken), "load player stats", "all");
+    }
+
+    [HttpGet("achievements")]
+    public Task<ActionResult<CaseOpeningAchievementSummaryObj>> GetAchievements(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningAchievements(UserId, cancellationToken), "load achievements", "all");
+    }
+
     [HttpPost("upgrades/{upgradeKey}/unlock")]
     public Task<ActionResult<CaseOpeningProgressObj>> UnlockUpgrade(string upgradeKey, CancellationToken cancellationToken)
     {
@@ -84,6 +102,29 @@ public sealed class CaseOpeningController : ControllerBase
         return Execute(
             () => _caseOpening.SellCaseOpeningInventory(UserId, request?.OpeningIds ?? [], cancellationToken),
             "sell inventory",
+            "selected");
+    }
+
+    [HttpPost("cases/{caseKey}/purchase")]
+    public Task<ActionResult<CaseOpeningCasePurchaseResultObj>> PurchaseCases(string caseKey, [FromBody] CaseOpeningCasePurchaseRequestObj? request, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.PurchaseCaseOpeningCases(UserId, caseKey, request?.Quantity ?? 1, cancellationToken), "purchase cases", caseKey);
+    }
+
+    [HttpPost("storage-containers")]
+    public Task<ActionResult<CaseOpeningStoragePurchaseResultObj>> PurchaseStorageContainer(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.PurchaseCaseOpeningStorageContainer(UserId, cancellationToken), "purchase storage container", "inventory");
+    }
+
+    [HttpPost("trade-ups")]
+    public Task<ActionResult<CaseOpeningTradeUpResultObj>> CreateTradeUp(
+        [FromBody] CaseOpeningTradeUpRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.CreateCaseOpeningTradeUp(UserId, request?.OpeningIds ?? [], cancellationToken),
+            "create trade up",
             "selected");
     }
 
@@ -180,7 +221,7 @@ public sealed class CaseOpeningController : ControllerBase
     {
         try
         {
-            await _caseOpening.SetCaseSettings(caseKey, request.UnlockCostStars, request.XpRequirement, cancellationToken);
+            await _caseOpening.SetCaseSettings(caseKey, request.UnlockCostStars, request.PurchaseCostStars, request.XpRequirement, cancellationToken);
             return Ok(new ApiResponse(true, "Case settings saved."));
         }
         catch (InvalidOperationException exception)
@@ -253,7 +294,7 @@ public sealed class CaseOpeningController : ControllerBase
     }
 }
 
-public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int XpRequirement);
+public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int PurchaseCostStars, int XpRequirement);
 public sealed record CaseOpeningDevProgressRequest(int Stars, int Xp);
 public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel);
 public sealed record CaseOpeningDevCaseUnlockRequest(bool Unlock);

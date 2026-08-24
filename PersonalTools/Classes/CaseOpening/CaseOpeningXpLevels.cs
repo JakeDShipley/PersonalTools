@@ -24,4 +24,24 @@ public static class CaseOpeningXpLevels
         int level = GetLevel(totalXp);
         return GetCumulativeXpForLevel(level + 1) - GetCumulativeXpForLevel(level);
     }
+
+    /// <summary>
+    /// Level rewards are deliberately deterministic so a player's reward can be calculated on
+    /// the server without trusting anything the browser sends back.
+    /// </summary>
+    public static int GetRewardStarsForLevel(int level)
+    {
+        return level < 1 ? 0 : 10 + (level * 5);
+    }
+
+    public static int GetRewardStarsBetween(int previousLevel, int newLevel)
+    {
+        if (newLevel <= previousLevel)
+        {
+            return 0;
+        }
+
+        return Enumerable.Range(Math.Max(1, previousLevel + 1), newLevel - previousLevel)
+            .Sum(GetRewardStarsForLevel);
+    }
 }

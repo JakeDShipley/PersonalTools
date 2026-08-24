@@ -30,6 +30,7 @@
     const collapsePreferenceStorageKey = 'personalTools.caseOpeningCollapsedSections';
     let allHistoryItems = [];
     let filteredHistoryItems = [];
+    let historyDirty = false;
     let historyScope = 'session';
     let historyPage = 1;
     let historyPageSize = loadHistoryPageSize();
@@ -45,6 +46,7 @@
     let statisticsRequestedAfterOpening = null;
     const announcedDryStreaks = new Set();
     let opening = false;
+    let tradeUpInFlight = false;
     let inspectX = 0;
     let inspectY = 0;
     let inspectPointer = null;
@@ -53,6 +55,34 @@
     let audioContext = null;
     let masterGain = null;
     let reelSoundTimers = [];
+    let achievementSummary = null;
+    let achievementKeysLoaded = false;
+    let unlockedAchievementKeys = new Set();
+    let inventoryCapacity = null;
+    const shopPurchaseQuantities = new Map();
+    let ownedCaseCounterFrame = null;
+    const destinationStorageKey = 'personalTools.caseOpeningDestination';
+    const validDestinations = ['shop', 'open', 'inventory'];
+    let activeDestination = loadDestinationPreference();
+    let loadedCaseKey = '';
+    let catalogueLoaded = false;
+    let progressLoaded = false;
+    let achievementsLoaded = false;
+    let inventoryCapacityLoaded = false;
+    let botProgressLoaded = false;
+    let historyLoaded = false;
+
+    function loadDestinationPreference() {
+        const hashDestination = String(window.location.hash || '').replace(/^#/, '').toLowerCase();
+        if (validDestinations.includes(hashDestination)) return hashDestination;
+
+        try {
+            const savedDestination = localStorage.getItem(destinationStorageKey);
+            return validDestinations.includes(savedDestination) ? savedDestination : 'open';
+        } catch {
+            return 'open';
+        }
+    }
 
     function loadHistoryPageSize() {
         try {
@@ -120,20 +150,91 @@
     }
 
     function renderCollapseToggle($button, isOpen) {
+        const labels = {
+            collection: ['Show items', 'Hide items'],
+            upgrades: ['Show upgrades', 'Hide upgrades'],
+            achievements: ['Show achievements', 'Hide achievements'],
+            inventory: ['Show inventory', 'Hide inventory']
+        };
+        const labelsForSection = labels[$button.data('case-collapse-toggle')] || labels.inventory;
         $button
             .attr('aria-expanded', isOpen ? 'true' : 'false')
             .find('span')
-            .text(isOpen
-                ? $button.data('case-collapse-toggle') === 'collection'
-                    ? 'Hide items'
-                    : $button.data('case-collapse-toggle') === 'upgrades'
-                        ? 'Hide upgrades'
-                        : 'Hide inventory'
-                : $button.data('case-collapse-toggle') === 'collection'
-                    ? 'Show items'
-                    : $button.data('case-collapse-toggle') === 'upgrades'
-                        ? 'Show upgrades'
-                        : 'Show inventory');
+            .text(isOpen ? labelsForSection[1] : labelsForSection[0]);
+    }
+
+    function achievementIcon(metricKey) {
+        const icons = {
+            'cases-opened': 'fa-box-open',
+            'skins-obtained': 'fa-gun',
+            'trade-ups-completed': 'fa-arrow-up-right-dots',
+            unlocks: 'fa-lock-open',
+            'login-days': 'fa-calendar-check',
+            'login-streak': 'fa-fire-flame-curved',
+            'collections-completed': 'fa-trophy',
+            'rarity-sets-completed': 'fa-gem'
+        };
+        return icons[metricKey] || 'fa-medal';
+    }
+
+    function renderAchievements(summary) {
+        achievementSummary = summary || null;
+        const stats = achievementSummary?.stats || {};
+        const achievements = Array.isArray(achievementSummary?.achievements)
+            ? achievementSummary.achievements
+            : [];
+        const unlocked = Number(achievementSummary?.unlockedCount || 0);
+        const total = Number(achievementSummary?.totalCount || achievements.length);
+        const nextUnlockedKeys = new Set(achievements
+            .filter(achievement => achievement.isUnlocked)
+            .map(achievement => String(achievement.achievementKey || '')));
+        const newlyUnlocked = achievementKeysLoaded
+            ? achievements.filter(achievement => achievement.isUnlocked
+                && !unlockedAchievementKeys.has(String(achievement.achievementKey || '')))
+            : [];
+
+        $('#caseAchievementCount').text(`${unlocked} / ${total}`);
+        $('#caseAchievementCases').text(Number(stats.totalCasesOpened || 0).toLocaleString());
+        $('#caseAchievementTradeUps').text(Number(stats.totalTradeUpsCompleted || 0).toLocaleString());
+        $('#caseAchievementStreak').text(`${Number(stats.currentLoginStreak || 0)} days`);
+        $('#caseAchievementStars').text(Number(achievementSummary?.earnedStars || 0).toLocaleString());
+        $('#caseAchievementCollections').text(
+            `${Number(stats.completedCollections || 0)} collections · ${Number(stats.completedRaritySets || 0)} rarity sets`);
+
+        const $grid = $('#caseAchievementGrid').empty();
+        achievements.forEach(function (achievement) {
+            const target = Math.max(1, Number(achievement.targetValue || 1));
+            const current = Math.min(target, Math.max(0, Number(achievement.currentValue || 0)));
+            const progress = Math.round((current / target) * 100);
+            const unlockedClass = achievement.isUnlocked ? 'is-unlocked' : 'is-locked';
+            const isNewUnlock = newlyUnlocked.some(item => item.achievementKey === achievement.achievementKey);
+            const $card = $('<article>', { class: `col-12 col-md-6 col-xl-4 case-achievement-card ${unlockedClass}${isNewUnlock ? ' is-new-unlock' : ''}` })
+                .append($('<div>', { class: 'case-achievement-icon' })
+                    .append($('<i>', { class: `fa-solid ${achievementIcon(achievement.metricKey)}`, 'aria-hidden': 'true' })))
+                .append($('<div>', { class: 'case-achievement-copy' })
+                    .append($('<div>', { class: 'd-flex align-items-start justify-content-between gap-2' })
+                        .append($('<strong>').text(achievement.name || 'Achievement'))
+                        .append($('<span>', { class: 'case-achievement-reward' })
+                            .append($('<i>', { class: 'fa-solid fa-star', 'aria-hidden': 'true' }))
+                            .append(document.createTextNode(` ${Number(achievement.rewardStars || 0)}`))))
+                    .append($('<p>').text(achievement.description || ''))
+                    .append($('<div>', { class: 'case-achievement-progress' })
+                        .attr('role', 'progressbar')
+                        .attr('aria-valuemin', '0')
+                        .attr('aria-valuemax', target)
+                        .attr('aria-valuenow', current)
+                        .append($('<span>').css('width', `${progress}%`)))
+                    .append($('<small>').text(achievement.isUnlocked
+                        ? 'Unlocked'
+                        : `${current.toLocaleString()} / ${target.toLocaleString()}`)));
+            $grid.append($card);
+        });
+
+        newlyUnlocked.forEach(function (achievement) {
+            window.personalToolsToast?.success(`Achievement unlocked: ${achievement.name} · +${achievement.rewardStars} Stars.`);
+        });
+        unlockedAchievementKeys = nextUnlockedKeys;
+        achievementKeysLoaded = true;
     }
 
     function initialiseCollapsibleSections() {
@@ -206,7 +307,7 @@
         const skipLevelLocked = skipXpReq > 0 && level < skipXpReq;
         const multiLevelLocked = multiXpReq > 0 && level < multiXpReq;
 
-        $('#caseStarsBalance, #caseUpgradeStarsBalance').text(stars);
+        $('#caseStarsBalance, #caseUpgradeStarsBalance, #caseShopStarsBalance').text(stars);
         renderXpBar();
         $('#caseSkipUpgradeCost').text(`${skipCost} Stars`);
         $('#caseMultiUpgradeCost').text(`${multiCost} Stars`);
@@ -240,6 +341,102 @@
         // when inventory is sold or another upgrade changes the balance.
         if (botProgress) renderBotProgress({ ...botProgress, stars: stars });
         if ($('#caseSelectorGrid').children().length) renderCaseSelector(catalogue);
+        if ($('#caseShopCaseGrid').children().length) renderShop(catalogue);
+    }
+
+    function renderShop(items) {
+        const stars = Number(caseProgress?.stars || 0);
+        const $grid = $('#caseShopCaseGrid').empty();
+        (Array.isArray(items) ? items : catalogue).forEach(function (item) {
+            const unlocked = isCaseUnlocked(item);
+            const owned = Number(item.ownedQuantity || 0);
+            const $action = unlocked
+                ? createCaseShopPurchaseControls(item, stars)
+                : $('<button>', { class: 'btn btn-outline-secondary btn-sm js-shop-unlock-case', type: 'button', 'data-case-key': item.caseKey, disabled: stars < Number(item.unlockCostStars || 0), text: `Unlock · ${item.unlockCostStars} ★` });
+            $grid.append($('<div>', { class: 'col-12 col-md-6 col-xl-4' }).append(
+                $('<article>', { class: 'case-shop-case' }).append(
+                    $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                    $('<div>', { class: 'case-shop-case-copy' }).append(
+                        $('<small>', { class: 'small-muted', text: item.type }),
+                        $('<strong>', { text: item.name }),
+                        $('<span>', { class: unlocked ? 'case-shop-owned' : 'case-shop-locked', text: unlocked ? `${owned.toLocaleString()} owned` : `Level ${item.xpRequirement || 0} · permanent unlock` })
+                    ),
+                    $action
+                )
+            ));
+        });
+
+        const capacity = inventoryCapacity || {};
+        const count = Number(capacity.storageContainerCount || 0);
+        const maximum = Number(caseProgress?.maximumStorageContainers || 0);
+        const cost = Number(caseProgress?.storageContainerBaseCostStars || 0) + (count * Number(caseProgress?.storageContainerCostIncrementStars || 0));
+        $('#caseShopStorageStatus').text(`${count} / ${maximum} owned`);
+        $('#caseShopStorageCopy').text(`Adds ${Number(caseProgress?.storageContainerSlots || 1000).toLocaleString()} permanent inventory slots. Next container: ${cost.toLocaleString()} Stars.`);
+        $('#purchaseStorageContainer').prop('disabled', count >= maximum || stars < cost).text(count >= maximum ? 'Storage limit reached' : `Buy · ${cost} ★`);
+
+        const skipUnlocked = caseProgress?.skipAnimationUnlocked === true;
+        const multiLevel = Number(caseProgress?.multiOpenLevel || 0);
+        const maxMulti = Number(caseProgress?.maximumMultiOpenLevel || 0);
+        $('#caseShopUpgradeGrid').empty().append(
+            shopUpgradeCard('skip-animation', 'Skip animation', 'Show your secure result immediately with a compact reveal.', skipUnlocked, Number(caseProgress?.skipAnimationCost || 0)),
+            shopUpgradeCard('multi-open', 'Multi case opening', `Unlock another simultaneous opening. Currently ${1 + multiLevel} at a time.`, multiLevel >= maxMulti, Number(caseProgress?.multiOpenCost || 0))
+        );
+    }
+
+    // Keeps bulk buying compact enough for each Shop row. The server repeats the same validation,
+    // so this control improves the experience without becoming the authority for the purchase.
+    function createCaseShopPurchaseControls(item, stars) {
+        const caseKeyForPurchase = String(item.caseKey || '');
+        const quantity = shopPurchaseQuantities.get(caseKeyForPurchase) || 1;
+        const unitPrice = Math.max(0, Number(item.purchaseCostStars || 0));
+        const totalCost = quantity * unitPrice;
+        return $('<div>', { class: 'case-shop-purchase', 'data-unit-price': unitPrice }).append(
+            $('<div>', { class: 'input-group input-group-sm case-shop-quantity' }).append(
+                $('<button>', {
+                    class: 'btn btn-outline-secondary js-shop-quantity-step',
+                    type: 'button',
+                    'data-step': -1,
+                    'aria-label': `Buy fewer ${item.name} cases`
+                }).append($('<i>', { class: 'fa-solid fa-minus', 'aria-hidden': 'true' })),
+                $('<input>', {
+                    class: 'form-control text-center js-shop-case-quantity',
+                    type: 'number',
+                    min: 1,
+                    max: 500,
+                    step: 1,
+                    value: quantity,
+                    inputmode: 'numeric',
+                    'data-case-key': caseKeyForPurchase,
+                    'aria-label': `Number of ${item.name} cases to buy`
+                }),
+                $('<button>', {
+                    class: 'btn btn-outline-secondary js-shop-quantity-step',
+                    type: 'button',
+                    'data-step': 1,
+                    'aria-label': `Buy more ${item.name} cases`
+                }).append($('<i>', { class: 'fa-solid fa-plus', 'aria-hidden': 'true' }))
+            ),
+            $('<button>', {
+                class: 'btn btn-warning btn-sm js-shop-buy-case',
+                type: 'button',
+                'data-case-key': caseKeyForPurchase,
+                disabled: stars < totalCost,
+                text: `Buy · ${totalCost.toLocaleString()} ★`
+            }),
+            $('<small>', { class: 'case-shop-unit-price', text: `${unitPrice.toLocaleString()} ★ each · maximum 500` })
+        );
+    }
+
+    function shopUpgradeCard(key, title, description, unlocked, cost) {
+        const $action = key === 'skip-animation' && unlocked
+            ? $('<div>', { class: 'form-check form-switch m-0' }).append(
+                $('<input>', { class: 'form-check-input pt-switch js-shop-skip-toggle', id: 'caseShopSkipAnimation', type: 'checkbox', role: 'switch', checked: loadSkipAnimationPreference() }),
+                $('<label>', { class: 'form-check-label small fw-semibold', for: 'caseShopSkipAnimation', text: 'Use quick open' })
+            )
+            : $('<button>', { class: 'btn btn-outline-warning btn-sm js-shop-unlock-upgrade', type: 'button', 'data-upgrade-key': key, disabled: unlocked || Number(caseProgress?.stars || 0) < cost, text: unlocked ? 'Unlocked' : `Unlock · ${cost} ★` });
+        return $('<div>', { class: 'col-12 col-md-6' }).append($('<article>', { class: 'case-shop-row' }).append(
+            $('<div>').append($('<h3>', { class: 'h6 mb-1', text: title }), $('<p>', { class: 'small-muted mb-0', text: description })), $action
+        ));
     }
 
     function renderXpRequirementBadge($badge, requirement) {
@@ -384,11 +581,23 @@
         const xpGained = results.reduce((sum, item) => sum + Number(item.xpAwarded || 0), 0);
         const totalXp = Number(last.totalXp || (caseProgress.xp + xpGained));
         const leveledUp = results.some(item => item.leveledUp);
+        const levelRewardStars = results.reduce((sum, item) => sum + Number(item.levelRewardStars || 0), 0);
 
         flyXpBubble(xpGained, $origin).done(function () {
-            caseProgress = { ...caseProgress, xp: totalXp };
-            renderXpBar();
-            if (leveledUp) playLevelUpAnimation(xpLevelForTotal(totalXp));
+            caseProgress = {
+                ...caseProgress,
+                xp: totalXp,
+                stars: Number(caseProgress.stars || 0) + levelRewardStars
+            };
+            renderProgress(caseProgress);
+
+            if (leveledUp) {
+                playLevelUpAnimation(xpLevelForTotal(totalXp));
+            }
+
+            if (levelRewardStars > 0) {
+                window.personalToolsToast?.success(`Level reward claimed: +${levelRewardStars} Stars.`);
+            }
         });
     }
 
@@ -399,15 +608,67 @@
 
     function renderOpenQuantity() {
         const availableQuantity = 1 + Number(caseProgress?.multiOpenLevel || 0);
+        const ownedQuantity = Number(caseData?.ownedQuantity || 0);
         $('[data-open-quantity]').each(function () {
             const quantity = Number($(this).data('open-quantity'));
             const active = quantity === selectedOpenQuantity;
             $(this)
-                .prop('disabled', quantity > availableQuantity)
+                .prop('disabled', quantity > availableQuantity || quantity > ownedQuantity)
                 .toggleClass('active', active)
                 .attr('aria-pressed', active ? 'true' : 'false');
         });
         if (!opening) renderOpenButton('ready');
+    }
+
+    function renderOwnedCaseQuantity(options) {
+        const quantity = Number(caseData?.ownedQuantity || 0);
+        const from = Number(options?.from);
+        const shouldAnimate = options?.animate === true
+            && Number.isFinite(from)
+            && from !== quantity
+            && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const $counter = $('#caseOwnedQuantity')
+            .toggleClass('is-empty', quantity < 1)
+            .attr('aria-label', `${quantity.toLocaleString()} ${quantity === 1 ? 'case' : 'cases'} ready`);
+        const $value = $('#caseOwnedQuantityValue');
+
+        window.cancelAnimationFrame(ownedCaseCounterFrame);
+        $counter.removeClass('is-decrementing is-incrementing');
+        if (!shouldAnimate) {
+            $value.text(quantity.toLocaleString());
+            return;
+        }
+
+        const difference = quantity - from;
+        const duration = Math.min(760, 360 + (Math.abs(difference) * 55));
+        const startedAt = performance.now();
+        $counter.addClass(difference < 0 ? 'is-decrementing' : 'is-incrementing');
+
+        function tick(timestamp) {
+            const progress = Math.min(1, (timestamp - startedAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const displayed = Math.round(from + (difference * eased));
+            $value.text(displayed.toLocaleString());
+            if (progress < 1) {
+                ownedCaseCounterFrame = window.requestAnimationFrame(tick);
+                return;
+            }
+
+            $value.text(quantity.toLocaleString());
+            window.setTimeout(() => $counter.removeClass('is-decrementing is-incrementing'), 260);
+        }
+
+        ownedCaseCounterFrame = window.requestAnimationFrame(tick);
+    }
+
+    function renderInventoryCapacity(capacity) {
+        inventoryCapacity = capacity || null;
+        const used = Number(inventoryCapacity?.usedSlots || 0);
+        const total = Number(inventoryCapacity?.totalCapacity || 1000);
+        const containers = Number(inventoryCapacity?.storageContainerCount || 0);
+        const storageNote = containers > 0 ? ` · ${containers} storage ${containers === 1 ? 'container' : 'containers'}` : '';
+        $('#caseInventoryCapacity').text(`${used.toLocaleString()} / ${total.toLocaleString()} slots used${storageNote}`);
+        if ($('#caseShopCaseGrid').children().length) renderShop(catalogue);
     }
 
     // Sound is a device preference rather than user data, so it is kept locally and never delays an opening request.
@@ -636,10 +897,16 @@
         });
     }
 
-    function loadBotProgress() {
-        return request('/api/case-opening/bots', 'GET', { showLoader: false })
-            .done(renderBotProgress)
-            .fail(response => showError(response, 'Bot workshop status could not be loaded.'));
+    function loadBotProgress(options) {
+        botProgressLoaded = true;
+        return request('/api/case-opening/bots', 'GET', Object.assign({ showLoader: false }, options || {}))
+            .done(function (progress) {
+                renderBotProgress(progress);
+            })
+            .fail(function (response) {
+                botProgressLoaded = false;
+                showError(response, 'Bot workshop status could not be loaded.');
+            });
     }
 
     function queueBotResult(result) {
@@ -656,13 +923,32 @@
             )
         ).children().slice(8).remove();
 
+        if (result.caseKey === caseKey && caseData) {
+            const previousQuantity = Number(caseData.ownedQuantity || 0);
+            caseData.ownedQuantity = Math.max(0, previousQuantity - 1);
+            const catalogueCase = catalogue.find(item => item.caseKey === caseKey);
+            if (catalogueCase) catalogueCase.ownedQuantity = caseData.ownedQuantity;
+            renderOwnedCaseQuantity({ from: previousQuantity, animate: true });
+            renderOpenQuantity();
+        }
+
         window.clearTimeout(botRefreshTimer);
-        botRefreshTimer = window.setTimeout(function () {
+        const refreshBotBackgroundData = function () {
+            // A bot result must never reset or compete with the user's reel. Wait until their
+            // opening has completed before refreshing the supporting collection and totals.
+            if (opening) {
+                botRefreshTimer = window.setTimeout(refreshBotBackgroundData, 650);
+                return;
+            }
+
             renderSessionSummary();
-            renderHistory(allHistoryItems);
+            if (activeDestination === 'inventory' && historyDirty) renderHistory(allHistoryItems);
             loadCollection(result.caseKey);
             loadStatistics(result.caseKey);
-        }, 120);
+            loadInventoryCapacity();
+            loadCaseCatalogue();
+        };
+        botRefreshTimer = window.setTimeout(refreshBotBackgroundData, 800);
 
         return $image;
     }
@@ -688,7 +974,12 @@
                 .fail(function (response) {
                     const message = response.responseJSON?.message || '';
                     if (!message.toLowerCase().includes('cooling down')) {
-                        window.personalToolsToast?.error(message || 'A bot could not open its assigned case.');
+                        const cannotContinue = /do not own|needs an owned case|inventory is full/i.test(message);
+                        const wasRunning = botsRunning;
+                        if (cannotContinue) stopBots(false);
+                        if (!cannotContinue || wasRunning) {
+                            window.personalToolsToast?.error(message || 'A bot could not open its assigned case.');
+                        }
                     }
                 })
                 .always(() => botOpenInFlight.delete(botId));
@@ -858,7 +1149,7 @@
             $('<img>', {
                 src: gold ? caseData?.imageUrl : item.imageUrl,
                 alt: '',
-                loading: 'lazy',
+                decoding: 'async',
                 referrerpolicy: 'no-referrer'
             }),
             $('<span>', { text: gold ? '★ Rare Special Item ★' : item.name }),
@@ -878,7 +1169,10 @@
     }
 
     function renderOpenButton(state) {
-        const openingText = selectedOpenQuantity === 1 ? 'Open case' : `Open ${selectedOpenQuantity} cases`;
+        const ownedQuantity = Number(caseData?.ownedQuantity || 0);
+        const openingText = ownedQuantity < selectedOpenQuantity
+            ? 'No cases owned'
+            : selectedOpenQuantity === 1 ? 'Open case' : `Open ${selectedOpenQuantity} cases`;
         const settings = {
             ready: { icon: 'fa-solid fa-box-open me-2', text: openingText },
             requesting: { icon: 'spinner-border spinner-border-sm me-2', text: 'Unlocking…' },
@@ -886,6 +1180,9 @@
         }[state] || { icon: 'fa-solid fa-box-open me-2', text: openingText };
         const $icon = $('<span>', { class: settings.icon, 'aria-hidden': 'true' });
         $open.empty().append($icon, document.createTextNode(settings.text));
+        if (state === 'ready') {
+            $open.prop('disabled', ownedQuantity < selectedOpenQuantity);
+        }
         $('.case-machine').toggleClass('is-requesting', state === 'requesting');
     }
 
@@ -907,6 +1204,7 @@
         $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         $('#caseName').text(data.name);
         $('#caseType').text(data.type);
+        renderOwnedCaseQuantity();
         $('#caseImage').attr('src', data.imageUrl);
         const button = document.getElementById('caseOddsButton');
         bootstrap.Popover.getInstance(button)?.dispose();
@@ -923,7 +1221,8 @@
             .filter(`[value="${caseKey}"]`).prop('checked', true);
         renderCaseSelector();
         renderRareItems(data);
-        $open.prop('disabled', false);
+        $open.prop('disabled', Number(data.ownedQuantity || 0) < 1);
+        renderOpenQuantity();
     }
 
     function collectionCard(item) {
@@ -1061,7 +1360,10 @@
     function loadCase(selectedKey, options) {
         const settings = options || {};
         $open.prop('disabled', true);
-        return request(`/api/case-opening/cases/${encodeURIComponent(selectedKey)}`)
+        loadedCaseKey = selectedKey;
+        return request(`/api/case-opening/cases/${encodeURIComponent(selectedKey)}`, 'GET', {
+            showLoader: settings.showLoader !== false
+        })
             .done(function (data) {
                 configureCase(data);
                 loadStatistics();
@@ -1073,7 +1375,10 @@
                     window.personalToolsToast?.success(`${data.name} selected.`);
                 }
             })
-            .fail(response => showError(response, 'That case could not be loaded.'));
+            .fail(function (response) {
+                if (loadedCaseKey === selectedKey) loadedCaseKey = '';
+                showError(response, 'That case could not be loaded.');
+            });
     }
 
     function animateNumber($element, value, suffix) {
@@ -1176,7 +1481,11 @@
                 $('<div>', { class: 'case-selector-content' }).append(
                     $('<small>', { text: item.type }),
                     $('<strong>', { text: item.name }),
-                    $('<span>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` })
+                    $('<span>', { class: 'case-selector-multiplier', text: `${multiplier}× sell rewards` }),
+                    $('<span>', {
+                        class: `case-selector-owned${Number(item.ownedQuantity || 0) < 1 ? ' is-empty' : ''}`,
+                        text: `${Number(item.ownedQuantity || 0).toLocaleString()} owned`
+                    })
                 ),
                 unlocked
                     ? $('<input>', {
@@ -1199,6 +1508,18 @@
         );
     }
 
+    function loadInventoryCapacity(options) {
+        inventoryCapacityLoaded = true;
+        return request('/api/case-opening/inventory-capacity', 'GET', Object.assign({ showLoader: false }, options || {}))
+            .done(function (capacity) {
+                renderInventoryCapacity(capacity);
+            })
+            .fail(function (response) {
+                inventoryCapacityLoaded = false;
+                showError(response, 'Your inventory capacity could not be loaded.');
+            });
+    }
+
     function renderCaseSelector(items) {
         // Loading an individual case refreshes its details before the catalogue is requested again.
         // Keep rendering the last known catalogue during that short gap rather than treating an
@@ -1215,13 +1536,18 @@
         $('#caseSelectorMatchCount').text(`${visibleItems.length} of ${catalogueItems.length}`);
     }
 
-    function loadCaseCatalogue() {
-        return request('/api/case-opening/cases', 'GET', { showLoader: false })
+    function loadCaseCatalogue(options) {
+        catalogueLoaded = true;
+        return request('/api/case-opening/cases', 'GET', Object.assign({ showLoader: false }, options || {}))
             .done(function (items) {
                 renderCaseSelector(items);
+                renderShop(items);
                 if (botProgress) renderBotProgress(botProgress);
             })
-            .fail(response => showError(response, 'The case catalogue could not be loaded.'));
+            .fail(function (response) {
+                catalogueLoaded = false;
+                showError(response, 'The case catalogue could not be loaded.');
+            });
     }
 
     function caseNameFor(key) {
@@ -1374,6 +1700,7 @@
     function renderInventorySelection() {
         const visibleItems = historyPageItems();
         const selectedItems = [...selectedInventoryIds];
+        const tradeUp = getTradeUpSelection();
         const stars = allHistoryItems
             .filter(item => selectedInventoryIds.has(String(item.openingId)))
             .reduce((total, item) => total + saleValueFor(item), 0);
@@ -1386,6 +1713,9 @@
             ? '0 selected'
             : `${selectedItems.length} selected · ${stars} ${stars === 1 ? 'Star' : 'Stars'}`);
         $('#sellCaseInventory').prop('disabled', selectedItems.length === 0);
+        $('#openCaseTradeUp')
+            .prop('disabled', !tradeUp.valid)
+            .attr('title', tradeUp.valid ? 'Use these 10 skins in a Trade Up Contract' : tradeUp.message);
 
         // Selection should feel immediate. Rebuilding cards after every checkbox change causes
         // the list to jump and interrupts users selecting several items in a row.
@@ -1393,6 +1723,102 @@
             const openingId = String($(this).data('opening-id'));
             $(this).prop('checked', selectedInventoryIds.has(openingId));
         });
+    }
+
+    function getTradeUpSelection() {
+        const items = allHistoryItems.filter(item => selectedInventoryIds.has(String(item.openingId)));
+        if (items.length !== 10) {
+            return { valid: false, items: items, message: 'Select exactly 10 skins to create a Trade Up Contract.' };
+        }
+
+        const rarity = String(items[0].rarityKey || '');
+        const outputRarity = { 'mil-spec': 'Restricted', restricted: 'Classified', classified: 'Covert' }[rarity];
+        if (!outputRarity) {
+            return { valid: false, items: items, message: 'Trade Up Contracts accept Mil-Spec, Restricted or Classified skins.' };
+        }
+
+        if (items.some(item => item.isRareSpecial || item.rarityKey !== rarity || item.floatValue == null)) {
+            return { valid: false, items: items, message: 'All 10 contract skins must be standard weapon skins with the same rarity.' };
+        }
+
+        const statTrak = items[0].isStatTrak === true;
+        if (items.some(item => (item.isStatTrak === true) !== statTrak)) {
+            return { valid: false, items: items, message: 'Use either 10 StatTrak™ skins or 10 standard skins.' };
+        }
+
+        return {
+            valid: true,
+            items: items,
+            outputRarity: outputRarity,
+            message: 'Ready for a Trade Up Contract.'
+        };
+    }
+
+    function renderTradeUpPreview() {
+        const tradeUp = getTradeUpSelection();
+        if (!tradeUp.valid) {
+            window.personalToolsToast?.error(tradeUp.message);
+            return false;
+        }
+
+        const averageFloat = tradeUp.items.reduce((total, item) => total + Number(item.floatValue || 0), 0) / tradeUp.items.length;
+        $('#caseTradeUpConversion').text(`10 ${tradeUp.items[0].rarityName} skins → one ${tradeUp.outputRarity} skin`);
+        const $inputs = $('#caseTradeUpInputs').empty();
+        tradeUp.items.forEach(item => $inputs.append(
+            $('<article>', { class: `case-trade-up-input ${rarityClass(item)}` }).append(
+                $('<img>', { src: item.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<span>', { text: item.name }),
+                $('<small>', { text: `${Number(item.floatValue).toFixed(6)} · ${caseNameFor(item.caseKey)}` })
+            )
+        ));
+
+        const groups = new Map();
+        tradeUp.items.forEach(item => {
+            const key = String(item.caseKey || '');
+            groups.set(key, (groups.get(key) || 0) + 1);
+        });
+        const $chances = $('#caseTradeUpChances').empty();
+        $chances.append($('<span>', { class: 'small-muted', text: `Average input float: ${averageFloat.toFixed(6)}` }));
+        [...groups.entries()].forEach(([caseKeyValue, count]) => $chances.append(
+            $('<span>', { class: 'case-trade-up-chance' }).append(
+                $('<strong>', { text: `${count * 10}%` }),
+                document.createTextNode(` ${caseNameFor(caseKeyValue)}`)
+            )
+        ));
+
+        $('#caseTradeUpForm').removeClass('d-none');
+        $('#caseTradeUpResult').addClass('d-none').empty();
+        $('#caseTradeUpFooter').removeClass('d-none');
+        $('#confirmCaseTradeUp').prop('disabled', false).empty().append(
+            $('<i>', { class: 'fa-solid fa-flask-vial me-1', 'aria-hidden': 'true' }),
+            document.createTextNode('Complete contract')
+        );
+        return true;
+    }
+
+    function renderTradeUpResult(result) {
+        const item = result.output;
+        const condition = item.floatValue == null
+            ? ''
+            : `Float ${Number(item.floatValue).toFixed(6)} · Pattern #${item.patternSeed}`;
+        const $result = $('#caseTradeUpResult').empty().removeClass('d-none').append(
+            $('<div>', { class: `case-trade-up-result-card ${rarityClass(item)}` }).append(
+                $('<p>', { class: 'eyebrow mb-1', text: 'Contract complete' }),
+                $('<img>', { src: item.imageUrl, alt: '', referrerpolicy: 'no-referrer' }),
+                $('<p>', { class: 'case-trade-up-output-rarity mb-1', text: item.rarityName }),
+                statTrakBadge(item),
+                $('<h3>', { class: 'h4 mb-2', text: item.name }),
+                $('<p>', { class: 'small-muted mb-2', text: [item.wear, condition].filter(Boolean).join(' · ') }),
+                $('<div>', { class: 'case-trade-up-result-chances' }).append(
+                    result.sourceChances.map(chance => $('<span>', { text: `${Number(chance.percentage).toFixed(0)}% ${chance.caseName}` }))
+                )
+            )
+        );
+        $('#caseTradeUpForm, #caseTradeUpFooter').addClass('d-none');
+        const card = $result.find('.case-trade-up-result-card').get(0);
+        if (card && window.anime?.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            window.anime.animate(card, { scale: [.72, 1], opacity: [0, 1], rotate: [-3, 0], duration: 520, ease: 'out(5)' });
+        }
     }
 
     function refreshInventorySaleValues() {
@@ -1490,6 +1916,7 @@
 
     function renderHistory(items) {
         allHistoryItems = Array.isArray(items) ? items : [];
+        historyDirty = false;
         const availableIds = new Set(allHistoryItems.map(item => String(item.openingId)));
         [...selectedInventoryIds].forEach(openingId => {
             if (!availableIds.has(openingId)) selectedInventoryIds.delete(openingId);
@@ -1502,15 +1929,40 @@
         filterHistory();
     }
 
-    function loadHistory() {
-        return request('/api/case-opening/history').done(renderHistory)
-            .fail(response => showError(response, 'Your case-opening history could not be loaded.'));
+    function loadHistory(options) {
+        historyLoaded = true;
+        return request('/api/case-opening/history', 'GET', options)
+            .done(function (items) {
+                renderHistory(items);
+            })
+            .fail(function (response) {
+                historyLoaded = false;
+                showError(response, 'Your case-opening history could not be loaded.');
+            });
     }
 
-    function loadProgress() {
-        return request('/api/case-opening/progress')
-            .done(renderProgress)
-            .fail(response => showError(response, 'Your Stars balance could not be loaded.'));
+    function loadProgress(options) {
+        progressLoaded = true;
+        return request('/api/case-opening/progress', 'GET', options)
+            .done(function (progress) {
+                renderProgress(progress);
+            })
+            .fail(function (response) {
+                progressLoaded = false;
+                showError(response, 'Your Stars balance could not be loaded.');
+            });
+    }
+
+    function loadAchievements(options) {
+        achievementsLoaded = true;
+        return request('/api/case-opening/achievements', 'GET', options)
+            .done(function (summary) {
+                renderAchievements(summary);
+            })
+            .fail(function (response) {
+                achievementsLoaded = false;
+                showError(response, 'Your achievements could not be loaded.');
+            });
     }
 
     function reelTarget(result) {
@@ -1531,26 +1983,33 @@
         result.reel.forEach(item => $reel.append(itemCard(item, 'case-reel-item')));
         $idle.addClass('d-none');
         $result.addClass('d-none');
-        const target = reelTarget(result);
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         renderOpenButton('rolling');
 
-        if (!window.anime?.animate || reduced) {
-            $reel.css('transform', `translateX(${target}px)`);
-            if (isGoldItem(result.winner)) showGoldReveal(result);
-            else finishOpening(result);
-            return;
-        }
+        // Give the browser one complete paint with the reel at its starting position. Starting
+        // the transform in the same frame as inserting the cards can skip that visual state on
+        // mobile GPUs, which makes the reel appear late or not at all.
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                const target = reelTarget(result);
+                if (!window.anime?.animate || reduced) {
+                    $reel.css('transform', `translate3d(${target}px,0,0)`);
+                    if (isGoldItem(result.winner)) showGoldReveal(result);
+                    else finishOpening(result);
+                    return;
+                }
 
-        startReelSounds(5200);
-        window.anime.animate($reel.get(0), {
-            translateX: [0, target],
-            duration: 5200,
-            ease: 'out(5)',
-            onComplete: function () {
-                if (isGoldItem(result.winner)) showGoldReveal(result);
-                else finishOpening(result);
-            }
+                startReelSounds(5200);
+                window.anime.animate($reel.get(0), {
+                    translateX: [0, target],
+                    duration: 5200,
+                    ease: 'out(5)',
+                    onComplete: function () {
+                        if (isGoldItem(result.winner)) showGoldReveal(result);
+                        else finishOpening(result);
+                    }
+                });
+            });
         });
     }
 
@@ -1615,41 +2074,45 @@
             historyItems.set(String(result.openingId), historyItem);
             allHistoryItems.unshift(historyItem);
         });
+        historyDirty = true;
         if (refreshDisplay !== false) {
             renderSessionSummary();
-            renderHistory(allHistoryItems);
+            if (activeDestination === 'inventory') renderHistory(allHistoryItems);
         }
     }
 
     function queuePostOpeningRefresh() {
         window.clearTimeout(postOpeningRefreshTimer);
 
-        // The opening controls are the priority. Rebuilding an ever-growing history table can
-        // wait briefly for the user to finish a run of openings, rather than making every next
-        // click progressively slower.
+        // The opening controls are the priority. These requests wait until the user pauses, use
+        // no full-screen loader and never rebuild a hidden inventory table.
         postOpeningRefreshTimer = window.setTimeout(function () {
             postOpeningRefreshTimer = null;
             renderSessionSummary();
-            renderHistory(allHistoryItems);
-        }, 550);
+            if (activeDestination === 'inventory' && historyDirty) renderHistory(allHistoryItems);
+            const quietOptions = { showLoader: false };
+            loadProgress(quietOptions);
+            loadAchievements(quietOptions);
+            loadInventoryCapacity(quietOptions);
+            loadStatistics(statisticsRequestedAfterOpening);
+            loadCollection(caseKey);
+        }, 700);
     }
 
     function completeOpening(results) {
         addResultsToInventory(results, false);
         opening = false;
+        $('.case-bottom-nav-link').prop('disabled', false);
         renderOpenButton('ready');
-        window.requestAnimationFrame(() => $open.prop('disabled', false));
+        window.requestAnimationFrame(() => $open.prop('disabled', Number(caseData?.ownedQuantity || 0) < selectedOpenQuantity));
         queuePostOpeningRefresh();
         const resultNames = results.length === 1 ? results[0].winner.name : `${results.length} items`;
         window.personalToolsToast?.success(`${resultNames} unboxed.`);
         statisticsRequestedAfterOpening = results[0]?.caseKey || caseKey;
-        loadStatistics(statisticsRequestedAfterOpening).always(function () {
-            if (!opening) $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
-        });
-        loadCollection(results[0]?.caseKey || caseKey);
+        $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
     }
 
-    function finishOpening(result) {
+    function renderFinishedOpening(result) {
         const winner = result.winner;
         if (!isGoldItem(winner)) playReveal(winner);
         $('#caseResultName').text(winner.name);
@@ -1661,6 +2124,10 @@
             runParticles(winner.rarityColor, 28);
             awardXp([result], resultImageOrigin(result));
         }
+    }
+
+    function finishOpening(result) {
+        renderFinishedOpening(result);
         completeOpening([result]);
     }
 
@@ -1668,7 +2135,7 @@
         const winner = result.winner;
         return $('<div>', { class: 'case-multi-result-column' }).append(
             $('<article>', { class: `case-multi-result ${rarityClass(winner)}` }).append(
-                $('<img>', { src: winner.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<img>', { src: winner.imageUrl, alt: '', decoding: 'async', referrerpolicy: 'no-referrer' }),
                 $('<span>', { class: 'case-multi-rarity', text: winner.rarityName }),
                 $('<strong>', { text: winner.name }),
                 statTrakBadge(winner)
@@ -1687,15 +2154,35 @@
         $idle.addClass('d-none');
         $result.addClass('d-none');
         results.forEach(result => $multiResults.append(multiResultCard(result)));
-        results.filter(result => isGoldItem(result.winner)).forEach(result => {
-            runParticles(result.winner.rarityColor || '#e4ae39', 64);
+        const goldResult = results.find(result => isGoldItem(result.winner));
+        if (goldResult) runParticles(goldResult.winner.rarityColor || '#e4ae39', 90);
+
+        const cards = $multiResults.children().get();
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const completeMultiOpening = function () {
+            awardXp(results, resultImageOrigin());
+            completeOpening(results);
+        };
+
+        if (!window.anime?.animate || reduced) {
+            completeMultiOpening();
+            return;
+        }
+
+        $(cards).css('opacity', 0);
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                window.anime.animate(cards, {
+                    opacity: [0, 1],
+                    translateY: [14, 0],
+                    scale: [.965, 1],
+                    delay: (_, index) => index * 65,
+                    duration: 340,
+                    ease: 'out(4)',
+                    onComplete: completeMultiOpening
+                });
+            });
         });
-        awardXp(results, resultImageOrigin());
-        window.personalToolsMotion?.reveal(
-            $multiResults.children().get(),
-            { fromY: 14, delay: 80, duration: 420 }
-        );
-        window.setTimeout(() => completeOpening(results), 450);
     }
 
     function showSkippedResult(result) {
@@ -1731,8 +2218,23 @@
                 return;
             }
 
-            finishOpening(result);
-            window.personalToolsMotion?.reveal([$skipCard.get(0), $result.get(0)], { fromY: 10, delay: 60, duration: 260 });
+            renderFinishedOpening(result);
+            const revealTargets = [$skipCard.get(0), $result.get(0)];
+            if (!window.anime?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                completeOpening([result]);
+                return;
+            }
+
+            window.anime.animate(revealTargets, {
+                opacity: [0, 1],
+                translateY: [8, 0],
+                duration: 260,
+                ease: 'out(4)',
+                onComplete: function () {
+                    $(revealTargets).css({ opacity: '', transform: '' });
+                    completeOpening([result]);
+                }
+            });
         }, 120);
     }
 
@@ -1814,13 +2316,179 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById('caseInspectModal')).show();
     }
 
+    function saveDestinationPreference(destination) {
+        try {
+            localStorage.setItem(destinationStorageKey, destination);
+            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${destination}`);
+        } catch {
+            // Navigation still works when browser history or storage is unavailable.
+        }
+    }
+
+    function positionDestinationIndicator(animate) {
+        const button = document.querySelector(`.case-bottom-nav-link[data-case-destination="${activeDestination}"]`);
+        const indicator = document.getElementById('caseBottomNavIndicator');
+        if (!button || !indicator) return;
+
+        const values = {
+            translateX: button.offsetLeft,
+            width: button.offsetWidth
+        };
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reducedMotion || !window.anime?.animate) {
+            indicator.style.width = `${values.width}px`;
+            indicator.style.transform = `translateX(${values.translateX}px)`;
+            return;
+        }
+
+        window.anime.animate(indicator, {
+            translateX: values.translateX,
+            width: values.width,
+            duration: 320,
+            ease: 'out(4)'
+        });
+    }
+
+    function setDestinationLoading(destination, loading) {
+        const selector = `[data-case-destination-loader="${destination}"]`;
+        $(selector).remove();
+        $(`[data-case-destination-panel="${destination}"]`).attr('aria-busy', loading ? 'true' : 'false');
+        if (!loading) return;
+
+        $('<div>', {
+            class: 'case-destination-loader',
+            'data-case-destination-loader': destination,
+            'data-case-destination-panel': destination,
+            'aria-label': `Loading ${destination}`,
+            role: 'status'
+        }).append($('<span>'), $('<span>'), $('<span>'))
+            .insertBefore($(`[data-case-destination-panel="${destination}"]`).first());
+    }
+
+    // Each destination asks for only the data it owns. Once loaded, its mounted DOM keeps the
+    // user's filters and selections intact when they move around the simulator.
+    function loadDestinationData(destination) {
+        const requests = [];
+        const quietOptions = { showLoader: false };
+
+        if (!catalogueLoaded) requests.push(loadCaseCatalogue(quietOptions));
+        if (!progressLoaded) requests.push(loadProgress(quietOptions));
+
+        if (destination === 'open') {
+            if (loadedCaseKey !== caseKey) requests.push(loadCase(caseKey, quietOptions));
+            if (!achievementsLoaded) requests.push(loadAchievements(quietOptions));
+            if (!inventoryCapacityLoaded) requests.push(loadInventoryCapacity(quietOptions));
+            if (!botProgressLoaded) requests.push(loadBotProgress(quietOptions));
+        }
+
+        if (destination === 'shop') {
+            if (!inventoryCapacityLoaded) requests.push(loadInventoryCapacity(quietOptions));
+            if (!botProgressLoaded) requests.push(loadBotProgress(quietOptions));
+        }
+
+        if (destination === 'inventory') {
+            if (!historyLoaded) requests.push(loadHistory(quietOptions));
+            else if (historyDirty) {
+                const historyRender = $.Deferred();
+                requests.push(historyRender.promise());
+                window.requestAnimationFrame(function () {
+                    renderHistory(allHistoryItems);
+                    historyRender.resolve();
+                });
+            }
+            if (!inventoryCapacityLoaded) requests.push(loadInventoryCapacity(quietOptions));
+        }
+
+        if (requests.length === 0) return $.Deferred().resolve().promise();
+
+        setDestinationLoading(destination, true);
+        return $.when.apply($, requests)
+            .always(function () {
+                setDestinationLoading(destination, false);
+            });
+    }
+
+    function switchDestination(destination, options) {
+        if (!validDestinations.includes(destination)) return;
+        const settings = options || {};
+        activeDestination = destination;
+
+        $('[data-case-destination-panel]').each(function () {
+            const visible = String($(this).data('case-destination-panel')) === destination;
+            $(this).toggleClass('d-none', !visible).attr('aria-hidden', visible ? 'false' : 'true');
+        });
+        $('.case-bottom-nav-link').each(function () {
+            const active = String($(this).data('case-destination')) === destination;
+            $(this).toggleClass('active', active).attr('aria-selected', active ? 'true' : 'false');
+        });
+
+        saveDestinationPreference(destination);
+        positionDestinationIndicator(settings.animate !== false);
+        $('#caseDestinationStatus').text(`${destination.charAt(0).toUpperCase()}${destination.slice(1)} section selected.`);
+
+        const panels = $(`[data-case-destination-panel="${destination}"]`).get();
+        const animatedPanels = destination === 'open'
+            ? panels.filter(panel => !panel.classList.contains('case-stage')).slice(0, 1)
+            : panels;
+        if (settings.animate !== false
+            && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            && window.anime?.animate) {
+            window.anime.animate(animatedPanels, {
+                opacity: [0, 1],
+                translateY: [10, 0],
+                delay: (_, index) => index * 28,
+                duration: 330,
+                ease: 'out(4)',
+                onComplete: function () {
+                    $(animatedPanels).css({ opacity: '', transform: '' });
+                }
+            });
+        }
+
+        if (!settings.initial) {
+            const pageTop = $page.offset()?.top || 0;
+            window.scrollTo({
+                top: Math.max(0, pageTop - 16),
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+            });
+        }
+
+        if (!settings.deferLoad) loadDestinationData(destination);
+    }
+
+    $('.case-bottom-nav-link').on('click', function () {
+        switchDestination(String($(this).data('case-destination')));
+    }).on('keydown', function (event) {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = $('.case-bottom-nav-link').get();
+        const currentIndex = buttons.indexOf(this);
+        const nextIndex = event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+                ? buttons.length - 1
+                : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[nextIndex].focus();
+        buttons[nextIndex].click();
+    });
+
+    $(document).on('show.bs.modal', '.modal', function () {
+        $('#caseBottomNav').addClass('is-obscured');
+    }).on('hidden.bs.modal', '.modal', function () {
+        if (!$('.modal.show').length) $('#caseBottomNav').removeClass('is-obscured');
+    });
+    $(window).on('resize.caseBottomNav', () => positionDestinationIndicator(false));
+
     $open.on('click', function () {
         if (opening || !caseData) return;
+        window.clearTimeout(postOpeningRefreshTimer);
+        postOpeningRefreshTimer = null;
         // Restore the normal opening stage before asking the server for the next roll.
         $('.case-machine').removeClass('is-multi-results');
         $('#caseMultiResults').addClass('d-none').empty().removeAttr('data-open-count');
         playOpeningStart();
         opening = true;
+        $('.case-bottom-nav-link').prop('disabled', true);
         $open.prop('disabled', true);
         renderOpenButton('requesting');
         $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', true);
@@ -1837,11 +2505,21 @@
                 const results = Array.isArray(batch?.results) ? batch.results : [];
                 if (results.length !== selectedOpenQuantity) {
                     opening = false;
+                    $('.case-bottom-nav-link').prop('disabled', false);
                     $open.prop('disabled', false);
                     renderOpenButton('ready');
                     $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
                     showError(null, 'The case-opening result was incomplete. Please try again.');
                     return;
+                }
+                const remainingQuantity = Number(batch?.remainingCaseQuantity);
+                if (Number.isFinite(remainingQuantity) && caseData) {
+                    const previousQuantity = Number(caseData.ownedQuantity || 0);
+                    caseData.ownedQuantity = remainingQuantity;
+                    const catalogueCase = catalogue.find(item => item.caseKey === caseKey);
+                    if (catalogueCase) catalogueCase.ownedQuantity = remainingQuantity;
+                    renderOwnedCaseQuantity({ from: previousQuantity, animate: true });
+                    renderOpenQuantity();
                 }
                 if (results.length > 1) {
                     showMultiResults(results);
@@ -1854,6 +2532,7 @@
             .fail(response => {
                 clearReelSounds();
                 opening = false;
+                $('.case-bottom-nav-link').prop('disabled', false);
                 $open.prop('disabled', false);
                 renderOpenButton('ready');
                 $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
@@ -1878,18 +2557,104 @@
         window.personalToolsToast?.info(this.checked ? 'Long reel animation will be skipped.' : 'Long reel animation restored.');
     });
 
-    $('[data-upgrade-key]').on('click', function () {
+    $(document).on('click', '[data-upgrade-key]', function () {
         const upgradeKey = String($(this).data('upgrade-key'));
         if (!upgradeKey) return;
         const $button = $(this).prop('disabled', true);
         request(`/api/case-opening/upgrades/${encodeURIComponent(upgradeKey)}/unlock`, 'POST', { showLoader: false })
             .done(function (progress) {
                 renderProgress(progress);
+                loadAchievements();
                 window.personalToolsToast?.success('Case-opening upgrade unlocked.');
             })
             .fail(response => showError(response, 'The upgrade could not be unlocked.'))
             .always(() => $button.prop('disabled', false));
     });
+
+    $(document).on('change', '.js-shop-skip-toggle', function () {
+        saveSkipAnimationPreference(this.checked);
+        $('#caseSkipAnimation').prop('checked', this.checked);
+        window.personalToolsToast?.info(this.checked ? 'Quick open enabled.' : 'Long reel animation restored.');
+    });
+
+    function refreshCaseShopPurchaseControl($purchase) {
+        const $input = $purchase.find('.js-shop-case-quantity');
+        const quantity = Number($input.val());
+        const valid = Number.isInteger(quantity) && quantity >= 1 && quantity <= 500;
+        const unitPrice = Math.max(0, Number($purchase.data('unit-price') || 0));
+        const totalCost = valid ? quantity * unitPrice : 0;
+        const caseKeyForPurchase = String($input.data('case-key') || '');
+
+        if (valid) shopPurchaseQuantities.set(caseKeyForPurchase, quantity);
+        $purchase.find('.js-shop-buy-case')
+            .prop('disabled', !valid || Number(caseProgress?.stars || 0) < totalCost)
+            .text(valid ? `Buy · ${totalCost.toLocaleString()} ★` : 'Choose 1–500');
+        $input.toggleClass('is-invalid', !valid);
+    }
+
+    $(document).on('input', '.js-shop-case-quantity', function () {
+        refreshCaseShopPurchaseControl($(this).closest('.case-shop-purchase'));
+    }).on('change blur', '.js-shop-case-quantity', function () {
+        const quantity = Math.max(1, Math.min(500, Math.trunc(Number($(this).val()) || 1)));
+        $(this).val(quantity);
+        refreshCaseShopPurchaseControl($(this).closest('.case-shop-purchase'));
+    });
+
+    $(document).on('click', '.js-shop-quantity-step', function () {
+        const $purchase = $(this).closest('.case-shop-purchase');
+        const $input = $purchase.find('.js-shop-case-quantity');
+        const quantity = Math.max(1, Math.min(500, (Math.trunc(Number($input.val()) || 1) + Number($(this).data('step') || 0))));
+        $input.val(quantity);
+        refreshCaseShopPurchaseControl($purchase);
+    });
+
+    $(document).on('click', '.js-shop-buy-case', function () {
+        const caseKeyToBuy = String($(this).data('case-key') || '');
+        const $purchase = $(this).closest('.case-shop-purchase');
+        const quantity = Math.max(1, Math.min(500, Math.trunc(Number($purchase.find('.js-shop-case-quantity').val()) || 1)));
+        const $button = $(this).prop('disabled', true);
+        request(`/api/case-opening/cases/${encodeURIComponent(caseKeyToBuy)}/purchase`, 'POST', {
+            data: JSON.stringify({ quantity: quantity }), contentType: 'application/json; charset=utf-8', showLoader: false
+        }).done(function (result) {
+            const item = catalogue.find(entry => entry.caseKey === caseKeyToBuy);
+            if (item) item.ownedQuantity = result.ownedQuantity;
+            if (caseKey === caseKeyToBuy && caseData) {
+                const previousQuantity = Number(caseData.ownedQuantity || 0);
+                caseData.ownedQuantity = Number(result.ownedQuantity || 0);
+                renderOwnedCaseQuantity({ from: previousQuantity, animate: true });
+                renderOpenQuantity();
+            }
+            renderProgress({ ...caseProgress, stars: result.starsBalance });
+            const purchasedQuantity = Number(result.purchasedQuantity || quantity);
+            const caseLabel = caseNameFor(caseKeyToBuy);
+            window.personalToolsToast?.success(`${purchasedQuantity.toLocaleString()} × ${caseLabel} added to your stock.`);
+        }).fail(response => showError(response, 'The case could not be purchased.')).always(() => $button.prop('disabled', false));
+    });
+
+    $(document).on('click', '.js-shop-unlock-case', function () {
+        const caseKeyToUnlock = String($(this).data('case-key') || '');
+        const $button = $(this).prop('disabled', true);
+        request(`/api/case-opening/cases/${encodeURIComponent(caseKeyToUnlock)}/unlock`, 'POST', { showLoader: false })
+            .done(function (progress) {
+                renderProgress(progress);
+                loadCaseCatalogue().done(renderShop);
+                loadAchievements();
+                window.personalToolsToast?.success('Case permanently unlocked. You can now buy copies.');
+            }).fail(response => showError(response, 'The case could not be unlocked.')).always(() => $button.prop('disabled', false));
+    });
+
+    $('#purchaseStorageContainer').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        request('/api/case-opening/storage-containers', 'POST', { showLoader: false })
+            .done(function (result) {
+                renderProgress({ ...caseProgress, stars: result.starsBalance });
+                loadInventoryCapacity().done(() => renderShop(catalogue));
+                window.personalToolsToast?.success(`Storage expanded by ${Number(result.addedSlots).toLocaleString()} slots.`);
+            }).fail(response => showError(response, 'The storage container could not be purchased.')).always(() => $button.prop('disabled', false));
+    });
+
+    $('.js-shop-buy-server').on('click', () => $('#buyCaseBotServer').trigger('click'));
+    $('.js-shop-buy-bot').on('click', () => $('#buyCaseBot').trigger('click'));
 
     $('#caseBotCaseSelect').on('change', function () {
         saveBotCasePreference(String(this.value || ''));
@@ -1901,6 +2666,7 @@
             .done(function (progress) {
                 renderBotProgress(progress);
                 renderProgress({ ...caseProgress, stars: progress.stars });
+                loadAchievements();
                 window.personalToolsToast?.success('Bot server installed. It has four available slots.');
             })
             .fail(response => showError(response, 'The bot server could not be purchased.'))
@@ -1913,6 +2679,7 @@
             .done(function (progress) {
                 renderBotProgress(progress);
                 renderProgress({ ...caseProgress, stars: progress.stars });
+                loadAchievements();
                 window.personalToolsToast?.success('Opening bot installed and started.');
                 startBots(false);
             })
@@ -1996,6 +2763,7 @@
         request(`/api/case-opening/cases/${encodeURIComponent(selectedKey)}/unlock`, 'POST', { showLoader: false })
             .done(function (progress) {
                 renderProgress(progress);
+                loadAchievements();
                 selectedCase.isUnlocked = true;
                 caseKey = selectedKey;
                 saveSelectedCaseKey(caseKey);
@@ -2041,6 +2809,58 @@
         renderInventorySelection();
     });
 
+    $('#openCaseTradeUp').on('click', function () {
+        if (!renderTradeUpPreview()) return;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTradeUpModal')).show();
+    });
+
+    $('#confirmCaseTradeUp').on('click', function () {
+        if (tradeUpInFlight) return;
+        const tradeUp = getTradeUpSelection();
+        if (!tradeUp.valid) {
+            window.personalToolsToast?.error(tradeUp.message);
+            return;
+        }
+
+        tradeUpInFlight = true;
+        const $button = $(this).prop('disabled', true).empty().append(
+            $('<span>', { class: 'spinner-border spinner-border-sm me-2', 'aria-hidden': 'true' }),
+            document.createTextNode('Completing contract…')
+        );
+        request('/api/case-opening/trade-ups', 'POST', {
+            data: JSON.stringify({ openingIds: tradeUp.items.map(item => item.openingId) }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                const consumedIds = new Set(tradeUp.items.map(item => String(item.openingId)));
+                allHistoryItems = allHistoryItems.filter(item => !consumedIds.has(String(item.openingId)));
+                sessionOpenings = sessionOpenings.filter(item => !consumedIds.has(String(item.openingId)));
+                allHistoryItems.unshift(result.output);
+                [...consumedIds].forEach(openingId => selectedInventoryIds.delete(openingId));
+                renderHistory(allHistoryItems);
+                renderTradeUpResult(result);
+                loadCollection(result.output.caseKey);
+                loadProgress();
+                loadAchievements();
+                loadInventoryCapacity();
+                window.personalToolsToast?.success(`Contract complete: ${result.output.name} is now in your inventory.`);
+            })
+            .fail(response => showError(response, 'The Trade Up Contract could not be completed.'))
+            .always(function () {
+                tradeUpInFlight = false;
+                if ($('#caseTradeUpForm').hasClass('d-none')) return;
+                $button.prop('disabled', false).empty().append(
+                    $('<i>', { class: 'fa-solid fa-flask-vial me-1', 'aria-hidden': 'true' }),
+                    document.createTextNode('Complete contract')
+                );
+            });
+    });
+
+    $('#caseTradeUpModal').on('hidden.bs.modal', function () {
+        if (!tradeUpInFlight) renderInventorySelection();
+    });
+
     $('#sellCaseInventory').on('click', function () {
         const openingIds = [...selectedInventoryIds];
         if (openingIds.length === 0) return;
@@ -2057,6 +2877,7 @@
                 openingIds.forEach(openingId => selectedInventoryIds.delete(openingId));
                 renderProgress({ ...caseProgress, stars: result.starsBalance });
                 renderHistory(allHistoryItems);
+                loadInventoryCapacity();
                 window.personalToolsToast?.success(`${result.soldItemCount} item${result.soldItemCount === 1 ? '' : 's'} sold for ${result.starsAwarded} ${result.starsAwarded === 1 ? 'Star' : 'Stars'}.`);
             })
             .fail(response => showError(response, 'The selected inventory items could not be sold.'))
@@ -2164,6 +2985,7 @@
                 renderHistory([]);
                 renderSessionSummary();
                 loadStatistics();
+                loadInventoryCapacity();
                 bootstrap.Modal.getInstance(document.getElementById('clearCaseHistoryModal'))?.hide();
                 window.personalToolsToast?.success('Case-opening inventory discarded.');
             })
@@ -2271,13 +3093,17 @@
         $('#caseTweakBotServerCostIncrement').val(Number(settings.botServerCostIncrementStars || 0));
         $('#caseTweakBotBaseCost').val(Number(settings.botBaseCostStars || 0));
         $('#caseTweakBotGrowthRate').val(Number(settings.botCostGrowthRate || 1.55));
+        $('#caseTweakStorageBaseCost').val(Number(settings.storageContainerBaseCostStars || 0));
+        $('#caseTweakStorageCostIncrement').val(Number(settings.storageContainerCostIncrementStars || 0));
+        $('#caseTweakStorageSlots').val(Number(settings.storageContainerSlots || 1000));
+        $('#caseTweakMaxStorage').val(Number(settings.maximumStorageContainers || 0));
     }
 
     function renderTweakCasesTable(caseSettingsList) {
         const settingsByKey = new Map(caseSettingsList.map(item => [String(item.caseKey).toLowerCase(), item]));
         const $body = $('#caseTweakCasesTableBody').empty();
         catalogue.forEach(item => {
-            const settings = settingsByKey.get(String(item.caseKey).toLowerCase()) || { unlockCostStars: 0, xpRequirement: 0 };
+            const settings = settingsByKey.get(String(item.caseKey).toLowerCase()) || { unlockCostStars: 0, purchaseCostStars: 1, xpRequirement: 0 };
             $body.append(
                 $('<tr>').append(
                     $('<td>', { text: item.name }),
@@ -2288,6 +3114,10 @@
                         step: 1,
                         'data-case-key': item.caseKey,
                         value: Number(settings.unlockCostStars || 0)
+                    })),
+                    $('<td>').append($('<input>', {
+                        class: 'form-control form-control-sm js-tweak-case-purchase-cost', type: 'number', min: 0, step: 1,
+                        'data-case-key': item.caseKey, value: Number(settings.purchaseCostStars || 0)
                     })),
                     $('<td>').append($('<input>', {
                         class: 'form-control form-control-sm js-tweak-case-xp',
@@ -2389,7 +3219,11 @@
             botServerBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakBotServerBaseCost').val()) || 0)),
             botServerCostIncrementStars: Math.max(0, Math.trunc(Number($('#caseTweakBotServerCostIncrement').val()) || 0)),
             botBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakBotBaseCost').val()) || 0)),
-            botCostGrowthRate: Math.max(1, Number($('#caseTweakBotGrowthRate').val()) || 1)
+            botCostGrowthRate: Math.max(1, Number($('#caseTweakBotGrowthRate').val()) || 1),
+            storageContainerBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakStorageBaseCost').val()) || 0)),
+            storageContainerCostIncrementStars: Math.max(0, Math.trunc(Number($('#caseTweakStorageCostIncrement').val()) || 0)),
+            storageContainerSlots: Math.max(1, Math.trunc(Number($('#caseTweakStorageSlots').val()) || 1)),
+            maximumStorageContainers: Math.max(0, Math.trunc(Number($('#caseTweakMaxStorage').val()) || 0))
         };
         request('/api/case-opening/settings', 'PUT', {
             data: JSON.stringify(payload),
@@ -2413,12 +3247,13 @@
             return {
                 caseKey: caseKeyToSave,
                 unlockCostStars: Math.max(0, Math.trunc(Number($row.find('.js-tweak-case-cost').val()) || 0)),
+                purchaseCostStars: Math.max(0, Math.trunc(Number($row.find('.js-tweak-case-purchase-cost').val()) || 0)),
                 xpRequirement: Math.max(0, Math.trunc(Number($row.find('.js-tweak-case-xp').val()) || 0))
             };
         }).get();
 
         $.when(...updates.map(update => request(`/api/case-opening/settings/cases/${encodeURIComponent(update.caseKey)}`, 'PUT', {
-            data: JSON.stringify({ unlockCostStars: update.unlockCostStars, xpRequirement: update.xpRequirement }),
+            data: JSON.stringify({ unlockCostStars: update.unlockCostStars, purchaseCostStars: update.purchaseCostStars, xpRequirement: update.xpRequirement }),
             contentType: 'application/json; charset=utf-8',
             showLoader: false
         })))
@@ -2454,6 +3289,8 @@
                 loadHistory();
                 loadCollection(caseKey);
                 loadStatistics(caseKey);
+                loadAchievements();
+                loadInventoryCapacity();
                 bootstrap.Modal.getInstance(document.getElementById('caseTweakResetModal'))?.hide();
                 window.personalToolsToast?.success('Your account has been reset to a new player.');
             })
@@ -2467,9 +3304,14 @@
     renderSessionDuration();
     window.setInterval(renderSessionDuration, 1000);
     renderSoundControls();
+    // Apply the saved destination before the first request completes so another panel never
+    // flashes briefly on a slower mobile connection.
+    switchDestination(activeDestination, { initial: true, animate: false, deferLoad: true });
     request('/api/case-opening/cases')
         .done(function (items) {
+            catalogueLoaded = true;
             renderCaseSelector(items);
+            renderShop(items);
             const selected = items.find(item => item.caseKey === caseKey && item.isUnlocked)
                 || items.find(item => item.isUnlocked)
                 || items[0];
@@ -2479,12 +3321,7 @@
             }
             caseKey = selected.caseKey;
             saveSelectedCaseKey(caseKey);
-            loadCase(caseKey).done(function () {
-                loadHistory();
-                loadProgress();
-                loadCaseCatalogue();
-                loadBotProgress();
-            });
+            switchDestination(activeDestination, { initial: true, animate: false });
         })
         .fail(response => showError(response, 'The case catalogue could not be loaded.'));
 })(jQuery);

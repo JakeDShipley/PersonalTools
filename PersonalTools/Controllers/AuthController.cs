@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes;
+using PersonalTools.Classes.CaseOpening;
 
 namespace PersonalTools.Controllers;
 
@@ -12,11 +13,13 @@ namespace PersonalTools.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthFuncs _auth;
+    private readonly ICaseOpeningFuncs _caseOpening;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthFuncs auth, ILogger<AuthController> logger)
+    public AuthController(IAuthFuncs auth, ICaseOpeningFuncs caseOpening, ILogger<AuthController> logger)
     {
         _auth = auth;
+        _caseOpening = caseOpening;
         _logger = logger;
     }
 
@@ -54,6 +57,17 @@ public sealed class AuthController : ControllerBase
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)),
                 properties);
+
+            try
+            {
+                await _caseOpening.RecordCaseOpeningLogin(user.UserId);
+            }
+            catch (Exception exception)
+            {
+                // Progression is a secondary feature. A valid account must still be able to sign
+                // in if its optional daily activity record cannot be written.
+                _logger.LogWarning(exception, "Case-opening login activity could not be recorded for {UserId}.", user.UserId);
+            }
 
             // The launch screen can welcome the just-authenticated account without another
             // round-trip. This is a display-only value and never includes session information.
