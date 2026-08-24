@@ -61,6 +61,9 @@
     let inventoryCapacity = null;
     let inventoryUpgrades = null;
     let inventoryUpgradesLoaded = false;
+    let autoBuySummary = null;
+    let autoBuyRulesLoaded = false;
+    let autoBuyPollTimer = null;
     let shopSearch = '';
     let shopTier = '';
     let shopPage = 1;
@@ -299,6 +302,21 @@
         return rarityValue * multiplier;
     }
 
+    // Level 5 grants Skip Animation instead of a further multiplier - the reel tops out at 3x
+    // (level 4), it doesn't get faster still, it gets bypassed entirely.
+    function openSpeedMultiplierText(speedLevel) {
+        const level = Number(speedLevel || 0);
+        const multiplier = 1 + (Math.min(level, 4) * .5);
+        const label = `${multiplier % 1 === 0 ? multiplier.toFixed(0) : multiplier.toFixed(1)}x speed`;
+        return level >= 5 ? `${label} + instant reveal` : label;
+    }
+
+    // Scales the single "Open case" reel spin and multi-open reveal pacing. Read fresh each time
+    // rather than cached, so it always reflects the latest purchased level.
+    function openSpeedMultiplier() {
+        return 1 + (Math.min(Number(caseProgress?.openSpeedLevel || 0), 4) * .5);
+    }
+
     function renderProgress(progress) {
         caseProgress = progress || null;
         const stars = Number(caseProgress?.stars || 0);
@@ -307,21 +325,24 @@
         const multiLevel = Number(caseProgress?.multiOpenLevel || 0);
         const maximumMultiLevel = Number(caseProgress?.maximumMultiOpenLevel || 4);
         const multiUnlocked = multiLevel > 0;
-        const skipCost = Number(caseProgress?.skipAnimationCost || 0);
+        const speedLevel = Number(caseProgress?.openSpeedLevel || 0);
+        const maximumSpeedLevel = Number(caseProgress?.maximumOpenSpeedLevel || 5);
         const multiCost = Number(caseProgress?.multiOpenCost || 0);
-        const skipXpReq = Number(caseProgress?.skipAnimationXpRequirement || 0);
+        const speedCost = Number(caseProgress?.openSpeedUpgradeCost || 0);
         const multiXpReq = Number(caseProgress?.multiOpenXpRequirement || 0);
-        const skipLevelLocked = skipXpReq > 0 && level < skipXpReq;
+        const speedXpReq = Number(caseProgress?.openSpeedUpgradeXpRequirement || 0);
         const multiLevelLocked = multiXpReq > 0 && level < multiXpReq;
+        const speedLevelLocked = speedXpReq > 0 && level < speedXpReq;
 
         $('#caseStarsBalance, #caseUpgradeStarsBalance, #caseLegacyUpgradeStarsBalance, #caseShopStarsBalance').text(stars);
         renderXpBar();
-        $('#caseSkipUpgradeCost').text(`${skipCost} Stars`);
         $('#caseMultiUpgradeCost').text(`${multiCost} Stars`);
+        $('#caseSpeedUpgradeCost').text(`${speedCost} Stars`);
         $('#caseSkipUpgrade').toggleClass('is-unlocked', skipUnlocked);
         $('#caseMultiUpgrade').toggleClass('is-unlocked', multiUnlocked);
-        renderXpRequirementBadge($('#caseSkipUpgradeXpBadge'), skipXpReq);
+        $('#caseSpeedUpgrade').toggleClass('is-unlocked', speedLevel > 0);
         renderXpRequirementBadge($('#caseMultiUpgradeXpBadge'), multiXpReq);
+        renderXpRequirementBadge($('#caseSpeedUpgradeXpBadge'), speedXpReq);
         $('#caseSkipAnimation')
             .prop('disabled', !skipUnlocked)
             .prop('checked', skipUnlocked && loadSkipAnimationPreference());
@@ -329,12 +350,18 @@
         $('#caseMultiUpgradeLabel').text(multiLevel >= maximumMultiLevel
             ? `All ${maximumMultiLevel} extra openings unlocked · up to 5 cases`
             : `${multiLevel} of ${maximumMultiLevel} extra openings unlocked · up to ${1 + multiLevel} cases`);
+        $('#caseSpeedUpgradeLabel').text(openSpeedMultiplierText(speedLevel));
+        // No longer independently purchasable - always disabled, purely informational. It's
+        // granted automatically once the speed upgrade reaches its final level (see below).
         $('#unlockSkipAnimation')
-            .prop('disabled', skipUnlocked || stars < skipCost || skipLevelLocked)
-            .text(skipUnlocked ? 'Unlocked' : skipLevelLocked ? `Reach level ${skipXpReq}` : `Unlock for ${skipCost}`);
+            .prop('disabled', true)
+            .text(skipUnlocked ? 'Unlocked' : `Unlocks at speed level ${maximumSpeedLevel}`);
         $('#unlockMultiOpen')
             .prop('disabled', multiLevel >= maximumMultiLevel || stars < multiCost || multiLevelLocked)
             .text(multiLevel >= maximumMultiLevel ? 'Fully unlocked' : multiLevelLocked ? `Reach level ${multiXpReq}` : `Unlock +1 for ${multiCost}`);
+        $('#unlockOpenSpeed')
+            .prop('disabled', speedLevel >= maximumSpeedLevel || stars < speedCost || speedLevelLocked)
+            .text(speedLevel >= maximumSpeedLevel ? 'Fully upgraded' : speedLevelLocked ? `Reach level ${speedXpReq}` : `Upgrade for ${speedCost}`);
         $('#caseOpenQuantity').removeClass('d-none');
 
         if (selectedOpenQuantity > 1 + multiLevel) {
@@ -470,8 +497,11 @@
         const skipUnlocked = caseProgress?.skipAnimationUnlocked === true;
         const multiLevel = Number(caseProgress?.multiOpenLevel || 0);
         const maxMulti = Number(caseProgress?.maximumMultiOpenLevel || 0);
+        const speedLevel = Number(caseProgress?.openSpeedLevel || 0);
+        const maxSpeed = Number(caseProgress?.maximumOpenSpeedLevel || 0);
         $('#caseShopUpgradeGrid').empty().append(
-            shopUpgradeCard('skip-animation', 'Skip animation', 'Show your secure result immediately with a compact reveal.', skipUnlocked, Number(caseProgress?.skipAnimationCost || 0)),
+            shopUpgradeCard('open-speed', 'Faster opening', `Speed up your opening reel and multi-open reveals. Currently ${openSpeedMultiplierText(speedLevel)}.`, speedLevel >= maxSpeed, Number(caseProgress?.openSpeedUpgradeCost || 0)),
+            shopUpgradeCard('skip-animation', 'Skip animation', skipUnlocked ? 'Show your secure result immediately with a compact reveal.' : `Granted automatically at Faster opening level ${maxSpeed}.`, skipUnlocked, 0),
             shopUpgradeCard('multi-open', 'Multi case opening', `Unlock another simultaneous opening. Currently ${1 + multiLevel} at a time.`, multiLevel >= maxMulti, Number(caseProgress?.multiOpenCost || 0))
         );
     }
@@ -508,12 +538,18 @@
 
     function shopUpgradeCard(key, title, description, unlocked, cost) {
         const switchId = key === 'skip-animation' && unlocked ? 'caseShopSkipAnimation' : '';
-        const $action = key === 'skip-animation' && unlocked
-            ? $('<div>', { class: 'form-check form-switch m-0' }).append(
+        let $action;
+        if (switchId) {
+            $action = $('<div>', { class: 'form-check form-switch m-0' }).append(
                 $('<input>', { class: 'form-check-input pt-switch js-shop-skip-toggle', id: switchId, type: 'checkbox', role: 'switch', checked: loadSkipAnimationPreference() }),
                 $('<label>', { class: 'form-check-label small fw-semibold', for: 'caseShopSkipAnimation', text: 'Use quick open' })
-            )
-            : $('<button>', { class: 'btn btn-outline-warning btn-sm js-shop-unlock-upgrade', type: 'button', 'data-upgrade-key': key, disabled: unlocked || Number(caseProgress?.stars || 0) < cost, text: unlocked ? 'Unlocked' : `Unlock · ${cost} ★` });
+            );
+        } else if (key === 'skip-animation') {
+            // No longer independently purchasable - earned via the Faster opening upgrade.
+            $action = $('<span>', { class: 'badge text-bg-secondary-subtle border', text: 'Locked' });
+        } else {
+            $action = $('<button>', { class: 'btn btn-outline-warning btn-sm js-shop-unlock-upgrade', type: 'button', 'data-upgrade-key': key, disabled: unlocked || Number(caseProgress?.stars || 0) < cost, text: unlocked ? 'Unlocked' : `Unlock · ${cost} ★` });
+        }
         const $row = $('<article>', {
             class: `case-shop-row${switchId ? ' case-shop-switch-row' : ''}`,
             'data-switch-target': switchId
@@ -1078,6 +1114,7 @@
                             return String($(this).data('bot-id') || '') === botId;
                         }).first();
                         awardXp([result], $slot.length ? $slot : $('#caseBotFeed'), true);
+                        evaluateAutoBuy();
                     })
                     .fail(function (response) {
                         const message = response.responseJSON?.message || '';
@@ -2278,6 +2315,9 @@
             `${Number(inventoryUpgrades?.bonusInventorySlots || 0).toLocaleString()} bonus slots unlocked`
         );
         availableUpgrades.forEach(function (upgrade) {
+            // Auto-buy tiers get one consolidated card inside the Auto-buy panel instead of a
+            // generic row per tier - see renderAutoBuyPanel().
+            if (String(upgrade.category || '').toLowerCase() === 'automation') return;
             const unlocked = upgrade.isUnlocked === true;
             const prerequisiteKey = {
                 'inventory-slots-500': 'inventory-slots-250',
@@ -2331,6 +2371,211 @@
             .toggleClass('is-locked', !autoSellUnlocked)
             .attr('title', autoSellUnlocked ? 'Protect StatTrak™ items from automatic selling.' : 'Unlock at least one automatic-selling rarity first.');
         $('#casePreserveStatTrakHint').text(autoSellUnlocked ? 'Applies to every enabled rarity' : 'Unlock an auto-sell tier first');
+
+        renderAutoBuyPanel();
+    }
+
+    function loadAutoBuyRules(options) {
+        autoBuyRulesLoaded = true;
+        return request('/api/case-opening/auto-buy/rules', 'GET', options).done(function (result) {
+            autoBuySummary = result;
+            renderAutoBuyPanel();
+            manageAutoBuyPolling();
+        }).fail(function (response) {
+            autoBuyRulesLoaded = false;
+            showError(response, 'Auto-buy rules could not be loaded.');
+        });
+    }
+
+    // Renders both halves of the Auto-buy panel: a single consolidated upgrade button covering
+    // all "automation" tiers (unlock -> more slots -> more slots), and, once at least the first
+    // tier is unlocked, an explicit "add a rule" picker plus one row per configured rule. Rows are
+    // driven entirely by configured rules (not by every unlocked case), so slot count and row
+    // count always agree.
+    function renderAutoBuyPanel() {
+        const stars = Number(inventoryUpgrades?.stars || caseProgress?.stars || 0);
+        const level = Number(caseProgress?.level || 0);
+        const autoBuyTiers = (inventoryUpgrades?.availableUpgrades || [])
+            .filter(upgrade => String(upgrade.category || '').toLowerCase() === 'automation')
+            .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+        const nextTier = autoBuyTiers.find(upgrade => upgrade.isUnlocked !== true);
+        const $upgradeButton = $('#caseAutoBuyUpgradeButton');
+
+        if (autoBuyTiers.length === 0) {
+            $upgradeButton.addClass('d-none').removeAttr('data-upgrade-key');
+        } else if (!nextTier) {
+            $upgradeButton.removeClass('d-none').prop('disabled', true).removeAttr('data-upgrade-key').text('Maxed out');
+            $('#caseAutoBuyUpgradeDescription').text('All auto-buy tiers unlocked.');
+        } else {
+            const meetsLevel = level >= Number(nextTier.requiredLevel || 0);
+            const canAfford = stars >= Number(nextTier.costStars || 0);
+            $upgradeButton.removeClass('d-none')
+                .attr('data-upgrade-key', nextTier.upgradeKey)
+                .prop('disabled', !meetsLevel || !canAfford)
+                .text(meetsLevel ? `Unlock · ${Number(nextTier.costStars || 0).toLocaleString()} ★` : `Level ${Number(nextTier.requiredLevel || 0)} required`);
+            $('#caseAutoBuyUpgradeDescription').text(nextTier.description || 'Automatically repurchase cases when your owned stock runs low.');
+        }
+
+        const unlocked = inventoryUpgrades?.autoBuyUnlocked === true;
+        $('#caseAutoBuyRuleEditor').toggleClass('d-none', !unlocked);
+        if (!unlocked) return;
+
+        const ruleSlots = Number(inventoryUpgrades?.autoBuyRuleSlots || 0);
+        const rules = autoBuySummary?.rules || [];
+        const usedRuleSlots = Number(autoBuySummary?.usedRuleSlots || 0);
+        $('#caseAutoBuyRuleStatus').text(`${usedRuleSlots} / ${ruleSlots} active rules`);
+
+        const configuredKeys = new Set(rules.map(rule => String(rule.caseKey).toLowerCase()));
+        const casesWithoutRule = catalogue.filter(item => isCaseUnlocked(item) && !configuredKeys.has(String(item.caseKey).toLowerCase()));
+
+        // The select itself stays enabled even when empty - a disabled <select> falls back to
+        // native browser styling here (near-invisible text on a light background) that ignores
+        // this page's dark theme. Disabling only the Add button is enough to block the action.
+        const $addCase = $('#caseAutoBuyAddCase').empty().prop('disabled', false);
+        if (casesWithoutRule.length === 0) {
+            // Two different reasons the picker can be empty: either every unlocked case already
+            // has a rule (fixed by unlocking more cases), or the rule-slot cap itself is maxed
+            // out at the top Auto-buy tier (fixed by nothing - there's no further upgrade).
+            const atRuleLimit = ruleSlots > 0 && rules.length >= ruleSlots;
+            const message = atRuleLimit && !nextTier
+                ? `Auto-buy rule limit reached (${ruleSlots}/${ruleSlots})`
+                : 'Unlock more cases to add more rules';
+            $addCase.append($('<option>', { value: '', text: message }));
+        } else {
+            casesWithoutRule.forEach(item => $addCase.append($('<option>', { value: item.caseKey, text: item.name })));
+        }
+        $('#caseAutoBuyAddRow').removeClass('d-none');
+        $('#caseAutoBuyAddButton').prop('disabled', casesWithoutRule.length === 0);
+
+        const $grid = $('#caseAutoBuyRules').empty();
+        if (rules.length === 0) {
+            $grid.append($('<div>', {
+                class: 'case-auto-buy-empty',
+                text: casesWithoutRule.length ? 'Add a rule below to start restocking a case automatically.' : 'Unlock a case to configure a restocking rule for it.'
+            }));
+            return;
+        }
+
+        rules.forEach(function (rule) {
+            $grid.append($('<article>', { class: 'case-auto-buy-row', 'data-case-key': rule.caseKey }).append(
+                $('<img>', { src: rule.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<span>', { class: 'case-auto-buy-row-name', text: rule.caseName }),
+                $('<span>', { class: 'case-auto-buy-row-owned', text: `${Number(rule.ownedQuantity || 0).toLocaleString()} owned` }),
+                $('<label>', { class: 'case-auto-buy-row-field' }).append(
+                    $('<span>', { text: 'Below' }),
+                    $('<input>', { class: 'form-control form-control-sm js-auto-buy-threshold', type: 'number', min: 0, step: 1, value: Number(rule.thresholdQuantity ?? 5) })
+                ),
+                $('<label>', { class: 'case-auto-buy-row-field' }).append(
+                    $('<span>', { text: 'Buy' }),
+                    $('<input>', { class: 'form-control form-control-sm js-auto-buy-quantity', type: 'number', min: 1, step: 1, value: Number(rule.purchaseQuantity ?? 10) })
+                ),
+                $('<div>', { class: 'form-check form-switch m-0' }).append(
+                    $('<input>', { class: 'form-check-input pt-switch js-auto-buy-toggle', type: 'checkbox', role: 'switch', checked: rule.isEnabled === true }),
+                    $('<label>', { class: 'visually-hidden', text: `Enable auto-buy for ${rule.caseName}` })
+                ),
+                $('<button>', { class: 'btn btn-outline-danger btn-sm js-auto-buy-remove', type: 'button', text: 'Remove' })
+            ));
+        });
+    }
+
+    function addAutoBuyRule() {
+        const caseKeyToAdd = String($('#caseAutoBuyAddCase').val() || '');
+        if (!caseKeyToAdd) return;
+        const payload = {
+            thresholdQuantity: Math.max(0, Math.trunc(Number($('#caseAutoBuyAddThreshold').val()) || 0)),
+            purchaseQuantity: Math.max(1, Math.trunc(Number($('#caseAutoBuyAddQuantity').val()) || 1)),
+            isEnabled: true
+        };
+        const $button = $('#caseAutoBuyAddButton').prop('disabled', true);
+        request(`/api/case-opening/auto-buy/rules/${encodeURIComponent(caseKeyToAdd)}`, 'PUT', {
+            data: JSON.stringify(payload),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                autoBuySummary = result;
+                renderAutoBuyPanel();
+                manageAutoBuyPolling();
+                window.personalToolsToast?.success('Auto-buy rule added.');
+            })
+            .fail(function (response) {
+                renderAutoBuyPanel();
+                showError(response, 'This auto-buy rule could not be added.');
+            })
+            .always(() => $button.prop('disabled', false));
+    }
+
+    function removeAutoBuyRule($row) {
+        const caseKeyToRemove = String($row.data('case-key'));
+        const $button = $row.find('.js-auto-buy-remove').prop('disabled', true);
+        request(`/api/case-opening/auto-buy/rules/${encodeURIComponent(caseKeyToRemove)}`, 'DELETE', { showLoader: false })
+            .done(function (result) {
+                autoBuySummary = result;
+                renderAutoBuyPanel();
+                manageAutoBuyPolling();
+                window.personalToolsToast?.success('Auto-buy rule removed.');
+            })
+            .fail(function (response) {
+                $button.prop('disabled', false);
+                showError(response, 'This auto-buy rule could not be removed.');
+            });
+    }
+
+    function saveAutoBuyRule($row) {
+        const caseKeyToSave = String($row.data('case-key'));
+        const payload = {
+            thresholdQuantity: Math.max(0, Math.trunc(Number($row.find('.js-auto-buy-threshold').val()) || 0)),
+            purchaseQuantity: Math.max(1, Math.trunc(Number($row.find('.js-auto-buy-quantity').val()) || 1)),
+            isEnabled: $row.find('.js-auto-buy-toggle').is(':checked')
+        };
+        request(`/api/case-opening/auto-buy/rules/${encodeURIComponent(caseKeyToSave)}`, 'PUT', {
+            data: JSON.stringify(payload),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                autoBuySummary = result;
+                renderAutoBuyPanel();
+                manageAutoBuyPolling();
+                window.personalToolsToast?.success('Auto-buy rule saved.');
+            })
+            .fail(function (response) {
+                renderAutoBuyPanel();
+                showError(response, 'This auto-buy rule could not be saved.');
+            });
+    }
+
+    // Same client-driven polling pattern as bots - no server-side background service. Runs only
+    // once Auto-buy is actually unlocked, and pauses while the tab isn't visible.
+    function manageAutoBuyPolling() {
+        const shouldPoll = inventoryUpgrades?.autoBuyUnlocked === true && !document.hidden;
+        if (shouldPoll && !autoBuyPollTimer) {
+            autoBuyPollTimer = window.setInterval(evaluateAutoBuy, 20000);
+        } else if (!shouldPoll && autoBuyPollTimer) {
+            window.clearInterval(autoBuyPollTimer);
+            autoBuyPollTimer = null;
+        }
+    }
+
+    // Also called opportunistically right after any case open (player or bot) - the two events
+    // that can drop an owned quantity below a rule's threshold between polls.
+    function evaluateAutoBuy() {
+        if (!inventoryUpgrades?.autoBuyUnlocked) return;
+        request('/api/case-opening/auto-buy/evaluate', 'POST', { showLoader: false })
+            .done(function (purchases) {
+                if (!Array.isArray(purchases) || purchases.length === 0) return;
+
+                loadInventoryCapacity({ showLoader: false });
+                loadProgress({ showLoader: false });
+                if (autoBuyRulesLoaded) loadAutoBuyRules({ showLoader: false });
+                if ($('#caseShopCaseGrid').children().length) loadCaseCatalogue().done(() => renderShop(catalogue));
+
+                purchases.forEach(function (purchase) {
+                    const caseName = catalogue.find(item => item.caseKey === purchase.caseKey)?.name || purchase.caseKey;
+                    window.personalToolsToast?.info(`Auto-bought ${purchase.purchasedQuantity} × ${caseName}.`);
+                });
+            });
+        // A quiet poll failure just tries again next tick - no .fail handler, no error surfaced.
     }
 
     function loadAchievements(options) {
@@ -2380,10 +2625,11 @@
                     return;
                 }
 
-                startReelSounds(5200);
+                const spinDuration = Math.round(5200 / openSpeedMultiplier());
+                startReelSounds(spinDuration);
                 window.anime.animate($reel.get(0), {
                     translateX: [0, target],
-                    duration: 5200,
+                    duration: spinDuration,
                     ease: 'out(5)',
                     onComplete: function () {
                         if (isGoldItem(result.winner)) showGoldReveal(result);
@@ -2491,6 +2737,7 @@
         queuePostOpeningRefresh();
         statisticsRequestedAfterOpening = results[0]?.caseKey || caseKey;
         $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
+        evaluateAutoBuy();
     }
 
     function renderFinishedOpening(result) {
@@ -2552,6 +2799,7 @@
             return;
         }
 
+        const multiplier = openSpeedMultiplier();
         $(cards).css('opacity', 0);
         window.requestAnimationFrame(function () {
             window.requestAnimationFrame(function () {
@@ -2559,8 +2807,8 @@
                     opacity: [0, 1],
                     translateY: [14, 0],
                     scale: [.965, 1],
-                    delay: (_, index) => index * 65,
-                    duration: 340,
+                    delay: (_, index) => (index * 65) / multiplier,
+                    duration: 340 / multiplier,
                     ease: 'out(4)',
                     onComplete: completeMultiOpening
                 });
@@ -2773,6 +3021,7 @@
             if (!inventoryCapacityLoaded) requests.push(loadInventoryCapacity(quietOptions));
             if (!botProgressLoaded) requests.push(loadBotProgress(quietOptions));
             if (!inventoryUpgradesLoaded) requests.push(loadInventoryUpgrades(quietOptions));
+            if (!autoBuyRulesLoaded) requests.push(loadAutoBuyRules(quietOptions));
         }
 
         if (destination === 'inventory') {
@@ -2959,7 +3208,10 @@
         window.personalToolsToast?.info(this.checked ? 'Long reel animation will be skipped.' : 'Long reel animation restored.');
     });
 
-    $(document).on('click', '[data-upgrade-key]', function () {
+    // Excludes .js-unlock-inventory-upgrade buttons (auto-buy, inventory-slots, ...) - those also
+    // carry a data-upgrade-key attribute but are handled by their own more specific delegated
+    // handler below, which would otherwise double-fire alongside this one on the same click.
+    $(document).on('click', '[data-upgrade-key]:not(.js-unlock-inventory-upgrade)', function () {
         const upgradeKey = String($(this).data('upgrade-key'));
         if (!upgradeKey) return;
         const $button = $(this).prop('disabled', true);
@@ -2967,6 +3219,8 @@
             .done(function (progress) {
                 renderProgress(progress);
                 loadAchievements();
+                if ($('#caseShopCaseGrid').children().length) renderShop(catalogue);
+                if (inventoryUpgradesLoaded) renderAutoBuyPanel();
                 window.personalToolsToast?.success('Case-opening upgrade unlocked.');
             })
             .fail(response => showError(response, 'The upgrade could not be unlocked.'))
@@ -3112,6 +3366,7 @@
         } else {
             resumeBotsIfDue();
         }
+        manageAutoBuyPolling();
     });
 
     window.addEventListener('pagehide', () => stopBots(false));
@@ -3302,7 +3557,7 @@
         renderShop(catalogue);
     });
 
-    $('#caseInventoryUpgradeGrid, #caseCapacityUpgradeGrid').on('click', '.js-unlock-inventory-upgrade', function () {
+    $('#caseInventoryUpgradeGrid, #caseCapacityUpgradeGrid, #caseAutoBuyPanel').on('click', '.js-unlock-inventory-upgrade', function () {
         const upgradeKey = String($(this).data('upgrade-key') || '');
         const $button = $(this).prop('disabled', true);
         request(`/api/case-opening/inventory/upgrades/${encodeURIComponent(upgradeKey)}/unlock`, 'POST', { showLoader: false })
@@ -3310,9 +3565,16 @@
                 inventoryUpgrades = result;
                 renderInventoryUpgradeStore(); renderInventorySelection(); loadProgress({ showLoader: false });
                 loadInventoryCapacity({ showLoader: false });
+                loadAutoBuyRules({ showLoader: false });
                 window.personalToolsToast?.success('Inventory upgrade unlocked.');
             }).fail(response => showError(response, 'The inventory upgrade could not be unlocked.'))
             .always(() => $button.prop('disabled', false));
+    });
+
+    $('#caseAutoBuyAddButton').on('click', addAutoBuyRule);
+
+    $('#caseAutoBuyRules').on('click', '.js-auto-buy-remove', function () {
+        removeAutoBuyRule($(this).closest('.case-auto-buy-row'));
     });
 
     $('#caseAutoSellControls').on('change', '.js-auto-sell-toggle', function () {
@@ -3324,6 +3586,10 @@
             contentType: 'application/json; charset=utf-8', showLoader: false
         }).done(function (result) { inventoryUpgrades = result; renderInventoryUpgradeStore(); markSwitchSaved($(`#caseAutoSell-${rarityKey}`)); window.personalToolsToast?.success('Auto-sell preference saved.'); })
             .fail(function (response) { renderInventoryUpgradeStore(); showError(response, 'The auto-sell preference could not be saved.'); });
+    });
+
+    $('#caseAutoBuyRules').on('change', '.js-auto-buy-toggle, .js-auto-buy-threshold, .js-auto-buy-quantity', function () {
+        saveAutoBuyRule($(this).closest('.case-auto-buy-row'));
     });
 
     $('#caseBotServers').on('click', '.js-upgrade-bot-speed', function () {
@@ -3539,6 +3805,7 @@
         $('#caseTweakXp').val(Number(caseProgress?.xp || 0));
         $('#caseTweakSkipAnimation').prop('checked', caseProgress?.skipAnimationUnlocked === true);
         $('#caseTweakMultiOpenLevel').val(Number(caseProgress?.multiOpenLevel || 0));
+        $('#caseTweakOpenSpeedLevel').val(Number(caseProgress?.openSpeedLevel || 0));
     }
 
     const caseTweakViewStorageKey = 'personalTools.caseOpeningTweakView';
@@ -3622,10 +3889,12 @@
 
     function fillTweakSettingsForm(settings) {
         $('#caseTweakXpPerOpen').val(Number(settings.xpPerCaseOpen || 0));
-        $('#caseTweakSkipCost').val(Number(settings.skipAnimationCostStars || 0));
-        $('#caseTweakSkipXpReq').val(Number(settings.skipAnimationXpRequirement || 0));
         $('#caseTweakMultiCost').val(Number(settings.multiOpenCostStars || 0));
         $('#caseTweakMultiXpReq').val(Number(settings.multiOpenXpRequirement || 0));
+        $('#caseTweakSpeedBaseCost').val(Number(settings.openSpeedUpgradeBaseCostStars || 0));
+        $('#caseTweakSpeedCostIncrement').val(Number(settings.openSpeedUpgradeCostIncrementStars || 0));
+        $('#caseTweakSpeedXpReq').val(Number(settings.openSpeedUpgradeXpRequirement || 0));
+        $('#caseTweakMaxSpeedLevel').val(Number(settings.maximumOpenSpeedLevel || 4));
         $('#caseTweakMaxMultiLevel').val(Number(settings.maximumMultiOpenLevel || 4));
         $('#caseTweakMaxOpenQuantity').val(Number(settings.maximumOpenQuantity || 5));
         $('#caseTweakBotInterval').val(Number(settings.botOpeningIntervalSeconds || 12));
@@ -3770,7 +4039,8 @@
         event.preventDefault();
         const payload = {
             skipAnimationUnlocked: $('#caseTweakSkipAnimation').is(':checked'),
-            multiOpenLevel: Math.max(0, Math.trunc(Number($('#caseTweakMultiOpenLevel').val()) || 0))
+            multiOpenLevel: Math.max(0, Math.trunc(Number($('#caseTweakMultiOpenLevel').val()) || 0)),
+            openSpeedLevel: Math.max(0, Math.trunc(Number($('#caseTweakOpenSpeedLevel').val()) || 0))
         };
         request('/api/case-opening/dev/upgrades', 'PUT', {
             data: JSON.stringify(payload),
@@ -3818,10 +4088,17 @@
         event.preventDefault();
         const payload = {
             xpPerCaseOpen: Math.max(0, Math.trunc(Number($('#caseTweakXpPerOpen').val()) || 0)),
-            skipAnimationCostStars: Math.max(0, Math.trunc(Number($('#caseTweakSkipCost').val()) || 0)),
-            skipAnimationXpRequirement: Math.max(0, Math.trunc(Number($('#caseTweakSkipXpReq').val()) || 0)),
+            // Skip animation is no longer independently purchasable (see the speed-upgrade
+            // rebalance) - these columns are inert, kept only so the settings payload shape
+            // matches the API/DB signature.
+            skipAnimationCostStars: 0,
+            skipAnimationXpRequirement: 0,
             multiOpenCostStars: Math.max(0, Math.trunc(Number($('#caseTweakMultiCost').val()) || 0)),
             multiOpenXpRequirement: Math.max(0, Math.trunc(Number($('#caseTweakMultiXpReq').val()) || 0)),
+            openSpeedUpgradeBaseCostStars: Math.max(0, Math.trunc(Number($('#caseTweakSpeedBaseCost').val()) || 0)),
+            openSpeedUpgradeCostIncrementStars: Math.max(0, Math.trunc(Number($('#caseTweakSpeedCostIncrement').val()) || 0)),
+            openSpeedUpgradeXpRequirement: Math.max(0, Math.trunc(Number($('#caseTweakSpeedXpReq').val()) || 0)),
+            maximumOpenSpeedLevel: Math.max(1, Math.trunc(Number($('#caseTweakMaxSpeedLevel').val()) || 1)),
             maximumMultiOpenLevel: Math.max(1, Math.trunc(Number($('#caseTweakMaxMultiLevel').val()) || 1)),
             maximumOpenQuantity: Math.max(1, Math.trunc(Number($('#caseTweakMaxOpenQuantity').val()) || 1)),
             botOpeningIntervalSeconds: Math.max(1, Math.trunc(Number($('#caseTweakBotInterval').val()) || 1)),

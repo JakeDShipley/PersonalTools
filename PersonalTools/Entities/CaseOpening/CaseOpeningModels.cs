@@ -161,6 +161,7 @@ public class CaseOpeningProgressDbModel
     public int Xp { get; set; }
     public bool SkipAnimationUnlocked { get; set; }
     public int MultiOpenLevel { get; set; }
+    public int OpenSpeedLevel { get; set; }
 }
 
 public sealed class CaseOpeningProgressObj : CaseOpeningProgressDbModel
@@ -173,6 +174,10 @@ public sealed class CaseOpeningProgressObj : CaseOpeningProgressDbModel
     public int MultiOpenCost { get; set; }
     public int MultiOpenXpRequirement { get; set; }
     public int MaximumMultiOpenLevel { get; set; }
+    public decimal OpenSpeedMultiplier { get; set; }
+    public int OpenSpeedUpgradeCost { get; set; }
+    public int OpenSpeedUpgradeXpRequirement { get; set; }
+    public int MaximumOpenSpeedLevel { get; set; }
     public int MaximumOpenQuantity { get; set; }
     public int StorageContainerBaseCostStars { get; set; }
     public int StorageContainerCostIncrementStars { get; set; }
@@ -259,6 +264,10 @@ public sealed class CaseOpeningGameSettingsObj
     public int SkipAnimationXpRequirement { get; set; }
     public int MultiOpenCostStars { get; set; }
     public int MultiOpenXpRequirement { get; set; }
+    public int OpenSpeedUpgradeBaseCostStars { get; set; }
+    public int OpenSpeedUpgradeCostIncrementStars { get; set; }
+    public int OpenSpeedUpgradeXpRequirement { get; set; }
+    public int MaximumOpenSpeedLevel { get; set; }
     public int MaximumMultiOpenLevel { get; set; }
     public int MaximumOpenQuantity { get; set; }
     public int BotOpeningIntervalSeconds { get; set; }
@@ -330,6 +339,8 @@ public class CaseOpeningInventoryUpgradeDbModel
     public Guid UserId { get; set; }
     public int BulkSellLimit { get; set; } = 100;
     public int BonusInventorySlots { get; set; }
+    public bool AutoBuyUnlocked { get; set; }
+    public int AutoBuyRuleSlots { get; set; } = 3;
     public bool AutoSellCovertUnlocked { get; set; }
     public bool AutoSellCovertEnabled { get; set; }
     public bool AutoSellClassifiedUnlocked { get; set; }
@@ -364,6 +375,38 @@ public sealed class CaseOpeningAutoSellPreferenceRequestObj
     public string RarityKey { get; set; } = string.Empty;
     public bool Enabled { get; set; }
     public bool? PreserveStatTrak { get; set; }
+}
+
+public class CaseOpeningAutoBuyRuleDbModel
+{
+    public string CaseKey { get; set; } = string.Empty;
+    public int ThresholdQuantity { get; set; }
+    public int PurchaseQuantity { get; set; } = 1;
+    public bool IsEnabled { get; set; } = true;
+    public DateTime CreatedUtc { get; set; }
+    public DateTime UpdatedUtc { get; set; }
+}
+
+public sealed class CaseOpeningAutoBuyRuleObj : CaseOpeningAutoBuyRuleDbModel
+{
+    public string CaseName { get; set; } = string.Empty;
+    public string ImageUrl { get; set; } = string.Empty;
+    public int OwnedQuantity { get; set; }
+}
+
+public sealed class CaseOpeningAutoBuyRuleRequestObj
+{
+    public int ThresholdQuantity { get; set; }
+    public int PurchaseQuantity { get; set; } = 1;
+    public bool IsEnabled { get; set; } = true;
+}
+
+public sealed class CaseOpeningAutoBuySummaryObj
+{
+    public bool Unlocked { get; set; }
+    public int RuleSlots { get; set; }
+    public int UsedRuleSlots { get; set; }
+    public List<CaseOpeningAutoBuyRuleObj> Rules { get; set; } = [];
 }
 
 public sealed class CaseOpeningTradeUpRequestObj

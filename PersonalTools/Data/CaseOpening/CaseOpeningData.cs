@@ -21,11 +21,14 @@ public interface ICaseOpeningData
     Task<bool> RecordCompletedCaseOpeningRarity(Guid userId, string caseKey, string rarityKey, CancellationToken cancellationToken = default);
     Task<List<string>> GetCaseOpeningUnlockedCases(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningCase(Guid userId, string caseKey, int cost, CancellationToken cancellationToken = default);
-    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, int maximumMultiOpenLevel, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> UnlockCaseOpeningUpgrade(Guid userId, string upgradeKey, int cost, int maximumMultiOpenLevel, int maximumOpenSpeedLevel, CancellationToken cancellationToken = default);
     Task<CaseOpeningSellResultDbModel?> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, int starsAwarded, CancellationToken cancellationToken = default);
     Task<CaseOpeningInventoryUpgradeDbModel> GetCaseOpeningInventoryUpgrades(Guid userId, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningUpgradeDefinitionObj>> GetCaseOpeningUpgradeDefinitions(Guid userId, CancellationToken cancellationToken = default);
     Task UnlockCaseOpeningInventoryUpgrade(Guid userId, string upgradeKey, int cost, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningAutoBuyRuleDbModel>> GetCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default);
+    Task SetCaseOpeningAutoBuyRule(Guid userId, string caseKey, int thresholdQuantity, int purchaseQuantity, bool isEnabled, int ruleSlotCap, CancellationToken cancellationToken = default);
+    Task DeleteCaseOpeningAutoBuyRule(Guid userId, string caseKey, CancellationToken cancellationToken = default);
     Task SetCaseOpeningAutoSellPreference(Guid userId, string rarityKey, bool enabled, bool preserveStatTrak, CancellationToken cancellationToken = default);
     Task ExecuteCaseOpeningTradeUp(
         Guid userId,
@@ -55,7 +58,7 @@ public interface ICaseOpeningData
     Task<CaseOpeningCasePurchaseResultObj?> PurchaseCaseOpeningCases(Guid userId, string caseKey, int quantity, int purchaseCostStars, CancellationToken cancellationToken = default);
     Task<CaseOpeningStoragePurchaseResultObj?> PurchaseCaseOpeningStorageContainer(Guid userId, Guid storageContainerId, int cost, int slots, int maximumContainers, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> SetCaseOpeningProgressDev(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
-    Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, int openSpeedLevel, CancellationToken cancellationToken = default);
     Task SetCaseOpeningCaseUnlockDev(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
     Task ResetCaseOpeningProgressDev(Guid userId, CancellationToken cancellationToken = default);
 }
@@ -133,6 +136,7 @@ public sealed class CaseOpeningData : ICaseOpeningData
         string upgradeKey,
         int cost,
         int maximumMultiOpenLevel,
+        int maximumOpenSpeedLevel,
         CancellationToken cancellationToken = default)
     {
         return _database.GetDataSP(
@@ -142,7 +146,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_user_id", userId),
                 ("p_upgrade_key", upgradeKey),
                 ("p_cost", cost),
-                ("p_max_multi_open_level", maximumMultiOpenLevel)),
+                ("p_max_multi_open_level", maximumMultiOpenLevel),
+                ("p_max_open_speed_level", maximumOpenSpeedLevel)),
             cancellationToken);
     }
 
@@ -473,6 +478,10 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_skip_animation_xp_requirement", settings.SkipAnimationXpRequirement),
                 ("p_multi_open_cost_stars", settings.MultiOpenCostStars),
                 ("p_multi_open_xp_requirement", settings.MultiOpenXpRequirement),
+                ("p_open_speed_upgrade_base_cost_stars", settings.OpenSpeedUpgradeBaseCostStars),
+                ("p_open_speed_upgrade_cost_increment_stars", settings.OpenSpeedUpgradeCostIncrementStars),
+                ("p_open_speed_upgrade_xp_requirement", settings.OpenSpeedUpgradeXpRequirement),
+                ("p_maximum_open_speed_level", settings.MaximumOpenSpeedLevel),
                 ("p_maximum_multi_open_level", settings.MaximumMultiOpenLevel),
                 ("p_maximum_open_quantity", settings.MaximumOpenQuantity),
                 ("p_bot_opening_interval_seconds", settings.BotOpeningIntervalSeconds),
@@ -526,6 +535,41 @@ public sealed class CaseOpeningData : ICaseOpeningData
     {
         return _database.ExecuteSP("sp_case_opening_inventory_upgrade_unlock",
             Parameters(("p_user_id", userId), ("p_upgrade_key", upgradeKey), ("p_cost", cost)), cancellationToken);
+    }
+
+    public Task<List<CaseOpeningAutoBuyRuleDbModel>> GetCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_auto_buy_rules_get", ReadAutoBuyRule,
+            Parameters(("p_user_id", userId)), cancellationToken);
+    }
+
+    public Task SetCaseOpeningAutoBuyRule(
+        Guid userId,
+        string caseKey,
+        int thresholdQuantity,
+        int purchaseQuantity,
+        bool isEnabled,
+        int ruleSlotCap,
+        CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_auto_buy_rule_set",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_case_key", caseKey),
+                ("p_threshold_quantity", thresholdQuantity),
+                ("p_purchase_quantity", purchaseQuantity),
+                ("p_is_enabled", isEnabled),
+                ("p_rule_slot_cap", ruleSlotCap)),
+            cancellationToken);
+    }
+
+    public Task DeleteCaseOpeningAutoBuyRule(Guid userId, string caseKey, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_auto_buy_rule_delete",
+            Parameters(("p_user_id", userId), ("p_case_key", caseKey)),
+            cancellationToken);
     }
 
     public Task<List<CaseOpeningUpgradeDefinitionObj>> GetInventoryUpgradeSettings(CancellationToken cancellationToken = default)
@@ -585,12 +629,16 @@ public sealed class CaseOpeningData : ICaseOpeningData
             cancellationToken);
     }
 
-    public Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default)
+    public Task<CaseOpeningProgressDbModel?> SetCaseOpeningUpgradesDev(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, int openSpeedLevel, CancellationToken cancellationToken = default)
     {
         return _database.GetDataSP(
             "sp_case_opening_upgrades_dev_set",
             ReadProgress,
-            Parameters(("p_user_id", userId), ("p_skip_animation_unlocked", skipAnimationUnlocked), ("p_multi_open_level", multiOpenLevel)),
+            Parameters(
+                ("p_user_id", userId),
+                ("p_skip_animation_unlocked", skipAnimationUnlocked),
+                ("p_multi_open_level", multiOpenLevel),
+                ("p_open_speed_level", openSpeedLevel)),
             cancellationToken);
     }
 
@@ -657,7 +705,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
             Stars = reader.GetInt32("Stars"),
             Xp = reader.GetInt32("Xp"),
             SkipAnimationUnlocked = reader.GetBoolean("SkipAnimationUnlocked"),
-            MultiOpenLevel = reader.GetInt32("MultiOpenLevel")
+            MultiOpenLevel = reader.GetInt32("MultiOpenLevel"),
+            OpenSpeedLevel = reader.GetInt32("OpenSpeedLevel")
         };
     }
 
@@ -725,6 +774,10 @@ public sealed class CaseOpeningData : ICaseOpeningData
             SkipAnimationXpRequirement = reader.GetInt32("SkipAnimationXpRequirement"),
             MultiOpenCostStars = reader.GetInt32("MultiOpenCostStars"),
             MultiOpenXpRequirement = reader.GetInt32("MultiOpenXpRequirement"),
+            OpenSpeedUpgradeBaseCostStars = reader.GetInt32("OpenSpeedUpgradeBaseCostStars"),
+            OpenSpeedUpgradeCostIncrementStars = reader.GetInt32("OpenSpeedUpgradeCostIncrementStars"),
+            OpenSpeedUpgradeXpRequirement = reader.GetInt32("OpenSpeedUpgradeXpRequirement"),
+            MaximumOpenSpeedLevel = reader.GetInt32("MaximumOpenSpeedLevel"),
             MaximumMultiOpenLevel = reader.GetInt32("MaximumMultiOpenLevel"),
             MaximumOpenQuantity = reader.GetInt32("MaximumOpenQuantity"),
             BotOpeningIntervalSeconds = reader.GetInt32("BotOpeningIntervalSeconds"),
@@ -803,11 +856,25 @@ public sealed class CaseOpeningData : ICaseOpeningData
         {
             UserId = reader.GetGuid("UserId"), BulkSellLimit = reader.GetInt32("BulkSellLimit"),
             BonusInventorySlots = reader.GetInt32("BonusInventorySlots"),
+            AutoBuyUnlocked = reader.GetBoolean("AutoBuyUnlocked"), AutoBuyRuleSlots = reader.GetInt32("AutoBuyRuleSlots"),
             AutoSellCovertUnlocked = reader.GetBoolean("AutoSellCovertUnlocked"), AutoSellCovertEnabled = reader.GetBoolean("AutoSellCovertEnabled"),
             AutoSellClassifiedUnlocked = reader.GetBoolean("AutoSellClassifiedUnlocked"), AutoSellClassifiedEnabled = reader.GetBoolean("AutoSellClassifiedEnabled"),
             AutoSellRestrictedUnlocked = reader.GetBoolean("AutoSellRestrictedUnlocked"), AutoSellRestrictedEnabled = reader.GetBoolean("AutoSellRestrictedEnabled"),
             AutoSellMilSpecUnlocked = reader.GetBoolean("AutoSellMilSpecUnlocked"), AutoSellMilSpecEnabled = reader.GetBoolean("AutoSellMilSpecEnabled"),
             PreserveStatTrak = reader.GetBoolean("PreserveStatTrak")
+        };
+    }
+
+    private static CaseOpeningAutoBuyRuleDbModel ReadAutoBuyRule(MySqlDataReader reader)
+    {
+        return new CaseOpeningAutoBuyRuleDbModel
+        {
+            CaseKey = reader.GetString("CaseKey"),
+            ThresholdQuantity = reader.GetInt32("ThresholdQuantity"),
+            PurchaseQuantity = reader.GetInt32("PurchaseQuantity"),
+            IsEnabled = reader.GetBoolean("IsEnabled"),
+            CreatedUtc = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc),
+            UpdatedUtc = DateTime.SpecifyKind(reader.GetDateTime("UpdatedUtc"), DateTimeKind.Utc)
         };
     }
 

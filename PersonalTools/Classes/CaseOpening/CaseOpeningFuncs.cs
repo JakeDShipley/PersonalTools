@@ -30,6 +30,10 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningInventoryUpgradeObj> GetCaseOpeningInventoryUpgrades(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningInventoryUpgradeObj> UnlockCaseOpeningInventoryUpgrade(Guid userId, string upgradeKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningInventoryUpgradeObj> SetCaseOpeningAutoSellPreference(Guid userId, string rarityKey, bool enabled, bool? preserveStatTrak, CancellationToken cancellationToken = default);
+    Task<CaseOpeningAutoBuySummaryObj> GetCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningAutoBuySummaryObj> SetCaseOpeningAutoBuyRule(Guid userId, string caseKey, CaseOpeningAutoBuyRuleRequestObj request, CancellationToken cancellationToken = default);
+    Task<CaseOpeningAutoBuySummaryObj> DeleteCaseOpeningAutoBuyRule(Guid userId, string caseKey, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningCasePurchaseResultObj>> EvaluateCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
@@ -46,7 +50,7 @@ public interface ICaseOpeningFuncs
 
     // Testing overrides for the caller's own account only.
     Task<CaseOpeningProgressObj> SetDevProgress(Guid userId, int stars, int xp, CancellationToken cancellationToken = default);
-    Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default);
+    Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, int openSpeedLevel, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> SetDevCaseUnlock(Guid userId, string caseKey, bool unlock, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressObj> ResetDevProgress(Guid userId, CancellationToken cancellationToken = default);
 }
@@ -430,14 +434,23 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         CancellationToken cancellationToken = default)
     {
         CaseOpeningGameSettingsObj gameSettings = await _data.GetGameSettings(cancellationToken);
+        CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
+
+        // Speed's cost/requirement climb with the level already owned (mirrors the bot speed
+        // upgrade's base+increment formula), unlike multi-open which is flat. Skip animation is no
+        // longer independently purchasable - it's granted automatically as the final speed level
+        // (see sp_case_opening_upgrade_unlock), so there's no "skip-animation" case here anymore.
         (string Key, int Cost, int XpRequirement, Func<CaseOpeningProgressDbModel, bool> IsUnlocked) upgrade = upgradeKey switch
         {
-            "skip-animation" => ("skip-animation", gameSettings.SkipAnimationCostStars, gameSettings.SkipAnimationXpRequirement, progress => progress.SkipAnimationUnlocked),
-            "multi-open" => ("multi-open", gameSettings.MultiOpenCostStars, gameSettings.MultiOpenXpRequirement, progress => progress.MultiOpenLevel >= gameSettings.MaximumMultiOpenLevel),
+            "multi-open" => ("multi-open", gameSettings.MultiOpenCostStars, gameSettings.MultiOpenXpRequirement, p => p.MultiOpenLevel >= gameSettings.MaximumMultiOpenLevel),
+            "open-speed" => (
+                "open-speed",
+                gameSettings.OpenSpeedUpgradeBaseCostStars + (progress.OpenSpeedLevel * gameSettings.OpenSpeedUpgradeCostIncrementStars),
+                gameSettings.OpenSpeedUpgradeXpRequirement + progress.OpenSpeedLevel,
+                p => p.OpenSpeedLevel >= gameSettings.MaximumOpenSpeedLevel),
             _ => throw new InvalidOperationException("That case-opening upgrade is not available.")
         };
 
-        CaseOpeningProgressDbModel progress = await _data.GetCaseOpeningProgress(userId, cancellationToken);
         if (upgrade.IsUnlocked(progress))
         {
             throw new InvalidOperationException("That case-opening upgrade is already unlocked.");
@@ -458,6 +471,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             upgrade.Key,
             upgrade.Cost,
             gameSettings.MaximumMultiOpenLevel,
+            gameSettings.MaximumOpenSpeedLevel,
             cancellationToken);
 
         if (updated is null)
@@ -558,6 +572,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         {
             "inventory-slots-500" => "inventory-slots-250",
             "inventory-slots-1000" => "inventory-slots-500",
+            "auto-buy-slots-10" => "auto-buy-slots-5",
             _ => null
         };
         if (requiredUpgradeKey is not null && !definitions.Any(item =>
@@ -595,6 +610,80 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         }
         await _data.SetCaseOpeningAutoSellPreference(userId, normalized, enabled, preserveStatTrak ?? current.PreserveStatTrak, cancellationToken);
         return await GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+    }
+
+    public Task<CaseOpeningAutoBuySummaryObj> GetCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return BuildAutoBuySummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningAutoBuySummaryObj> SetCaseOpeningAutoBuyRule(
+        Guid userId,
+        string caseKey,
+        CaseOpeningAutoBuyRuleRequestObj request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateCaseKey(caseKey);
+        List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
+        if (!unlockedCaseKeys.Contains(caseKey, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Unlock this case before adding an auto-buy rule for it.");
+        }
+
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        if (!upgrades.AutoBuyUnlocked)
+        {
+            throw new InvalidOperationException("Unlock Auto-buy before configuring a rule.");
+        }
+
+        if (request.ThresholdQuantity < 0 || request.PurchaseQuantity < 1)
+        {
+            throw new InvalidOperationException("Threshold cannot be negative and purchase quantity must be at least 1.");
+        }
+
+        await _data.SetCaseOpeningAutoBuyRule(
+            userId, caseKey, request.ThresholdQuantity, request.PurchaseQuantity, request.IsEnabled, upgrades.AutoBuyRuleSlots, cancellationToken);
+        return await BuildAutoBuySummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningAutoBuySummaryObj> DeleteCaseOpeningAutoBuyRule(Guid userId, string caseKey, CancellationToken cancellationToken = default)
+    {
+        ValidateCaseKey(caseKey);
+        await _data.DeleteCaseOpeningAutoBuyRule(userId, caseKey, cancellationToken);
+        return await BuildAutoBuySummary(userId, cancellationToken);
+    }
+
+    private async Task<CaseOpeningAutoBuySummaryObj> BuildAutoBuySummary(Guid userId, CancellationToken cancellationToken)
+    {
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        List<CaseOpeningAutoBuyRuleDbModel> rules = await _data.GetCaseOpeningAutoBuyRules(userId, cancellationToken);
+        List<CaseOpeningOwnedCaseDbModel> owned = await _data.GetCaseOpeningOwnedCases(userId, cancellationToken);
+        Dictionary<string, int> ownedByKey = owned.ToDictionary(item => item.CaseKey, item => item.Quantity, StringComparer.OrdinalIgnoreCase);
+        List<CaseOpeningCaseObj> catalogue = await _referenceData.GetCuratedCases(cancellationToken);
+        Dictionary<string, CaseOpeningCaseObj> catalogueByKey = catalogue.ToDictionary(item => item.CaseKey, StringComparer.OrdinalIgnoreCase);
+
+        return new CaseOpeningAutoBuySummaryObj
+        {
+            Unlocked = upgrades.AutoBuyUnlocked,
+            RuleSlots = upgrades.AutoBuyRuleSlots,
+            UsedRuleSlots = rules.Count(item => item.IsEnabled),
+            Rules = rules.Select(rule =>
+            {
+                catalogueByKey.TryGetValue(rule.CaseKey, out CaseOpeningCaseObj? caseInfo);
+                return new CaseOpeningAutoBuyRuleObj
+                {
+                    CaseKey = rule.CaseKey,
+                    ThresholdQuantity = rule.ThresholdQuantity,
+                    PurchaseQuantity = rule.PurchaseQuantity,
+                    IsEnabled = rule.IsEnabled,
+                    CreatedUtc = rule.CreatedUtc,
+                    UpdatedUtc = rule.UpdatedUtc,
+                    CaseName = caseInfo?.Name ?? rule.CaseKey,
+                    ImageUrl = caseInfo?.ImageUrl ?? string.Empty,
+                    OwnedQuantity = ownedByKey.TryGetValue(rule.CaseKey, out int quantity) ? quantity : 0
+                };
+            }).ToList()
+        };
     }
 
     public async Task<CaseOpeningCasePurchaseResultObj> PurchaseCaseOpeningCases(
@@ -635,6 +724,53 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
 
         CaseOpeningCasePurchaseResultObj? result = await _data.PurchaseCaseOpeningCases(userId, caseKey, quantity, caseSettings.PurchaseCostStars, cancellationToken);
         return result ?? throw new InvalidOperationException("The case purchase could not be completed. Please try again.");
+    }
+
+    // Polled by the client every ~20s (mirroring how bots are driven), plus opportunistically right
+    // after any case open - the two events that can drop an owned quantity below a rule's threshold.
+    // Reuses PurchaseCaseOpeningCases outright so tiered pricing/capacity/unlock checks always match
+    // what a manual purchase would enforce - nothing here duplicates that logic. A rule that can't
+    // currently afford or fit its purchase (insufficient Stars, full inventory, etc.) is skipped
+    // quietly rather than surfaced as an error, since this runs unattended on a timer.
+    public async Task<List<CaseOpeningCasePurchaseResultObj>> EvaluateCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        if (!upgrades.AutoBuyUnlocked)
+        {
+            return [];
+        }
+
+        List<CaseOpeningAutoBuyRuleDbModel> rules = await _data.GetCaseOpeningAutoBuyRules(userId, cancellationToken);
+        List<CaseOpeningAutoBuyRuleDbModel> enabledRules = rules.Where(rule => rule.IsEnabled).ToList();
+        if (enabledRules.Count == 0)
+        {
+            return [];
+        }
+
+        List<CaseOpeningOwnedCaseDbModel> owned = await _data.GetCaseOpeningOwnedCases(userId, cancellationToken);
+        Dictionary<string, int> ownedByKey = owned.ToDictionary(item => item.CaseKey, item => item.Quantity, StringComparer.OrdinalIgnoreCase);
+
+        List<CaseOpeningCasePurchaseResultObj> purchases = [];
+        foreach (CaseOpeningAutoBuyRuleDbModel rule in enabledRules)
+        {
+            int ownedQuantity = ownedByKey.TryGetValue(rule.CaseKey, out int quantity) ? quantity : 0;
+            if (ownedQuantity >= rule.ThresholdQuantity)
+            {
+                continue;
+            }
+
+            try
+            {
+                purchases.Add(await PurchaseCaseOpeningCases(userId, rule.CaseKey, rule.PurchaseQuantity, cancellationToken));
+            }
+            catch (InvalidOperationException)
+            {
+                // Not enough Stars, no inventory room, case no longer unlocked, etc. - try again
+                // next poll rather than failing the whole evaluation for every other rule.
+            }
+        }
+
+        return purchases;
     }
 
     public async Task<CaseOpeningStoragePurchaseResultObj> PurchaseCaseOpeningStorageContainer(Guid userId, CancellationToken cancellationToken = default)
@@ -1144,7 +1280,7 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         return await BuildProgress(updated, settings, await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken), cancellationToken);
     }
 
-    public async Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, CancellationToken cancellationToken = default)
+    public async Task<CaseOpeningProgressObj> SetDevUpgrades(Guid userId, bool skipAnimationUnlocked, int multiOpenLevel, int openSpeedLevel, CancellationToken cancellationToken = default)
     {
         CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
         if (multiOpenLevel < 0 || multiOpenLevel > settings.MaximumMultiOpenLevel)
@@ -1152,7 +1288,12 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException($"Multi-open level must be between 0 and {settings.MaximumMultiOpenLevel}.");
         }
 
-        CaseOpeningProgressDbModel? updated = await _data.SetCaseOpeningUpgradesDev(userId, skipAnimationUnlocked, multiOpenLevel, cancellationToken);
+        if (openSpeedLevel < 0 || openSpeedLevel > settings.MaximumOpenSpeedLevel)
+        {
+            throw new InvalidOperationException($"Speed level must be between 0 and {settings.MaximumOpenSpeedLevel}.");
+        }
+
+        CaseOpeningProgressDbModel? updated = await _data.SetCaseOpeningUpgradesDev(userId, skipAnimationUnlocked, multiOpenLevel, openSpeedLevel, cancellationToken);
         if (updated is null)
         {
             throw new InvalidOperationException("Your upgrades could not be updated. Please try again.");
@@ -1227,11 +1368,19 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             XpForNextLevel = CaseOpeningXpLevels.GetXpForNextLevel(progress.Xp),
             SkipAnimationUnlocked = progress.SkipAnimationUnlocked,
             MultiOpenLevel = progress.MultiOpenLevel,
+            OpenSpeedLevel = progress.OpenSpeedLevel,
             SkipAnimationCost = settings.SkipAnimationCostStars,
             SkipAnimationXpRequirement = settings.SkipAnimationXpRequirement,
             MultiOpenCost = settings.MultiOpenCostStars,
             MultiOpenXpRequirement = settings.MultiOpenXpRequirement,
             MaximumMultiOpenLevel = settings.MaximumMultiOpenLevel,
+            // Level 0 = 1x, then +.5x per level up to 3x at level 4. Level 5 (the final tier) grants
+            // Skip Animation instead of a further multiplier - the reel doesn't get faster than 3x,
+            // it gets bypassed entirely.
+            OpenSpeedMultiplier = 1m + (Math.Min(progress.OpenSpeedLevel, 4) * .5m),
+            OpenSpeedUpgradeCost = settings.OpenSpeedUpgradeBaseCostStars + (progress.OpenSpeedLevel * settings.OpenSpeedUpgradeCostIncrementStars),
+            OpenSpeedUpgradeXpRequirement = settings.OpenSpeedUpgradeXpRequirement + progress.OpenSpeedLevel,
+            MaximumOpenSpeedLevel = settings.MaximumOpenSpeedLevel,
             MaximumOpenQuantity = settings.MaximumOpenQuantity,
             StorageContainerBaseCostStars = settings.StorageContainerBaseCostStars,
             StorageContainerCostIncrementStars = settings.StorageContainerCostIncrementStars,
@@ -1500,6 +1649,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
     {
         if (settings.XpPerCaseOpen < 0 || settings.SkipAnimationCostStars < 0 || settings.MultiOpenCostStars < 0
             || settings.SkipAnimationXpRequirement < 0 || settings.MultiOpenXpRequirement < 0
+            || settings.OpenSpeedUpgradeBaseCostStars < 0 || settings.OpenSpeedUpgradeCostIncrementStars < 0
+            || settings.OpenSpeedUpgradeXpRequirement < 0
             || settings.BotServerBaseCostStars < 0 || settings.BotServerCostIncrementStars < 0
             || settings.BotBaseCostStars < 0 || settings.StorageContainerBaseCostStars < 0
             || settings.StorageContainerCostIncrementStars < 0 || settings.StorageContainerSlots < 1)
@@ -1507,9 +1658,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
         }
 
-        if (settings.MaximumMultiOpenLevel < 1 || settings.MaximumOpenQuantity < 1 || settings.MaximumStorageContainers < 0)
+        if (settings.MaximumMultiOpenLevel < 1 || settings.MaximumOpenSpeedLevel < 1
+            || settings.MaximumOpenQuantity < 1 || settings.MaximumStorageContainers < 0)
         {
-            throw new InvalidOperationException("Maximum multi-open level and open quantity must be at least 1, and storage limits cannot be negative.");
+            throw new InvalidOperationException("Maximum multi-open level, speed level, and open quantity must be at least 1, and storage limits cannot be negative.");
         }
 
         if (settings.BotOpeningIntervalSeconds < 1)

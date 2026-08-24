@@ -124,6 +124,33 @@ public sealed class CaseOpeningController : ControllerBase
         return Execute(() => _caseOpening.SetCaseOpeningAutoSellPreference(UserId, request.RarityKey, request.Enabled, request.PreserveStatTrak, cancellationToken), "update auto sell", request.RarityKey);
     }
 
+    [HttpGet("auto-buy/rules")]
+    public Task<ActionResult<CaseOpeningAutoBuySummaryObj>> GetAutoBuyRules(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningAutoBuyRules(UserId, cancellationToken), "load auto-buy rules", "all");
+    }
+
+    [HttpPut("auto-buy/rules/{caseKey}")]
+    public Task<ActionResult<CaseOpeningAutoBuySummaryObj>> SetAutoBuyRule(
+        string caseKey,
+        [FromBody] CaseOpeningAutoBuyRuleRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.SetCaseOpeningAutoBuyRule(UserId, caseKey, request, cancellationToken), "save auto-buy rule", caseKey);
+    }
+
+    [HttpDelete("auto-buy/rules/{caseKey}")]
+    public Task<ActionResult<CaseOpeningAutoBuySummaryObj>> DeleteAutoBuyRule(string caseKey, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.DeleteCaseOpeningAutoBuyRule(UserId, caseKey, cancellationToken), "delete auto-buy rule", caseKey);
+    }
+
+    [HttpPost("auto-buy/evaluate")]
+    public Task<ActionResult<List<CaseOpeningCasePurchaseResultObj>>> EvaluateAutoBuy(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.EvaluateCaseOpeningAutoBuyRules(UserId, cancellationToken), "evaluate auto-buy", "all");
+    }
+
     [HttpPost("cases/{caseKey}/purchase")]
     public Task<ActionResult<CaseOpeningCasePurchaseResultObj>> PurchaseCases(string caseKey, [FromBody] CaseOpeningCasePurchaseRequestObj? request, CancellationToken cancellationToken)
     {
@@ -327,7 +354,7 @@ public sealed class CaseOpeningController : ControllerBase
         CancellationToken cancellationToken)
     {
         return Execute(
-            () => _caseOpening.SetDevUpgrades(UserId, request.SkipAnimationUnlocked, request.MultiOpenLevel, cancellationToken),
+            () => _caseOpening.SetDevUpgrades(UserId, request.SkipAnimationUnlocked, request.MultiOpenLevel, request.OpenSpeedLevel, cancellationToken),
             "set dev upgrades",
             "all");
     }
@@ -376,5 +403,5 @@ public sealed record CaseOpeningCaseSettingsRequest(int UnlockCostStars, int Pur
 public sealed record CaseOpeningInventoryUpgradeSettingsRequest(int CostStars, int RequiredLevel);
 public sealed record CaseOpeningXpByRarityRequest(int XpAwarded);
 public sealed record CaseOpeningDevProgressRequest(int Stars, int Xp);
-public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel);
+public sealed record CaseOpeningDevUpgradesRequest(bool SkipAnimationUnlocked, int MultiOpenLevel, int OpenSpeedLevel);
 public sealed record CaseOpeningDevCaseUnlockRequest(bool Unlock);

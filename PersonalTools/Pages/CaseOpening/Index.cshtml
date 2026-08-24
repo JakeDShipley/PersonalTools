@@ -188,6 +188,29 @@
                         <div class="case-auto-sell-grid" id="caseAutoSellControls"></div>
                     </div>
                 </div>
+                <div class="col-12">
+                    <div class="case-auto-sell-panel mt-3" id="caseAutoBuyPanel">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div>
+                                <p class="eyebrow mb-1">Automatic restocking</p>
+                                <h3 class="h6 mb-1">Auto-buy</h3>
+                                <p class="small-muted mb-0" id="caseAutoBuyUpgradeDescription">Automatically repurchase cases when your owned stock runs low.</p>
+                            </div>
+                            <button class="btn btn-outline-warning btn-sm js-unlock-inventory-upgrade d-none" type="button" id="caseAutoBuyUpgradeButton"></button>
+                        </div>
+                        <div id="caseAutoBuyRuleEditor" class="d-none">
+                            <p class="small-muted mb-2" id="caseAutoBuyPanelCopy">Set a threshold and quantity per case - when your owned stock drops below it, the Shop buys more for you.</p>
+                            <div class="case-auto-buy-add-row d-none" id="caseAutoBuyAddRow">
+                                <select class="form-select form-select-sm" id="caseAutoBuyAddCase"></select>
+                                <label class="case-auto-buy-row-field"><span>Below</span><input class="form-control form-control-sm" type="number" min="0" step="1" id="caseAutoBuyAddThreshold" value="5" /></label>
+                                <label class="case-auto-buy-row-field"><span>Buy</span><input class="form-control form-control-sm" type="number" min="1" step="1" id="caseAutoBuyAddQuantity" value="10" /></label>
+                                <button class="btn btn-warning btn-sm" type="button" id="caseAutoBuyAddButton">Add rule</button>
+                            </div>
+                            <div class="d-flex justify-content-end mb-2"><span class="case-upgrade-card-metric" id="caseAutoBuyRuleStatus"></span></div>
+                            <div class="case-auto-buy-grid" id="caseAutoBuyRules"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -352,27 +375,42 @@
 
             <div class="collapse" id="caseUpgradesContent" data-case-collapse-default="closed">
             <div class="row g-3 pt-1">
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
+                    <article class="case-upgrade-card h-100" id="caseSpeedUpgrade">
+                        <span class="case-xp-requirement-badge d-none" id="caseSpeedUpgradeXpBadge"></span>
+                        <span class="case-upgrade-icon"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i></span>
+                        <div class="case-upgrade-copy">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <h3 class="h6 mb-1">Faster opening</h3>
+                                <span class="badge text-bg-secondary" id="caseSpeedUpgradeCost">400 Stars</span>
+                            </div>
+                            <p class="small-muted mb-3">Speed up your own case-opening reel and multi-open reveals. Stacks in four steps up to 3x, then the final level grants instant Skip Animation.</p>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <span class="small fw-semibold" id="caseSpeedUpgradeLabel">1x speed</span>
+                                <button class="btn btn-outline-warning btn-sm" id="unlockOpenSpeed" type="button" data-upgrade-key="open-speed">Upgrade</button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-12 col-lg-4">
                     <article class="case-upgrade-card h-100" id="caseSkipUpgrade">
-                        <span class="case-xp-requirement-badge d-none" id="caseSkipUpgradeXpBadge"></span>
                         <span class="case-upgrade-icon"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></span>
                         <div class="case-upgrade-copy">
                             <div class="d-flex align-items-center justify-content-between gap-2">
                                 <h3 class="h6 mb-1">Skip animation</h3>
-                                <span class="badge text-bg-secondary" id="caseSkipUpgradeCost">35 Stars</span>
                             </div>
-                            <p class="small-muted mb-3">Reveal the selected item straight away with a short result animation, without waiting for the reel.</p>
+                            <p class="small-muted mb-3">Reveal the selected item straight away with a short result animation, without waiting for the reel. Granted automatically at the final Faster opening level.</p>
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                 <div class="form-check form-switch m-0">
                                     <input class="form-check-input pt-switch" id="caseSkipAnimation" type="checkbox" role="switch" disabled />
                                     <label class="form-check-label small fw-semibold" for="caseSkipAnimation" id="caseSkipAnimationLabel">Locked</label>
                                 </div>
-                                <button class="btn btn-outline-warning btn-sm" id="unlockSkipAnimation" type="button" data-upgrade-key="skip-animation">Unlock</button>
+                                <button class="btn btn-outline-warning btn-sm" id="unlockSkipAnimation" type="button" disabled>Unlock</button>
                             </div>
                         </div>
                     </article>
                 </div>
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
                     <article class="case-upgrade-card h-100" id="caseMultiUpgrade">
                         <span class="case-xp-requirement-badge d-none" id="caseMultiUpgradeXpBadge"></span>
                         <span class="case-upgrade-icon"><i class="fa-solid fa-clone" aria-hidden="true"></i></span>
@@ -962,6 +1000,10 @@
                                     <label class="form-label small fw-semibold" for="caseTweakMultiOpenLevel">Multi-open level</label>
                                     <input class="form-control" id="caseTweakMultiOpenLevel" type="number" min="0" step="1" />
                                 </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakOpenSpeedLevel">Opening speed level</label>
+                                    <input class="form-control" id="caseTweakOpenSpeedLevel" type="number" min="0" step="1" />
+                                </div>
                                 <div class="col-12 col-md-auto">
                                     <button class="btn btn-warning" type="submit">Save upgrades</button>
                                 </div>
@@ -1004,20 +1046,28 @@
                                     <input class="form-control" id="caseTweakXpPerOpen" type="number" min="0" step="1" />
                                 </div>
                                 <div class="col-6 col-md-4 col-lg-3">
-                                    <label class="form-label small fw-semibold" for="caseTweakSkipCost">Skip animation cost (Stars)</label>
-                                    <input class="form-control" id="caseTweakSkipCost" type="number" min="0" step="1" />
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-3">
-                                    <label class="form-label small fw-semibold" for="caseTweakSkipXpReq">Skip animation level requirement</label>
-                                    <input class="form-control" id="caseTweakSkipXpReq" type="number" min="0" step="1" />
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakMultiCost">Multi-open cost (Stars)</label>
                                     <input class="form-control" id="caseTweakMultiCost" type="number" min="0" step="1" />
                                 </div>
                                 <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakMultiXpReq">Multi-open level requirement</label>
                                     <input class="form-control" id="caseTweakMultiXpReq" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakSpeedBaseCost">Speed upgrade base cost (Stars)</label>
+                                    <input class="form-control" id="caseTweakSpeedBaseCost" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakSpeedCostIncrement">Speed upgrade cost increment (Stars)</label>
+                                    <input class="form-control" id="caseTweakSpeedCostIncrement" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakSpeedXpReq">Speed upgrade base level requirement</label>
+                                    <input class="form-control" id="caseTweakSpeedXpReq" type="number" min="0" step="1" />
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-semibold" for="caseTweakMaxSpeedLevel">Maximum speed level</label>
+                                    <input class="form-control" id="caseTweakMaxSpeedLevel" type="number" min="1" step="1" />
                                 </div>
                                 <div class="col-6 col-md-4 col-lg-3">
                                     <label class="form-label small fw-semibold" for="caseTweakMaxMultiLevel">Maximum multi-open level</label>
