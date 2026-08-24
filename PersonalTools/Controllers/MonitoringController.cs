@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.Monitoring;
 using PersonalTools.Entities.Monitoring;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
-[Authorize]
+[Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
 [ApiController]
 [Route("api/monitoring")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]

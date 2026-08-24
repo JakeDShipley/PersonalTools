@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.Tracker;
 using PersonalTools.Entities.Tracker;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
-[Authorize]
+[Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
 [ApiController]
 [Route("api/tracker")]
 public sealed class TrackerController : ControllerBase
@@ -156,6 +157,7 @@ public sealed class TrackerController : ControllerBase
     }
 
     [HttpGet("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<TrackerSettingsObj>> GetSettings()
     {
         try
@@ -170,6 +172,7 @@ public sealed class TrackerController : ControllerBase
     }
 
     [HttpPut("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<ApiResponse>> UpdateSettings([FromBody] TrackerSettingsRequest request)
     {
         try

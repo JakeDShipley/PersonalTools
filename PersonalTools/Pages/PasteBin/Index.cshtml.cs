@@ -1,8 +1,10 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
+using PersonalTools.Pages.Shared;
+using PersonalTools.Security;
 
 namespace PersonalTools.Pages.PasteBin;
 
-public sealed class IndexModel : PageModel
+public sealed class IndexModel : RoleRestrictedPageModel
 {
-    public void OnGet() { }
+    public IActionResult OnGet() => IsUserAllowedHere(AppRole.Admin) ? Page() : RedirectWhenUserIsNotAllowed();
 }

@@ -7,10 +7,12 @@ using PersonalTools.Classes.CSMatches;
 using PersonalTools.Entities.CSMatches;
 using PersonalTools.Classes.Tracker;
 using PersonalTools.Classes.PasteBin;
+using PersonalTools.Pages.Shared;
+using PersonalTools.Security;
 
 namespace PersonalTools.Pages.Settings;
 
-public sealed class IndexModel : PageModel
+public sealed class IndexModel : RoleRestrictedPageModel
 {
     private readonly IAuthFuncs _auth;
     private readonly ICSMatchReferenceData _referenceData;
@@ -49,10 +51,20 @@ public sealed class IndexModel : PageModel
     [BindProperty]
     public List<string> SelectedActiveDutyMaps { get; set; } = [];
 
-        private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    public async Task OnGet()
+    private bool IsUserAllowedHere()
     {
+        return base.IsUserAllowedHere(AppRole.Admin);
+    }
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        if (!IsUserAllowedHere())
+        {
+            return RedirectWhenUserIsNotAllowed();
+        }
+
         LinkedSteamId = (await _auth.GetUser(UserId))?.SteamId;
         AllMaps = await _referenceData.GetMaps();
         ActiveDutyPool = await _referenceData.GetActiveDutyPool();
@@ -60,10 +72,16 @@ public sealed class IndexModel : PageModel
         Settings = await _settings.Get(UserId);
         TrackerAutoCloseAfterDays = (await _tracker.GetSettings()).AutoCloseAfterDays;
         PasteBinMaximumUploadSizeMb = (await _pasteBin.GetPasteBinSettings()).MaximumUploadSizeMb;
+        return Page();
     }
 
     public async Task<IActionResult> OnPostUnlinkSteam()
     {
+        if (!IsUserAllowedHere())
+        {
+            return RedirectWhenUserIsNotAllowed();
+        }
+
         await _auth.UnlinkSteam(UserId);
         TempData["SuccessMessage"] = "Steam account unlinked.";
         return RedirectToPage();
@@ -71,6 +89,11 @@ public sealed class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostUpdateActiveDutyPool()
     {
+        if (!IsUserAllowedHere())
+        {
+            return RedirectWhenUserIsNotAllowed();
+        }
+
         await _referenceData.SetActiveDutyPool(SelectedActiveDutyMaps);
         TempData["SuccessMessage"] = "Active Duty map pool updated.";
         return RedirectToPage();

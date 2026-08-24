@@ -1,7 +1,9 @@
 @page
 @model PersonalTools.Pages.CaseOpening.IndexModel
+@using PersonalTools.Security
 @{
     ViewData["Title"] = "CS2 Case Simulator";
+    bool canManageCaseOpening = User.IsUserAllowedHere(AppRole.Admin);
 }
 
 @section Head {
@@ -36,9 +38,12 @@
             <span class="case-stars-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
             <strong id="caseStarsBalance" aria-live="polite">0</strong>
         </aside>
-        <button class="case-tweak-button shadow-sm" id="caseTweakButton" type="button" data-bs-toggle="modal" data-bs-target="#caseTweakModal" aria-label="Open variable tweak modal" title="Tweak variables (testing)">
-            <i class="fa-solid fa-wrench" aria-hidden="true"></i>
-        </button>
+        @if (canManageCaseOpening)
+        {
+            <button class="case-tweak-button shadow-sm" id="caseTweakButton" type="button" data-bs-toggle="modal" data-bs-target="#caseTweakModal" aria-label="Open variable tweak modal" title="Tweak variables (testing)">
+                <i class="fa-solid fa-wrench" aria-hidden="true"></i>
+            </button>
+        }
     </div>
 
     <div class="case-xp-bar section-spacing" id="caseXpBar" aria-live="polite">
@@ -824,6 +829,8 @@
     </div>
 </div>
 
+@if (canManageCaseOpening)
+{
 <div class="modal fade" id="caseTweakResetModal" tabindex="-1" aria-labelledby="caseTweakResetTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1030,6 +1037,7 @@
         </div>
     </div>
 </div>
+}
 
 @section Scripts {
     <script src="~/js/pages/page-case-opening.js" asp-append-version="true"></script>

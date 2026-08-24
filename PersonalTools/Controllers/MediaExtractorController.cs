@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Entities.MediaExtractor;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
-[Authorize]
+[Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
 [ApiController]
 [Route("api/media-extractor")]
 public sealed class MediaExtractorController : ControllerBase

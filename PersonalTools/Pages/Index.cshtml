@@ -1,7 +1,9 @@
 ﻿@page
 @model PersonalTools.Pages.IndexModel
+@using PersonalTools.Security
 @{
     ViewData["Title"] = "Dashboard";
+    bool canManageSystem = User.IsUserAllowedHere(AppRole.Admin);
 }
 
 @section Head {
@@ -50,6 +52,8 @@
         }
     </div>
 
+    @if (canManageSystem)
+    {
     <section class="trk-page trk-dashboard-section" aria-labelledby="trackerDashboardTitle">
         <div class="trk-dashboard-head">
             <span class="dashboard-tool-group-icon"><i class="fa-solid fa-bug" aria-hidden="true"></i></span>
@@ -68,6 +72,7 @@
         </div>
         <div class="trk-board" id="trackerDashboardBoard"></div>
     </section>
+    }
 
     <aside class="quick-links-float" aria-label="Quick links">
         <div class="collapse collapse-horizontal quick-links-panel-collapse" id="quickLinksPanel">

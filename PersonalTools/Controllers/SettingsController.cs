@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes;
 using PersonalTools.Entities;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
@@ -18,6 +19,13 @@ public sealed class SettingsController : ControllerBase
     [HttpPut]
     public async Task<ActionResult<ApiResponse>> Set([FromBody] AppSettingRequest request, CancellationToken cancellationToken)
     {
+        // Appearance and dashboard preferences remain per-user controls even though the full
+        // Settings page is administrator-only. Server secrets are never user-editable.
+        if (request.Key == AppSettingKey.SteamWebApiKey && !User.IsUserAllowedHere(AppRole.Admin))
+        {
+            return Forbid();
+        }
+
         try { await _settings.Set(UserId, request.Key, request.Value, cancellationToken); return Ok(new ApiResponse(true, "Setting saved.")); }
         catch (InvalidOperationException exception) { return BadRequest(new ApiResponse(false, exception.Message)); }
     }

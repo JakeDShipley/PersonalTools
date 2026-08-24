@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonalTools.Classes.Dashboard;
 using PersonalTools.Entities.Dashboard;
+using PersonalTools.Security;
 
 namespace PersonalTools.Pages
 {
@@ -17,7 +18,7 @@ namespace PersonalTools.Pages
 
         public void OnGet()
         {
-            Tools = _dashboardFuncs.GetDashboardTools();
+            Tools = _dashboardFuncs.GetDashboardTools(User.IsUserAllowedHere(AppRole.Admin));
         }
     }
 }

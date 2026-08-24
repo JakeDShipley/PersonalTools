@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Mapster;
 using PersonalTools.Data;
 using PersonalTools.Entities;
+using PersonalTools.Security;
 
 namespace PersonalTools.Classes;
 
@@ -17,6 +18,9 @@ public interface IAuthFuncs
     Task UnlinkSteam(Guid userId);
     Task<AppUser?> GetUser(Guid userId);
     Task ChangePassword(Guid userId, Guid sessionId, string currentPassword, string newPassword, string confirmPassword);
+    Task<List<AdminUserObj>> GetManagedUsers();
+    Task<AdminUserObj> CreateManagedUser(string email, string displayName, string password, string confirmPassword, AppRole role, bool isActive);
+    Task<AdminUserObj> UpdateManagedUser(Guid actingUserId, Guid userId, string email, string displayName, string? password, string? confirmPassword, AppRole role, bool isActive);
 }
 
 public sealed class AuthFuncs : IAuthFuncs
@@ -54,6 +58,49 @@ public sealed class AuthFuncs : IAuthFuncs
 
         await _data.ChangePassword(userId, sessionId, Hash(newPassword));
     }
+    public async Task<List<AdminUserObj>> GetManagedUsers() => (await _data.GetUsers()).Adapt<List<AdminUserObj>>();
+    public async Task<AdminUserObj> CreateManagedUser(string email, string displayName, string password, string confirmPassword, AppRole role, bool isActive)
+    {
+        ValidateRole(role);
+        ValidateProfile(email, displayName);
+        ValidateNewPassword(password, confirmPassword);
+        string normalisedEmail = email.Trim().ToLowerInvariant();
+        if (await _data.GetUserByEmail(normalisedEmail) is not null)
+            throw new InvalidOperationException("That email address is already registered.");
+
+        Guid userId = Guid.NewGuid();
+        await _data.CreateManagedUser(userId, normalisedEmail, displayName.Trim(), Hash(password), role, isActive);
+        return (await _data.GetUsers()).First(user => user.UserId == userId).Adapt<AdminUserObj>();
+    }
+    public async Task<AdminUserObj> UpdateManagedUser(Guid actingUserId, Guid userId, string email, string displayName, string? password, string? confirmPassword, AppRole role, bool isActive)
+    {
+        if (userId == Guid.Empty)
+            throw new InvalidOperationException("Choose a valid user account.");
+        ValidateRole(role);
+        ValidateProfile(email, displayName);
+        AppUser? existing = (await _data.GetUserById(userId))?.Adapt<AppUser>();
+        if (existing is null)
+            throw new InvalidOperationException("That user account no longer exists.");
+        if (userId == actingUserId && (role != existing.Role || !isActive))
+            throw new InvalidOperationException("You cannot remove or disable your own administrator access.");
+        if (existing.IsActive && existing.Role == AppRole.Admin && (!isActive || role != AppRole.Admin) && await _data.GetActiveAdminCount() <= 1)
+            throw new InvalidOperationException("At least one active administrator must remain.");
+
+        string normalisedEmail = email.Trim().ToLowerInvariant();
+        AppUserDbModel? emailOwner = await _data.GetUserByEmail(normalisedEmail);
+        if (emailOwner is not null && emailOwner.UserId != userId)
+            throw new InvalidOperationException("That email address is already registered.");
+
+        string? replacementHash = null;
+        if (!string.IsNullOrEmpty(password) || !string.IsNullOrEmpty(confirmPassword))
+        {
+            ValidateNewPassword(password ?? string.Empty, confirmPassword ?? string.Empty);
+            replacementHash = Hash(password!);
+        }
+
+        await _data.UpdateManagedUser(userId, normalisedEmail, displayName.Trim(), replacementHash, role, isActive);
+        return (await _data.GetUsers()).First(user => user.UserId == userId).Adapt<AdminUserObj>();
+    }
     private static string Hash(string password) { byte[] salt = RandomNumberGenerator.GetBytes(16); byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA512, 32); return $"PBKDF2-SHA512$600000${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}"; }
     private static bool Verify(string password, string stored)
     {
@@ -74,7 +121,16 @@ public sealed class AuthFuncs : IAuthFuncs
             return false;
         }
     }
-    private static void Validate(string email, string name, string password) { if (!System.Net.Mail.MailAddress.TryCreate(email, out _)) throw new InvalidOperationException("Enter a valid email address."); if (name.Trim().Length < 2) throw new InvalidOperationException("Enter a display name."); if (password.Length < 12) throw new InvalidOperationException("Use a password with at least 12 characters."); }
+    private static void Validate(string email, string name, string password) { ValidateProfile(email, name); if (password.Length < 12) throw new InvalidOperationException("Use a password with at least 12 characters."); }
+    private static void ValidateProfile(string email, string name)
+    {
+        if (!System.Net.Mail.MailAddress.TryCreate(email, out _)) throw new InvalidOperationException("Enter a valid email address.");
+        if (name.Trim().Length is < 2 or > 100) throw new InvalidOperationException("Enter a display name between 2 and 100 characters.");
+    }
+    private static void ValidateRole(AppRole role)
+    {
+        if (!Enum.IsDefined(role)) throw new InvalidOperationException("Choose a valid user role.");
+    }
     private static void ValidateNewPassword(string password, string confirmPassword)
     {
         if (password != confirmPassword) throw new InvalidOperationException("The new password and confirmation do not match.");

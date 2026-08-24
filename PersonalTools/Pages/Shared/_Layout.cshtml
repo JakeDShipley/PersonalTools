@@ -1,9 +1,11 @@
 @using System.Security.Claims
 @using PersonalTools.Classes
 @using PersonalTools.Entities
+@using PersonalTools.Security
 @inject IAppSettingsFuncs AppSettings
 @{
     bool showNavigation = User.Identity?.IsAuthenticated == true;
+    bool canManageSettings = User.IsUserAllowedHere(AppRole.Admin);
     string currentPath = Context.Request.Path.Value ?? "/";
     string ActivePage(string path, bool exact = false) =>
         (exact ? currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) : currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
@@ -117,9 +119,12 @@
                         <a class="app-sidebar-link cs-stats-sidebar-link @ActivePage("/CSStats")" asp-page="/CSStats/Index" title="CS2 Player Stats" data-sidebar-motion="stats">
                             <span class="app-nav-icon"><i class="fa-solid fa-chart-simple"></i></span><span class="sidebar-label">CS2 Player Stats</span><span class="cs-stats-nav-pulse" aria-hidden="true"></span>
                         </a>
+                        @if (canManageSettings)
+                        {
                         <a class="app-sidebar-link cs-demos-sidebar-link @ActivePage("/CSDemos")" asp-page="/CSDemos/Index" title="CS2 Demo Library" data-sidebar-motion="demos">
                             <span class="app-nav-icon"><i class="fa-solid fa-film"></i></span><span class="sidebar-label">CS2 Demo Library</span><span class="cs-demos-nav-tracer" aria-hidden="true"></span>
                         </a>
+                        }
                         <a class="app-sidebar-link sidebar-feature-link skins-sidebar-link @ActivePage("/Skins")" asp-page="/Skins/Index" title="CS2 Skin Tracker" data-sidebar-motion="skins">
                             <span class="app-nav-icon"><i class="fa-solid fa-gun"></i></span><span class="sidebar-label">CS2 Skin Tracker</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
@@ -129,16 +134,22 @@
                         <a class="app-sidebar-link sidebar-feature-link notes-sidebar-link @ActivePage("/Notes")" asp-page="/Notes/Index" title="Notes" data-sidebar-motion="notes">
                             <span class="app-nav-icon"><i class="fa-solid fa-note-sticky"></i></span><span class="sidebar-label">Notes</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
+                        @if (canManageSettings)
+                        {
                         <a class="app-sidebar-link sidebar-feature-link paste-bin-sidebar-link @ActivePage("/PasteBin") @ActivePage("/p/")" asp-page="/PasteBin/Index" title="Paste Bin" data-sidebar-motion="paste">
                             <span class="app-nav-icon"><i class="fa-regular fa-paste"></i></span><span class="sidebar-label">Paste Bin</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
+                        }
                     </div>
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">Media</span>
+                        @if (canManageSettings)
+                        {
                         <a class="app-sidebar-link sidebar-feature-link extractor-sidebar-link @ActivePage("/MediaExtractor")" asp-page="/MediaExtractor/Index" title="Media Extractor" data-sidebar-motion="extractor">
                             <span class="app-nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="sidebar-label">Media Extractor</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
+                        }
                         <a class="app-sidebar-link sidebar-feature-link audio-sidebar-link @ActivePage("/AudioStudio")" asp-page="/AudioStudio/Index" title="Audio Studio" data-sidebar-motion="audio">
                             <span class="app-nav-icon"><i class="fa-solid fa-wave-square"></i></span><span class="sidebar-label">Audio Studio</span><span class="sidebar-feature-signal" aria-hidden="true"></span>
                         </a>
@@ -153,7 +164,8 @@
 
                     <div class="app-nav-group">
                         <span class="app-nav-heading sidebar-label">System</span>
-
+                        @if (canManageSettings)
+                        {
                         <a class="app-sidebar-link sidebar-feature-link tracker-sidebar-link @ActivePage("/Tracker")"
                            asp-page="/Tracker/Index"
                            title="Bug/Feature Tracker"
@@ -175,6 +187,10 @@
                             <span class="sidebar-label">Logs Viewer</span>
                             <span class="system-nav-signal logs-viewer-nav-signal" aria-hidden="true"></span>
                         </a>
+                        <a class="app-sidebar-link @ActivePage("/Admin/Users")" asp-page="/Admin/Users/Index" title="User management">
+                            <span class="app-nav-icon"><i class="fa-solid fa-users-gear"></i></span><span class="sidebar-label">User management</span>
+                        </a>
+                        }
                     </div>
                 </nav>
 
@@ -185,9 +201,12 @@
                     <button class="app-utility-link theme-utility" type="button" data-theme-toggle aria-label="Switch theme" title="Switch theme" data-bs-toggle="tooltip" data-bs-placement="top">
                         <span class="app-nav-icon"><i class="fa-solid fa-moon" aria-hidden="true"></i></span>
                     </button>
-                    <a class="app-utility-link settings-utility @ActivePage("/Settings")" asp-page="/Settings/Index" aria-label="Settings" title="Settings" data-bs-toggle="tooltip" data-bs-placement="top">
-                        <span class="app-nav-icon"><i class="fa-solid fa-gear"></i></span>
-                    </a>
+                    @if (canManageSettings)
+                    {
+                        <a class="app-utility-link settings-utility @ActivePage("/Settings")" asp-page="/Settings/Index" aria-label="Settings" title="Settings" data-bs-toggle="tooltip" data-bs-placement="top">
+                            <span class="app-nav-icon"><i class="fa-solid fa-gear"></i></span>
+                        </a>
+                    }
                     <form method="post" asp-page="/Login" asp-page-handler="SignOut" class="js-signout-form">
                         <button class="app-utility-link signout-utility" type="submit" aria-label="Sign out" title="Sign out" data-bs-toggle="tooltip" data-bs-placement="top">
                             <span class="app-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>

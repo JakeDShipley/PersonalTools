@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.PasteBin;
 using PersonalTools.Entities.PasteBin;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
-[Authorize]
+[Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
 [ApiController]
 [Route("api/paste-bin")]
 public sealed class PasteBinController : ControllerBase
@@ -100,6 +101,7 @@ public sealed class PasteBinController : ControllerBase
     public Task<IActionResult> PreviewFile(string shortCode, CancellationToken cancellationToken) => ReturnFile(shortCode, preview: true, cancellationToken);
 
     [HttpGet("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<PasteBinSettingsDbModel>> GetPasteBinSettings(CancellationToken cancellationToken)
     {
         try { return Ok(await _pasteBin.GetPasteBinSettings(cancellationToken)); }
@@ -111,6 +113,7 @@ public sealed class PasteBinController : ControllerBase
     }
 
     [HttpPut("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<ApiResponse>> UpdatePasteBinSettings([FromBody] PasteBinSettingsRequest request, CancellationToken cancellationToken)
     {
         try

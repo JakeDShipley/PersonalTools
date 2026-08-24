@@ -4,12 +4,12 @@ namespace PersonalTools.Classes.Dashboard
 {
     public interface IDashboardFuncs
     {
-        List<DashboardToolObj> GetDashboardTools();
+        List<DashboardToolObj> GetDashboardTools(bool includeAdminTools);
     }
 
     public class DashboardFuncs : IDashboardFuncs
     {
-        public List<DashboardToolObj> GetDashboardTools()
+        public List<DashboardToolObj> GetDashboardTools(bool includeAdminTools)
         {
             return new List<DashboardToolObj>
             {
@@ -103,7 +103,7 @@ namespace PersonalTools.Classes.Dashboard
                     ButtonText = "Open",
                     Category = "Blits"
                 },
-            };
+            }.Where(tool => includeAdminTools || tool.PageUrl is not "/CSDemos" and not "/PasteBin" and not "/MediaExtractor").ToList();
         }
     }
 }

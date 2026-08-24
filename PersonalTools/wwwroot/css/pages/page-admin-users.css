@@ -1,0 +1,33 @@
+.admin-users-page { max-width:1320px; }
+.admin-users-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
+.admin-users-add { white-space:nowrap; }
+.admin-users-summary, .admin-users-directory, .admin-user-modal { border-color:var(--pt-line); background:var(--pt-surface); }
+.admin-users-stat { min-height:5.75rem; padding:1rem; border:1px solid var(--pt-line); border-radius:var(--pt-small-radius); background:color-mix(in srgb, var(--pt-canvas) 42%, var(--pt-surface)); display:flex; flex-direction:column; justify-content:space-between; gap:.45rem; }
+.admin-users-stat span, .admin-users-date { color:var(--app-muted); font-size:.82rem; }
+.admin-users-stat strong { font-size:1.55rem; line-height:1; }
+.admin-users-stat.is-loading strong { opacity:.35; }
+.admin-users-table-wrap { border:1px solid var(--pt-line); border-radius:var(--pt-small-radius); }
+.admin-users-table-wrap .table { --bs-table-bg:transparent; --bs-table-color:var(--pt-ink); --bs-table-border-color:var(--pt-line); }
+.admin-users-table-wrap thead th { color:var(--app-muted); font-size:.72rem; letter-spacing:.055em; text-transform:uppercase; font-weight:700; white-space:nowrap; }
+.admin-users-table-wrap tbody tr { transition:background-color .18s ease; }
+.admin-users-table-wrap tbody tr:hover { background:color-mix(in srgb, var(--pt-mint) 10%, transparent); }
+.admin-user-identity { display:flex; align-items:center; gap:.75rem; min-width:13rem; }
+.admin-user-identity > span:last-child { display:grid; gap:.15rem; }
+.admin-user-identity small { color:var(--app-muted); font-size:.8rem; overflow-wrap:anywhere; }
+.admin-user-avatar { inline-size:2.25rem; block-size:2.25rem; flex:0 0 auto; display:grid; place-items:center; border:1px solid var(--pt-line); border-radius:50%; background:color-mix(in srgb, var(--pt-mint) 22%, var(--pt-surface)); color:var(--pt-ink); font-weight:700; }
+.admin-user-avatar.is-admin { background:color-mix(in srgb, var(--pt-coral) 24%, var(--pt-surface)); border-color:color-mix(in srgb, var(--pt-coral) 52%, var(--pt-line)); }
+.admin-role-badge, .admin-status-badge { display:inline-flex; align-items:center; padding:.32rem .56rem; border:1px solid var(--pt-line); border-radius:var(--pt-pill-radius); font-size:.76rem; font-weight:700; line-height:1; }
+.admin-role-badge.is-admin { color:var(--pt-coral); border-color:color-mix(in srgb, var(--pt-coral) 48%, var(--pt-line)); background:color-mix(in srgb, var(--pt-coral) 12%, var(--pt-surface)); }
+.admin-role-badge.is-user { color:var(--pt-ink); background:color-mix(in srgb, var(--pt-mint) 12%, var(--pt-surface)); }
+.admin-status-badge.is-active { color:#167b58; border-color:color-mix(in srgb, #23a878 52%, var(--pt-line)); background:color-mix(in srgb, #23a878 12%, var(--pt-surface)); }
+:root[data-theme="dark"] .admin-status-badge.is-active { color:#6de5b5; }
+.admin-status-badge.is-disabled { color:var(--app-muted); background:color-mix(in srgb, var(--pt-ink) 6%, var(--pt-surface)); }
+.admin-users-directory .pagination .page-link { background:var(--pt-surface); border-color:var(--pt-line); color:var(--pt-ink); box-shadow:none; }
+.admin-users-directory .pagination .page-item.active .page-link { background:var(--bs-primary); border-color:var(--bs-primary); color:var(--pt-surface); }
+:root[data-app-theme="tactical"] .admin-users-directory .pagination .page-item.active .page-link { color:#101114; }
+.admin-user-modal-header { background:color-mix(in srgb, var(--pt-canvas) 54%, var(--pt-surface)); border-bottom-color:var(--pt-line); }
+.admin-user-modal-panel { padding:1rem; border:1px solid var(--pt-line); border-radius:var(--pt-small-radius); background:color-mix(in srgb, var(--pt-canvas) 38%, var(--pt-surface)); }
+.admin-user-active-switch { display:flex; align-items:flex-start; gap:.65rem; }
+.admin-user-active-switch small { display:block; color:var(--app-muted); margin-top:.1rem; }
+.admin-user-modal-section-icon { width:2rem; height:2rem; display:grid; place-items:center; border:1px solid var(--pt-line); border-radius:var(--pt-small-radius); color:var(--pt-coral); background:color-mix(in srgb, var(--pt-coral) 10%, var(--pt-surface)); }
+@media (max-width:575.98px) { .admin-users-hero { align-items:stretch; flex-direction:column; } .admin-users-add { width:100%; } .admin-users-table-wrap { border-inline:0; border-radius:0; } .admin-users-directory .card-body { padding-inline:.75rem !important; } }

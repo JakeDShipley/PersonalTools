@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PersonalTools.Pages.Shared;
+using PersonalTools.Security;
 using PersonalTools.Classes.MediaExtractor;
 using PersonalTools.Entities.MediaExtractor;
 using System.IO.Compression;
@@ -9,7 +11,7 @@ using System.IO;
 
 namespace PersonalTools.Pages.MediaExtractor
 {
-    public class IndexModel : PageModel
+    public class IndexModel : RoleRestrictedPageModel
     {
         private readonly IMediaExtractorFuncs _mediaExtractorFuncs;
 
@@ -25,6 +27,7 @@ namespace PersonalTools.Pages.MediaExtractor
 
         public async Task<IActionResult> OnPostParse()
         {
+            if (!IsUserAllowedHere(AppRole.Admin)) return RedirectWhenUserIsNotAllowed();
             MediaItems = await _mediaExtractorFuncs.Parse(SourceCode);
 
             return Page();
@@ -32,6 +35,7 @@ namespace PersonalTools.Pages.MediaExtractor
 
         public async Task<IActionResult> OnPostDownloadZip()
         {
+            if (!IsUserAllowedHere(AppRole.Admin)) return RedirectWhenUserIsNotAllowed();
             using var reader = new StreamReader(Request.Body);
             var json = await reader.ReadToEndAsync();
 
@@ -80,6 +84,7 @@ namespace PersonalTools.Pages.MediaExtractor
 
         public async Task<IActionResult> OnGetDownloadFile(string url)
         {
+            if (!IsUserAllowedHere(AppRole.Admin)) return RedirectWhenUserIsNotAllowed();
             if (string.IsNullOrWhiteSpace(url))
                 return BadRequest();
 
@@ -123,5 +128,6 @@ namespace PersonalTools.Pages.MediaExtractor
                 return BadRequest("Download failed");
             }
         }
+        public IActionResult OnGet() => IsUserAllowedHere(AppRole.Admin) ? Page() : RedirectWhenUserIsNotAllowed();
     }
 }

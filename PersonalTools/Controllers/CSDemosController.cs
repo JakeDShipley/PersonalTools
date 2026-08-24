@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.CSDemos;
 using PersonalTools.Entities;
 using PersonalTools.Entities.CSDemos;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
-[Authorize]
+[Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
 [ApiController]
 [Route("api/cs-demos")]
 public sealed class CSDemosController : ControllerBase

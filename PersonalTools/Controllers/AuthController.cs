@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes;
 using PersonalTools.Classes.CaseOpening;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
@@ -45,6 +46,7 @@ public sealed class AuthController : ControllerBase
                 new(ClaimTypes.NameIdentifier, user.UserId.ToString("D")),
                 new(ClaimTypes.Name, user.DisplayName),
                 new(ClaimTypes.Email, user.Email),
+                new(ClaimTypes.Role, user.Role.ToString()),
                 new("session_id", session.SessionId.ToString("D")),
             ];
             AuthenticationProperties properties = new()

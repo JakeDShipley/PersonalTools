@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalTools.Classes.CaseOpening;
 using PersonalTools.Entities;
 using PersonalTools.Entities.CaseOpening;
+using PersonalTools.Security;
 
 namespace PersonalTools.Controllers;
 
@@ -194,12 +195,14 @@ public sealed class CaseOpeningController : ControllerBase
     // ---------- Game settings + per-case settings (the variable-tweak modal's "Game settings" tab) ----------
 
     [HttpGet("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningGameSettingsObj>> GetGameSettings(CancellationToken cancellationToken)
     {
         return Execute(() => _caseOpening.GetGameSettings(cancellationToken), "load game settings", "all");
     }
 
     [HttpPut("settings")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningGameSettingsObj>> UpdateGameSettings(
         [FromBody] CaseOpeningGameSettingsObj request,
         CancellationToken cancellationToken)
@@ -208,12 +211,14 @@ public sealed class CaseOpeningController : ControllerBase
     }
 
     [HttpGet("settings/cases")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<List<CaseOpeningCaseSettingsObj>>> GetCaseSettings(CancellationToken cancellationToken)
     {
         return Execute(() => _caseOpening.GetCaseSettings(cancellationToken), "load case settings", "all");
     }
 
     [HttpPut("settings/cases/{caseKey}")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<ApiResponse>> UpdateCaseSettings(
         string caseKey,
         [FromBody] CaseOpeningCaseSettingsRequest request,
@@ -238,6 +243,7 @@ public sealed class CaseOpeningController : ControllerBase
     // ---------- Testing overrides for your own account (the variable-tweak modal's "Your progress" tab) ----------
 
     [HttpPut("dev/progress")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningProgressObj>> SetDevProgress(
         [FromBody] CaseOpeningDevProgressRequest request,
         CancellationToken cancellationToken)
@@ -246,6 +252,7 @@ public sealed class CaseOpeningController : ControllerBase
     }
 
     [HttpPut("dev/upgrades")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningProgressObj>> SetDevUpgrades(
         [FromBody] CaseOpeningDevUpgradesRequest request,
         CancellationToken cancellationToken)
@@ -257,6 +264,7 @@ public sealed class CaseOpeningController : ControllerBase
     }
 
     [HttpPut("dev/cases/{caseKey}")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningProgressObj>> SetDevCaseUnlock(
         string caseKey,
         [FromBody] CaseOpeningDevCaseUnlockRequest request,
@@ -266,6 +274,7 @@ public sealed class CaseOpeningController : ControllerBase
     }
 
     [HttpPost("dev/reset")]
+    [Authorize(Policy = AppAuthorizationPolicies.AdminOnly)]
     public Task<ActionResult<CaseOpeningProgressObj>> ResetDevProgress(CancellationToken cancellationToken)
     {
         return Execute(() => _caseOpening.ResetDevProgress(UserId, cancellationToken), "reset dev progress", "all");

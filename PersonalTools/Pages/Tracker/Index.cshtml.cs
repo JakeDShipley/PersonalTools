@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
+using PersonalTools.Pages.Shared;
+using PersonalTools.Security;
 
 namespace PersonalTools.Pages.Tracker
 {
-    public class IndexModel : PageModel
+    public class IndexModel : RoleRestrictedPageModel
     {
-        public void OnGet()
-        {
-        }
+        public IActionResult OnGet() => IsUserAllowedHere(AppRole.Admin) ? Page() : RedirectWhenUserIsNotAllowed();
     }
 }

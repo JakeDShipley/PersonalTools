@@ -103,10 +103,49 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         {
             string? userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
             string? sessionId = context.Principal?.FindFirstValue("session_id");
-            if (!Guid.TryParse(userId, out Guid id) || !Guid.TryParse(sessionId, out Guid parsedSessionId) || !await context.HttpContext.RequestServices.GetRequiredService<IAuthFuncs>().IsSessionValid(parsedSessionId, id)) context.RejectPrincipal();
+            IAuthFuncs auth = context.HttpContext.RequestServices.GetRequiredService<IAuthFuncs>();
+            if (!Guid.TryParse(userId, out Guid id) ||
+                !Guid.TryParse(sessionId, out Guid parsedSessionId) ||
+                !await auth.IsSessionValid(parsedSessionId, id))
+            {
+                context.RejectPrincipal();
+                return;
+            }
+
+            // Roles are refreshed alongside the server-side session check. A promotion or
+            // demotion therefore applies on the next request instead of waiting for a long-lived
+            // authentication cookie to expire.
+            PersonalTools.Entities.AppUser? user = await auth.GetUser(id);
+            if (user is null || !user.IsActive)
+            {
+                context.RejectPrincipal();
+                return;
+            }
+
+            ClaimsIdentity? identity = context.Principal?.Identity as ClaimsIdentity;
+            if (identity is null || string.Equals(identity.FindFirst(ClaimTypes.Role)?.Value, user.Role.ToString(), StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            Claim? roleClaim = identity.FindFirst(ClaimTypes.Role);
+            if (roleClaim is not null)
+            {
+                identity.RemoveClaim(roleClaim);
+            }
+
+            identity.AddClaim(new Claim(ClaimTypes.Role, user.Role.ToString()));
+            context.ReplacePrincipal(new ClaimsPrincipal(identity));
+            context.ShouldRenew = true;
         };
     });
-builder.Services.AddAuthorization(options => options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.AddPolicy(AppAuthorizationPolicies.AdminOnly, policy => policy.RequireRole(AppRole.Admin.ToString()));
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
