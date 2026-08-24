@@ -2020,9 +2020,12 @@ body {
 
 /* Application toasts */
 .app-toast-container {
+    bottom: 1rem;
     margin-top: .4rem;
     max-width: min(25rem, 100vw);
     pointer-events: none;
+    position: fixed;
+    right: 1rem;
     z-index: 2200;
 }
 
@@ -2041,7 +2044,25 @@ body {
     overflow: hidden;
     padding: .72rem .75rem .72rem 0;
     pointer-events: auto;
+    transform: translateX(1.2rem) scale(.98);
+    transition: opacity .2s ease, transform .22s cubic-bezier(.2, .8, .2, 1);
 }
+
+    /* This is deliberately independent of Bootstrap's .toast display rules. It means success
+       feedback stays visible even if a CDN component has not initialised yet. */
+    .app-toast.show {
+        display: grid;
+    }
+
+    .app-toast.is-visible {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    .app-toast.is-leaving {
+        opacity: 0;
+        transform: translateX(1.2rem) scale(.98);
+    }
 
     .app-toast + .app-toast {
         margin-top: .65rem;
@@ -2111,10 +2132,36 @@ body {
 
 @media (max-width: 575.98px) {
     .app-toast-container {
-        left: 0;
+        bottom: max(.75rem, env(safe-area-inset-bottom));
+        left: .75rem;
         max-width: none;
-        right: 0;
-        width: 100%;
+        right: .75rem;
+        width: auto;
+    }
+
+    .app-toast {
+        min-height: 4rem;
+        transform: translateY(.85rem) scale(.98);
+    }
+
+    .app-toast.is-visible {
+        transform: translateY(0) scale(1);
+    }
+
+    .app-toast.is-leaving {
+        transform: translateY(.85rem) scale(.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-toast {
+        transition: opacity .12s ease;
+        transform: none;
+    }
+
+    .app-toast.is-visible,
+    .app-toast.is-leaving {
+        transform: none;
     }
 }
 

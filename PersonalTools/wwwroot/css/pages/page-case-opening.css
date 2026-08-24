@@ -13,8 +13,8 @@
 /* The simulator destinations stay mounted while this compact shell changes which area is visible.
    That preserves filters and selections, while JavaScript can defer each area's heavier API calls
    until the user actually asks for them. */
-.case-bottom-nav { position:fixed; left:50%; bottom:max(.75rem,env(safe-area-inset-bottom)); z-index:1045; width:min(31rem,calc(100vw - 1.5rem)); pointer-events:none; transform:translateX(-50%); transition:opacity .18s ease,transform .22s ease; }
-.case-bottom-nav-shell { position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.25rem; overflow:hidden; padding:.35rem; border:1px solid color-mix(in srgb,var(--case-gold) 24%,var(--pt-line)); border-radius:calc(var(--pt-card-radius) + .15rem); background:color-mix(in srgb,var(--pt-surface) 91%,transparent); box-shadow:0 .8rem 2.4rem rgba(0,0,0,.26),inset 0 1px 0 color-mix(in srgb,#fff 9%,transparent); backdrop-filter:blur(18px) saturate(1.25); pointer-events:auto; isolation:isolate; }
+.case-bottom-nav { position:fixed; left:50%; bottom:max(.75rem,env(safe-area-inset-bottom)); z-index:1045; width:min(48rem,calc(100vw - 1.5rem)); pointer-events:none; transform:translateX(-50%); transition:opacity .18s ease,transform .22s ease; }
+.case-bottom-nav-shell { position:relative; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.25rem; overflow:hidden; padding:.35rem; border:1px solid color-mix(in srgb,var(--case-gold) 24%,var(--pt-line)); border-radius:calc(var(--pt-card-radius) + .15rem); background:color-mix(in srgb,var(--pt-surface) 91%,transparent); box-shadow:0 .8rem 2.4rem rgba(0,0,0,.26),inset 0 1px 0 color-mix(in srgb,#fff 9%,transparent); backdrop-filter:blur(18px) saturate(1.25); pointer-events:auto; isolation:isolate; }
 .case-bottom-nav-indicator { position:absolute; top:.35rem; bottom:.35rem; left:0; z-index:0; width:0; border:1px solid color-mix(in srgb,var(--case-gold) 58%,var(--pt-line)); border-radius:var(--pt-small-radius); background:linear-gradient(135deg,color-mix(in srgb,var(--case-gold) 19%,var(--pt-surface)),color-mix(in srgb,var(--case-purple) 10%,var(--pt-surface))); box-shadow:0 .25rem .8rem color-mix(in srgb,var(--case-gold) 14%,transparent),inset 0 0 1rem color-mix(in srgb,var(--case-gold) 7%,transparent); transform:translateX(0); }
 .case-bottom-nav-link { position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:.5rem; min-width:0; min-height:3rem; padding:.45rem .75rem; color:var(--pt-ink-soft); border:0; border-radius:var(--pt-small-radius); background:transparent; font-size:.82rem; font-weight:700; letter-spacing:.01em; touch-action:manipulation; transition:color .16s ease,background .16s ease; }
 .case-bottom-nav-link:hover { color:var(--pt-ink); background:color-mix(in srgb,var(--case-gold) 7%,transparent); }
@@ -46,7 +46,7 @@
 @media (min-width:992px) {
     .has-app-sidebar .case-bottom-nav { left:var(--pt-sidebar-width); right:0; display:flex; justify-content:center; width:auto; transform:none; transition:left .24s ease,opacity .18s ease,transform .22s ease; }
     .has-app-sidebar.app-sidebar-collapsed .case-bottom-nav { left:var(--pt-sidebar-compact-width); }
-    .has-app-sidebar .case-bottom-nav-shell { width:min(31rem,calc(100% - 1.5rem)); }
+    .has-app-sidebar .case-bottom-nav-shell { width:min(48rem,calc(100% - 1.5rem)); }
     .has-app-sidebar .case-bottom-nav.is-obscured { transform:translateY(1rem); }
 }
 
@@ -55,7 +55,7 @@
     .case-bottom-nav { bottom:max(.5rem,env(safe-area-inset-bottom)); width:calc(100vw - 1rem); }
     .case-bottom-nav-shell { gap:.15rem; padding:.3rem; }
     .case-bottom-nav-indicator { top:.3rem; bottom:.3rem; }
-    .case-bottom-nav-link { flex-direction:column; gap:.12rem; min-height:3.35rem; padding:.3rem .45rem; font-size:.68rem; }
+    .case-bottom-nav-link { flex-direction:column; gap:.12rem; min-height:3.35rem; padding:.3rem .25rem; font-size:.61rem; }
     .case-bottom-nav-icon { width:1.35rem; height:1.35rem; }
     .case-destination-loader { grid-template-columns:1fr; }
 }
@@ -346,11 +346,8 @@
 .case-selector-multiplier { color:var(--pt-ink-soft); font-size:.73rem; }
 .case-selector-owned { color:var(--pt-mint); font-size:.72rem; font-weight:750; letter-spacing:.02em; }
 .case-selector-owned.is-empty { color:var(--pt-ink-soft); }
-.case-shop { overflow:hidden; background:linear-gradient(135deg,color-mix(in srgb,var(--pt-surface) 92%,var(--case-gold)),var(--pt-surface)); }
+.case-shop,.case-upgrades-store { overflow:hidden; background:linear-gradient(135deg,color-mix(in srgb,var(--pt-surface) 92%,var(--case-gold)),var(--pt-surface)); }
 .case-shop-stars { display:inline-flex; align-items:center; gap:.4rem; padding:.42rem .7rem; border:1px solid color-mix(in srgb,var(--case-gold) 50%,var(--pt-line)); border-radius:999px; color:var(--case-gold); background:color-mix(in srgb,var(--pt-surface) 84%,var(--case-gold)); }
-.case-shop-tabs { gap:.35rem; }
-.case-shop-tabs .nav-link { color:var(--pt-ink-soft); border:1px solid var(--pt-line); }
-.case-shop-tabs .nav-link.active { color:#17120a; border-color:var(--case-gold); background:var(--case-gold); }
 .case-shop-case,.case-shop-row,.case-shop-storage { display:flex; align-items:center; justify-content:space-between; gap:1rem; height:100%; padding:.8rem; border:1px solid var(--pt-line); background:var(--pt-surface); }
 .case-shop-case { display:grid; grid-template-columns:58px minmax(0,1fr); align-content:start; cursor:default; }
 .case-shop-case img { width:58px; height:42px; object-fit:contain; }
@@ -358,16 +355,17 @@
 .case-shop-case-copy strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .case-shop-owned { color:var(--pt-mint); font-size:.75rem; font-weight:750; }
 .case-shop-locked { color:var(--pt-ink-soft); font-size:.75rem; }
-.case-shop-purchase { display:grid; grid-column:1/-1; grid-template-columns:minmax(7.5rem,.8fr) minmax(8.6rem,1.2fr); gap:.4rem; padding-top:.55rem; border-top:1px solid var(--pt-line); }
-.case-shop-quantity .form-control { min-width:0; max-width:none; color:var(--pt-ink); border-color:var(--pt-line); background:var(--pt-surface); font-weight:750; }
-.case-shop-quantity .btn { padding-inline:.55rem; }
-.case-shop-purchase > .js-shop-buy-case { white-space:nowrap; }
-.case-shop-unit-price { grid-column:1/-1; color:var(--pt-ink-soft); font-size:.65rem; text-align:right; }
+.case-shop-tier { width:max-content; padding:.1rem .4rem; color:var(--case-gold); border:1px solid color-mix(in srgb,var(--case-gold) 40%,var(--pt-line)); border-radius:999px; font-size:.62rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+.case-shop-purchase { display:flex; flex-wrap:wrap; grid-column:1/-1; gap:.35rem; padding-top:.55rem; border-top:1px solid var(--pt-line); }
+.case-shop-purchase > .js-shop-buy-case { flex:1 1 4.1rem; white-space:nowrap; }
+.case-shop-purchase > .case-shop-buy-max { flex-basis:5.3rem; }
+.case-shop-unit-price { flex:1 0 100%; color:var(--pt-ink-soft); font-size:.65rem; text-align:right; }
 .case-shop-case > .js-shop-unlock-case { grid-column:1/-1; justify-self:end; }
 .case-shop-storage { padding:1rem; }
 .case-shop-icon { display:inline-grid; place-items:center; width:2.45rem; height:2.45rem; margin-bottom:.6rem; color:var(--case-gold); border:1px solid color-mix(in srgb,var(--case-gold) 50%,var(--pt-line)); }
-:root[data-app-theme="tactical"] .case-shop,:root[data-app-theme="tactical"] .case-shop-case,:root[data-app-theme="tactical"] .case-shop-row,:root[data-app-theme="tactical"] .case-shop-storage,:root[data-app-theme="tactical"] .case-shop-icon,:root[data-app-theme="tactical"] .case-shop-stars,:root[data-app-theme="tactical"] .case-shop-purchase .btn,:root[data-app-theme="tactical"] .case-shop-purchase .form-control { border-radius:0; }
-@media (max-width:575.98px) { .case-shop-tabs .nav-link { font-size:.78rem; padding:.42rem .5rem; } .case-shop-case { grid-template-columns:46px minmax(0,1fr); align-items:flex-start; } .case-shop-case img { width:46px; } .case-shop-purchase { grid-template-columns:minmax(7rem,.85fr) minmax(8rem,1.15fr); } }
+.case-shop-empty { padding:2rem 1rem; color:var(--pt-ink-soft); border:1px dashed var(--pt-line); text-align:center; }
+:root[data-app-theme="tactical"] .case-shop,:root[data-app-theme="tactical"] .case-upgrades-store,:root[data-app-theme="tactical"] .case-shop-case,:root[data-app-theme="tactical"] .case-shop-row,:root[data-app-theme="tactical"] .case-shop-storage,:root[data-app-theme="tactical"] .case-shop-icon,:root[data-app-theme="tactical"] .case-shop-stars,:root[data-app-theme="tactical"] .case-shop-purchase .btn { border-radius:0; }
+@media (max-width:575.98px) { .case-shop-case { grid-template-columns:46px minmax(0,1fr); align-items:flex-start; } .case-shop-case img { width:46px; } .case-shop-purchase > .js-shop-buy-case { flex-basis:3.95rem; font-size:.73rem; padding-inline:.35rem; } }
 .case-selector-actions { display:flex; align-items:center; justify-content:flex-end; gap:.55rem; min-width:9.5rem; }
 .case-selector-tile:hover { border-color:var(--pt-mint); box-shadow:0 0 0 .16rem color-mix(in srgb,var(--pt-mint) 16%,transparent); }
 .case-selector-tile:has(input:checked) { border-color:var(--case-gold); background:color-mix(in srgb,var(--pt-surface) 91%,var(--case-gold)); box-shadow:0 0 0 .18rem color-mix(in srgb,var(--case-gold) 22%,transparent); }
@@ -474,6 +472,34 @@
 .case-trade-up-result-chances { display:flex; flex-wrap:wrap; justify-content:center; gap:.4rem; margin-top:1rem; }
 :root[data-app-theme="tactical"] .case-trade-up-intro,.case-trade-up-input,.case-trade-up-result-card { border-radius:0; }
 @media (max-width:575.98px) { .case-trade-up-slots { grid-template-columns:repeat(2,minmax(0,1fr)); } .case-trade-up-input img { height:2.7rem; } }
+
+/* The dedicated Trade Ups destination keeps touch selection separate from the dense inventory
+   table. Whole item cards are selectable; real buttons remain independently operable. */
+.case-trade-up-workspace-summary { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(15rem,.8fr); gap:1rem; padding:1rem; border:1px solid color-mix(in srgb,var(--case-purple) 38%,var(--pt-line)); border-radius:var(--pt-card-radius); background:color-mix(in srgb,var(--case-purple) 8%,var(--pt-surface)); }
+.case-trade-up-count { padding:.42rem .7rem; border:1px solid color-mix(in srgb,var(--case-gold) 45%,var(--pt-line)); border-radius:var(--pt-pill-radius); color:var(--pt-ink); background:color-mix(in srgb,var(--case-gold) 13%,var(--pt-surface)); font-size:.8rem; font-weight:700; }
+.case-trade-up-workspace-slots { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.45rem; }
+.case-trade-up-workspace-slot { min-height:5.6rem; padding:.35rem; overflow:hidden; border:1px dashed var(--pt-line); border-top:3px solid var(--pt-line); border-radius:var(--pt-small-radius); color:var(--app-muted); background:color-mix(in srgb,var(--pt-canvas) 60%,var(--pt-surface)); font-size:.75rem; }
+.case-trade-up-workspace-slot:not(.is-empty) { border-style:solid; cursor:pointer; }
+.case-trade-up-workspace-slot img { width:100%; height:3.5rem; object-fit:contain; }
+.case-trade-up-workspace-slot span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.64rem; font-weight:700; }
+.case-trade-up-workspace-copy { display:flex; flex-direction:column; justify-content:center; gap:.45rem; }
+.case-trade-up-workspace-copy > span { color:var(--app-muted); font-size:.84rem; }
+.case-trade-up-workspace-chances { display:flex; flex-wrap:wrap; gap:.35rem; }
+.case-trade-up-workspace-chances span { padding:.22rem .45rem; border:1px solid color-mix(in srgb,var(--case-gold) 38%,var(--pt-line)); border-radius:var(--pt-pill-radius); font-size:.72rem; }
+.case-trade-up-candidate { display:flex; min-height:9.4rem; height:100%; padding:.7rem; border:1px solid color-mix(in srgb,var(--rarity) 38%,var(--pt-line)); border-top:3px solid var(--rarity); border-radius:var(--pt-small-radius); background:color-mix(in srgb,var(--rarity) 7%,var(--pt-surface)); cursor:pointer; transition:border-color .16s ease,background-color .16s ease,box-shadow .16s ease; }
+.case-trade-up-candidate:hover,.case-trade-up-candidate:focus-visible { outline:0; border-color:var(--rarity); background:color-mix(in srgb,var(--rarity) 15%,var(--pt-surface)); box-shadow:inset 0 0 0 1px var(--rarity); }
+.case-trade-up-candidate.is-selected { background:color-mix(in srgb,var(--rarity) 21%,var(--pt-surface)); box-shadow:inset 0 0 0 2px var(--rarity); }
+.case-trade-up-candidate.is-ineligible { opacity:.42; cursor:not-allowed; }
+.case-trade-up-candidate img { width:43%; min-width:0; height:5.2rem; align-self:center; object-fit:contain; }
+.case-trade-up-candidate > div { display:flex; min-width:0; flex:1; flex-direction:column; justify-content:center; gap:.2rem; }
+.case-trade-up-candidate small { color:var(--rarity); font-size:.64rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.case-trade-up-candidate strong,.case-trade-up-candidate span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.case-trade-up-candidate strong { font-size:.78rem; }
+.case-trade-up-candidate span { color:var(--app-muted); font-size:.68rem; }
+.case-trade-up-mobile-action { position:sticky; bottom:calc(env(safe-area-inset-bottom) + 1rem); z-index:3; margin-top:1rem; padding:.75rem; border:1px solid var(--pt-line); border-radius:var(--pt-card-radius); background:color-mix(in srgb,var(--pt-surface) 92%,transparent); backdrop-filter:blur(10px); }
+.case-trade-up-workspace-result { margin-top:1rem; }
+:root[data-app-theme="tactical"] .case-trade-up-workspace-summary,.case-trade-up-workspace-slot,.case-trade-up-candidate,.case-trade-up-mobile-action { border-radius:0; }
+@media (max-width:767.98px) { .case-trade-up-workspace-summary { grid-template-columns:1fr; } .case-trade-up-workspace-slots { grid-template-columns:repeat(5,minmax(3.35rem,1fr)); overflow-x:auto; } .case-trade-up-workspace-slot { min-width:3.35rem; } .case-trade-up-candidate { min-height:8.7rem; flex-direction:column; } .case-trade-up-candidate img { width:100%; height:4.3rem; } }
 :root[data-app-theme="tactical"] .case-history-toolbar,
 :root[data-app-theme="tactical"] .case-history-table-wrap,
 :root[data-app-theme="tactical"] .case-history-tabs,

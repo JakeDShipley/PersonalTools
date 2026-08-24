@@ -51,25 +51,28 @@
 
             element.append(accent, icon, copy, close);
             container.appendChild(element);
-            window.requestAnimationFrame(() => window.personalToolsMotion?.pop(element, { fromScale: .96, fromOpacity: 0 }));
-
-            while (container.children.length > 4) container.firstElementChild?.remove();
             const delay = options.delay || (type === 'error' ? 6500 : 4300);
-            if (typeof window.bootstrap?.Toast === 'function') {
-                const instance = window.bootstrap.Toast.getOrCreateInstance(element, {
-                    animation: true,
-                    autohide: options.autohide !== false,
-                    delay
-                });
-                element.addEventListener('hidden.bs.toast', () => element.remove(), { once: true });
-                instance.show();
-                return instance;
+
+            // Do not depend on Bootstrap's internal toast lifecycle here. The application already
+            // has Bootstrap for components, but notifications are global feedback and need to be
+            // just as dependable as the CS killfeed if a component script is delayed or replaced.
+            // The CSS transition owns the short enter/exit animation, including reduced motion.
+            let removeTimer = null;
+            function dismiss() {
+                if (element.classList.contains('is-leaving')) return;
+                window.clearTimeout(removeTimer);
+                element.classList.remove('is-visible');
+                element.classList.add('is-leaving');
+                window.setTimeout(() => element.remove(), 220);
             }
 
-            // Notifications remain usable if the Bootstrap JavaScript CDN is briefly unavailable.
-            element.classList.add('show');
-            close.addEventListener('click', () => element.remove(), { once: true });
-            if (options.autohide !== false) window.setTimeout(() => element.remove(), delay);
+            close.addEventListener('click', dismiss, { once: true });
+            window.requestAnimationFrame(function () {
+                element.classList.add('show', 'is-visible');
+            });
+
+            while (container.children.length > 4) container.firstElementChild?.remove();
+            if (options.autohide !== false) removeTimer = window.setTimeout(dismiss, delay);
             return element;
         }
 

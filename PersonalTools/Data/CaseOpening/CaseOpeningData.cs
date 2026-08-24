@@ -36,7 +36,6 @@ public interface ICaseOpeningData
     Task<bool> ClaimCaseOpeningBotCycle(Guid userId, Guid botId, CancellationToken cancellationToken = default);
     Task<bool> CaseOpeningConditionExists(Guid userId, string sourceItemId, decimal floatValue, int patternSeed, CancellationToken cancellationToken = default);
     Task SaveCaseOpening(Guid userId, CaseOpeningHistoryDbModel opening, CancellationToken cancellationToken = default);
-    Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsDbModel> GetCaseOpeningStatistics(Guid userId, string caseKey, string targetRarityKey, CancellationToken cancellationToken = default);
     Task<CaseOpeningProgressDbModel?> AddCaseOpeningXp(Guid userId, int xpDelta, CancellationToken cancellationToken = default);
     Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default);
@@ -414,14 +413,6 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_float_value", opening.FloatValue ?? (object)DBNull.Value),
                 ("p_pattern_seed", opening.PatternSeed ?? (object)DBNull.Value),
                 ("p_estimated_price", opening.EstimatedPrice ?? (object)DBNull.Value)),
-            cancellationToken);
-    }
-
-    public async Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default)
-    {
-        await _database.ExecuteSP(
-            "sp_case_opening_history_clear",
-            Parameters(("p_user_id", userId)),
             cancellationToken);
     }
 

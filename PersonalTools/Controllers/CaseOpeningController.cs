@@ -177,21 +177,6 @@ public sealed class CaseOpeningController : ControllerBase
         return Execute(() => _caseOpening.OpenCases(UserId, caseKey, request?.Quantity ?? 1, cancellationToken), "open", caseKey);
     }
 
-    [HttpDelete("history")]
-    public async Task<ActionResult<ApiResponse>> ClearHistory(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _caseOpening.ClearCaseOpeningHistory(UserId, cancellationToken);
-            return Ok(new ApiResponse(true, "Case-opening history cleared."));
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Case-opening history clear failed for user {UserId}.", UserId);
-            return StatusCode(500, new ApiResponse(false, "Your case-opening history could not be cleared."));
-        }
-    }
-
     // ---------- Game settings + per-case settings (the variable-tweak modal's "Game settings" tab) ----------
 
     [HttpGet("settings")]

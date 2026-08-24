@@ -28,7 +28,6 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningSellResultObj> SellCaseOpeningInventory(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
     Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
-    Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
 
     // Game settings (global, shared) + per-case settings, for the variable-tweak modal.
@@ -917,11 +916,6 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             "rarity-sets-completed" => stats.CompletedRaritySets,
             _ => 0
         };
-    }
-
-    public Task ClearCaseOpeningHistory(Guid userId, CancellationToken cancellationToken = default)
-    {
-        return _data.ClearCaseOpeningHistory(userId, cancellationToken);
     }
 
     public Task<CaseOpeningGameSettingsObj> GetGameSettings(CancellationToken cancellationToken = default)
