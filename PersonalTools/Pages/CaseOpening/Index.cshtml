@@ -211,6 +211,24 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-12">
+                    <div class="case-auto-sell-panel mt-3" id="caseTradeUpUpgradePanel">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div>
+                                <p class="eyebrow mb-1">Inventory crafting</p>
+                                <h3 class="h6 mb-1">Auto trade-up</h3>
+                                <p class="small-muted mb-0" id="caseTradeUpUnlockDescription">Automatically fire Trade Up Contracts toward a target skin.</p>
+                            </div>
+                            <button class="btn btn-outline-warning btn-sm js-unlock-inventory-upgrade d-none" type="button" id="caseTradeUpUnlockButton"></button>
+                        </div>
+                        <div id="caseTradeUpUpgradeTiers" class="d-none">
+                            <div class="case-trade-up-upgrade-card">
+                                <div><h3 class="h6 mb-1">Recipe slots</h3><p class="small-muted mb-0" id="caseTradeUpSlotsDescription">Raise how many recipes you can have active at once.</p></div>
+                                <button class="btn btn-outline-warning btn-sm" type="button" id="caseTradeUpSlotsUpgradeButton">Add slot</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -627,6 +645,34 @@
         </div>
     </section>
 
+    <section class="card border-0 shadow-sm case-trade-up-recipes section-spacing d-none" data-case-destination-panel="tradeups" aria-labelledby="caseTradeUpRecipesTitle">
+        <div class="card-body p-3 p-lg-4">
+            <div class="mb-3">
+                <p class="eyebrow mb-1">Automation</p>
+                <h2 class="h4 mb-1" id="caseTradeUpRecipesTitle">Auto trade-up recipes</h2>
+                <p class="small-muted mb-0">Target a specific skin. Once ten matching inputs are ready the contract fires on its own, using the exact same odds as a manual Trade Up - match or not, the result waits here for you to collect.</p>
+            </div>
+
+            <div class="case-trade-up-locked-notice" id="caseTradeUpLockedNotice">
+                <p class="mb-0">Unlock <strong>Auto trade-up</strong> in the <a href="#" id="caseTradeUpLockedLink">Upgrades tab</a> to start creating recipes.</p>
+            </div>
+
+            <div id="caseTradeUpUnlockedContent" class="d-none">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <h3 class="h6 mb-0">Your recipes</h3>
+                    <span class="case-upgrade-card-metric" id="caseTradeUpRecipeSlotStatus"></span>
+                </div>
+                <div class="case-trade-up-recipe-grid mb-3" id="caseTradeUpRecipeGrid"></div>
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <h3 class="h6 mb-0">Held skins</h3>
+                    <span class="case-upgrade-card-metric" id="caseTradeUpHoldingStatus"></span>
+                </div>
+                <div class="case-trade-up-holding-grid" id="caseTradeUpHoldingGrid"></div>
+            </div>
+        </div>
+    </section>
+
     <section class="section-spacing case-history-section d-none" data-case-destination-panel="inventory" aria-labelledby="caseHistoryTitle">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
             <div>
@@ -914,6 +960,62 @@
             <div class="modal-body">
                 <div class="case-trade-up-result d-none" id="caseTradeUpResult" aria-live="polite"></div>
                 <p class="case-trade-up-dismiss-hint mb-0"><i class="fa-solid fa-computer-mouse me-1" aria-hidden="true"></i>Click anywhere to close. Select the skin image to view it in your inventory.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="caseTradeUpRecipeModal" tabindex="-1" aria-labelledby="caseTradeUpRecipeModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="caseTradeUpRecipeModalTitle">Create a recipe</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="caseTradeUpRecipeCreateFields">
+                    <div class="case-trade-up-recipe-builder mb-3">
+                        <label class="case-trade-up-recipe-field"><span>Case</span><select class="form-select form-select-sm" id="caseTradeUpRecipeCase"></select></label>
+                        <label class="case-trade-up-recipe-field"><span>Target skin</span><select class="form-select form-select-sm" id="caseTradeUpRecipeItem" disabled></select></label>
+                    </div>
+                    <div class="form-check form-switch case-trade-up-recipe-stattrak mb-3">
+                        <input class="form-check-input pt-switch" type="checkbox" id="caseTradeUpRecipeStatTrak" disabled />
+                        <label class="form-check-label small fw-semibold" for="caseTradeUpRecipeStatTrak">StatTrak™</label>
+                    </div>
+                    <div class="case-trade-up-recipe-wears mb-3">
+                        <span class="small-muted d-block mb-1">Accepted wears for a match (leave all unchecked to accept any):</span>
+                        <div class="case-trade-up-recipe-wear-options" id="caseTradeUpRecipeWearOptions"></div>
+                    </div>
+                </div>
+
+                <div id="caseTradeUpRecipeManageFields" class="d-none">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input pt-switch" type="checkbox" role="switch" id="caseTradeUpRecipeManageActive" />
+                        <label class="form-check-label small fw-semibold" for="caseTradeUpRecipeManageActive">Active</label>
+                    </div>
+                    <p class="small-muted mb-3" id="caseTradeUpRecipeManageMeta"></p>
+
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div>
+                            <strong class="d-block">Holding capacity</strong>
+                            <span class="small-muted" id="caseTradeUpModalHoldingStatus"></span>
+                        </div>
+                        <button class="btn btn-outline-warning btn-sm" type="button" id="caseTradeUpHoldingUpgradeButton">Add capacity</button>
+                    </div>
+                </div>
+
+                <div class="case-trade-up-recipe-preview d-none" id="caseTradeUpRecipePreview">
+                    <img id="caseTradeUpRecipePreviewImage" src="" alt="" referrerpolicy="no-referrer" />
+                    <div>
+                        <strong id="caseTradeUpRecipePreviewName"></strong>
+                        <span class="small-muted d-block" id="caseTradeUpRecipePreviewRarity"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="small-muted me-auto" id="caseTradeUpRecipeModalCost"></span>
+                <button type="button" class="btn btn-outline-danger d-none" id="caseTradeUpRecipeModalDelete">Delete recipe</button>
+                <button type="button" class="btn btn-warning" id="caseTradeUpRecipeModalSubmit" disabled>Create recipe</button>
             </div>
         </div>
     </div>

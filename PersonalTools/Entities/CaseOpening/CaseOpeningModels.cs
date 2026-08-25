@@ -279,6 +279,7 @@ public sealed class CaseOpeningGameSettingsObj
     public int StorageContainerCostIncrementStars { get; set; }
     public int StorageContainerSlots { get; set; }
     public int MaximumStorageContainers { get; set; }
+    public int TradeUpRecipeCostStars { get; set; }
 }
 
 public sealed class CaseOpeningCaseSettingsObj
@@ -341,6 +342,8 @@ public class CaseOpeningInventoryUpgradeDbModel
     public int BonusInventorySlots { get; set; }
     public bool AutoBuyUnlocked { get; set; }
     public int AutoBuyRuleSlots { get; set; } = 3;
+    public bool TradeUpRecipesUnlocked { get; set; }
+    public int TradeUpRecipeSlots { get; set; }
     public bool AutoSellCovertUnlocked { get; set; }
     public bool AutoSellCovertEnabled { get; set; }
     public bool AutoSellClassifiedUnlocked { get; set; }
@@ -356,6 +359,12 @@ public sealed class CaseOpeningInventoryUpgradeObj : CaseOpeningInventoryUpgrade
 {
     public int Stars { get; set; }
     public List<CaseOpeningUpgradeDefinitionObj> AvailableUpgrades { get; set; } = [];
+
+    // Recipe slots are a repeatable +1 purchase (like the bot speed upgrade) rather than a
+    // discrete-tier upgrade definition, so the cost is computed here instead of living in
+    // CaseOpeningUpgradeDefinitions. Zero means "not unlocked yet" or "already at maximum".
+    public int TradeUpRecipeSlotUpgradeCostStars { get; set; }
+    public int MaximumTradeUpRecipeSlots { get; set; }
 }
 
 public sealed class CaseOpeningUpgradeDefinitionObj
@@ -430,6 +439,10 @@ public sealed class CaseOpeningTradeUpResultObj
     public decimal AverageInputFloat { get; set; }
     public CaseOpeningHistoryObj Output { get; set; } = new();
     public List<CaseOpeningTradeUpSourceChanceObj> SourceChances { get; set; } = [];
+
+    // Set only when this contract was fired by an auto trade-up recipe rather than manually.
+    public Guid? RecipeId { get; set; }
+    public bool? IsMatch { get; set; }
 }
 
 public sealed class CaseOpeningTradeUpDbModel
@@ -441,6 +454,77 @@ public sealed class CaseOpeningTradeUpDbModel
     public Guid OutputOpeningId { get; set; }
     public string OutputCaseKey { get; set; } = string.Empty;
     public decimal AverageInputFloat { get; set; }
+}
+
+public class CaseOpeningTradeUpRecipeDbModel
+{
+    public Guid RecipeId { get; set; }
+    public string TargetCaseKey { get; set; } = string.Empty;
+    public string TargetSourceItemId { get; set; } = string.Empty;
+    public string TargetItemName { get; set; } = string.Empty;
+    public string TargetMarketHashName { get; set; } = string.Empty;
+    public string TargetImageUrl { get; set; } = string.Empty;
+    public string TargetRarityKey { get; set; } = string.Empty;
+    public string TargetRarityName { get; set; } = string.Empty;
+    public string TargetRarityColor { get; set; } = string.Empty;
+
+    // The rarity a recipe's ten inputs must share - one rung below TargetRarityKey on the trade-up
+    // ladder. Stored rather than recomputed so recipe matching never needs the ladder in SQL.
+    public string TargetInputRarityKey { get; set; } = string.Empty;
+    public bool TargetStatTrak { get; set; }
+
+    // Empty means "any wear counts as a match" - the roll itself is unaffected either way.
+    public List<string> TargetWears { get; set; } = [];
+    public bool IsActive { get; set; } = true;
+
+    // Each recipe holds its own outputs - the pool is not shared account-wide. A recipe with
+    // capacity 1 stops firing once it has one held item, even if every other recipe is empty.
+    public int HoldingCapacity { get; set; } = 1;
+    public DateTime CreatedUtc { get; set; }
+    public DateTime UpdatedUtc { get; set; }
+}
+
+public sealed class CaseOpeningTradeUpRecipeObj : CaseOpeningTradeUpRecipeDbModel
+{
+    public int HeldCount { get; set; }
+    public int EligibleInputCount { get; set; }
+}
+
+public sealed class CaseOpeningTradeUpRecipeRequestObj
+{
+    public string CaseKey { get; set; } = string.Empty;
+    public string SourceItemId { get; set; } = string.Empty;
+    public List<string> Wears { get; set; } = [];
+    public bool StatTrak { get; set; }
+}
+
+public sealed class CaseOpeningTradeUpRecipeActiveRequestObj
+{
+    public bool IsActive { get; set; }
+}
+
+public class CaseOpeningTradeUpHoldingDbModel : CaseOpeningHistoryObj
+{
+    public Guid HoldingId { get; set; }
+    public Guid RecipeId { get; set; }
+    public bool IsMatch { get; set; }
+    public string TargetItemName { get; set; } = string.Empty;
+}
+
+public sealed class CaseOpeningTradeUpHoldingObj : CaseOpeningTradeUpHoldingDbModel
+{
+}
+
+public sealed class CaseOpeningTradeUpRecipeSummaryObj
+{
+    public int UsedRecipeSlots { get; set; }
+
+    // Total held items across every recipe - each recipe's own capacity lives on
+    // CaseOpeningTradeUpRecipeObj.HoldingCapacity, since the pool is not shared account-wide.
+    public int UsedHoldingCount { get; set; }
+    public int RecipeCostStars { get; set; }
+    public List<CaseOpeningTradeUpRecipeObj> Recipes { get; set; } = [];
+    public List<CaseOpeningTradeUpHoldingObj> Holdings { get; set; } = [];
 }
 
 public class CaseOpeningBotServerDbModel

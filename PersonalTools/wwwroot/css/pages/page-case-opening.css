@@ -219,6 +219,37 @@ body:has(.case-opening-page) .form-switch .form-check-label { display:inline-fle
 .case-auto-buy-add-row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:.75rem; padding:.6rem .75rem; margin-bottom:.75rem; border:1px dashed var(--pt-line); border-radius:var(--pt-small-radius); }
 .case-auto-buy-add-row select { flex:1 1 160px; min-width:140px; }
 .case-auto-buy-add-row .btn:disabled { opacity:.4; filter:saturate(.35); cursor:not-allowed; }
+.case-trade-up-upgrade-card { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem .9rem; border:1px solid var(--pt-line); border-radius:var(--pt-small-radius); background:var(--pt-surface); }
+.case-trade-up-upgrade-card .btn:disabled { opacity:.55; filter:saturate(.4); cursor:not-allowed; }
+.case-trade-up-locked-notice { padding:.9rem 1rem; border:1px dashed var(--pt-line); border-radius:var(--pt-small-radius); background:color-mix(in srgb,var(--pt-surface) 96%,var(--case-blue)); color:var(--pt-ink-soft); font-size:.85rem; }
+.case-trade-up-recipe-builder { display:flex; flex-wrap:wrap; align-items:flex-end; gap:.75rem; }
+.case-trade-up-recipe-field { display:grid; flex:1 1 200px; min-width:160px; gap:.2rem; }
+.case-trade-up-recipe-field span { color:var(--pt-ink-soft); font-size:.6rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.case-trade-up-recipe-stattrak .form-check-label { padding-top:.1rem; }
+.case-trade-up-recipe-wear-options { display:flex; flex-wrap:wrap; gap:.5rem; }
+.case-trade-up-recipe-wear-option { display:flex; align-items:center; gap:.35rem; padding:.3rem .6rem; border:1px solid var(--pt-line); border-radius:999px; background:var(--pt-surface); font-size:.72rem; }
+.case-trade-up-recipe-preview { display:flex; align-items:center; gap:.75rem; padding:.6rem .75rem; margin-bottom:1rem; border:1px solid var(--pt-line); border-top:3px solid var(--rarity,var(--pt-line)); border-radius:var(--pt-small-radius); background:var(--pt-surface); }
+.case-trade-up-recipe-preview img { flex:0 0 3rem; width:3rem; height:2.25rem; object-fit:contain; }
+.case-trade-up-recipe-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr)); gap:.75rem; }
+.case-trade-up-recipe-card { position:relative; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--pt-line); border-top:3px solid var(--rarity,var(--pt-line)); border-radius:var(--pt-small-radius); background:color-mix(in srgb,var(--pt-surface) 94%,var(--rarity,transparent)); cursor:pointer; transition:border-color .2s ease,box-shadow .2s ease; }
+.case-trade-up-recipe-card:hover { border-color:var(--pt-mint); box-shadow:0 0 0 .16rem color-mix(in srgb,var(--pt-mint) 16%,transparent); }
+.case-trade-up-recipe-card img { width:100%; height:88px; padding:.6rem; object-fit:contain; }
+.case-trade-up-recipe-card-copy { display:grid; gap:.15rem; padding:0 .6rem .55rem; }
+.case-trade-up-recipe-card-copy strong { overflow:hidden; color:var(--pt-ink); font-size:.76rem; text-overflow:ellipsis; white-space:nowrap; }
+.case-trade-up-recipe-card-copy span { color:var(--pt-ink-soft); font-size:.66rem; }
+.case-trade-up-recipe-card.is-inactive { opacity:.55; }
+.case-trade-up-recipe-card.is-add { align-items:center; justify-content:center; min-height:9.5rem; border-style:dashed; background:transparent; color:var(--pt-ink-soft); font-size:.78rem; font-weight:650; gap:.35rem; }
+.case-trade-up-recipe-card.is-add i { font-size:1.3rem; }
+.case-trade-up-recipe-card.is-add.disabled { opacity:.5; cursor:not-allowed; }
+.case-trade-up-holding-grid { display:flex; flex-direction:column; gap:.55rem; }
+.case-trade-up-holding-row { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; padding:.6rem .75rem; border:1px solid var(--pt-line); border-top:3px solid var(--rarity,var(--pt-line)); border-radius:var(--pt-small-radius); background:var(--pt-surface); }
+.case-trade-up-holding-row img { flex:0 0 2.6rem; width:2.6rem; height:2rem; object-fit:contain; }
+.case-trade-up-holding-row-name { flex:1 1 160px; min-width:0; overflow:hidden; color:var(--pt-ink); font-size:.82rem; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.case-trade-up-holding-row-meta { flex:0 0 auto; color:var(--pt-ink-soft); font-size:.68rem; white-space:nowrap; }
+.case-trade-up-holding-row-badge { flex:0 0 auto; padding:.2rem .55rem; border-radius:999px; font-size:.65rem; font-weight:750; letter-spacing:.03em; text-transform:uppercase; }
+.case-trade-up-holding-row-badge.is-match { color:var(--bs-success); background:color-mix(in srgb,var(--bs-success) 18%,transparent); }
+.case-trade-up-holding-row-badge.is-unmatched { color:var(--pt-ink-soft); background:color-mix(in srgb,var(--pt-ink-soft) 16%,transparent); }
+.case-trade-up-holding-empty { padding:1.25rem; color:var(--pt-ink-soft); font-size:.82rem; text-align:center; }
 .case-auto-buy-row .js-auto-buy-remove { flex:0 0 auto; }
 .case-shop-row.is-unlocked { border-color:color-mix(in srgb,var(--bs-success) 55%,var(--pt-line)); }
 .case-bot-speed .progress { height:.35rem; background:color-mix(in srgb,var(--pt-surface) 82%,var(--pt-line)); }

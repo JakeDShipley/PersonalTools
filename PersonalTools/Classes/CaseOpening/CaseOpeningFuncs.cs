@@ -35,6 +35,14 @@ public interface ICaseOpeningFuncs
     Task<CaseOpeningAutoBuySummaryObj> DeleteCaseOpeningAutoBuyRule(Guid userId, string caseKey, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningCasePurchaseResultObj>> EvaluateCaseOpeningAutoBuyRules(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningTradeUpResultObj> CreateCaseOpeningTradeUp(Guid userId, List<Guid> openingIds, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> GetCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> CreateCaseOpeningTradeUpRecipe(Guid userId, CaseOpeningTradeUpRecipeRequestObj request, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> SetCaseOpeningTradeUpRecipeActive(Guid userId, Guid recipeId, bool isActive, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> DeleteCaseOpeningTradeUpRecipe(Guid userId, Guid recipeId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> CollectCaseOpeningTradeUpHolding(Guid userId, Guid holdingId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningInventoryUpgradeObj> UpgradeCaseOpeningTradeUpRecipeSlots(Guid userId, CancellationToken cancellationToken = default);
+    Task<CaseOpeningTradeUpRecipeSummaryObj> UpgradeCaseOpeningTradeUpRecipeHolding(Guid userId, Guid recipeId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningTradeUpResultObj>> EvaluateCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default);
     Task<CaseOpeningOpenBatchResultObj> OpenCases(Guid userId, string caseKey, int quantity, CancellationToken cancellationToken = default);
     Task<CaseOpeningStatisticsObj> GetCaseOpeningStatistics(Guid userId, string caseKey, CancellationToken cancellationToken = default);
 
@@ -61,6 +69,12 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
     private const int MaximumBotSpeedLevel = 20;
     private const int BotSpeedUpgradeBaseCost = 300;
     private const int BotSpeedUpgradeIncrement = 100;
+    private const int MaximumTradeUpRecipeSlots = 20;
+    private const int TradeUpSlotUpgradeBaseCost = 300;
+    private const int TradeUpSlotUpgradeIncrement = 75;
+    private const int MaximumTradeUpRecipeHoldingCapacity = 20;
+    private const int TradeUpHoldingUpgradeBaseCost = 250;
+    private const int TradeUpHoldingUpgradeIncrement = 50;
     private const string StarterCaseKey = "kilowatt";
 
     // Higher unlock tiers pay more when their simulated items are sold. This does not depend on
@@ -84,6 +98,13 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
         ["mil-spec"] = "restricted",
         ["restricted"] = "classified",
         ["classified"] = "covert"
+    };
+
+    // Names must match WearFromFloat's output exactly - these are compared against a recipe's
+    // accepted wears when a rolled output is checked for a match.
+    private static readonly HashSet<string> KnownWears = new(StringComparer.Ordinal)
+    {
+        "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"
     };
 
     private readonly ICaseOpeningReferenceData _referenceData;
@@ -543,6 +564,10 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             .Adapt<CaseOpeningInventoryUpgradeObj>();
         result.Stars = (await _data.GetCaseOpeningProgress(userId, cancellationToken)).Stars;
         result.AvailableUpgrades = await _data.GetCaseOpeningUpgradeDefinitions(userId, cancellationToken);
+        result.MaximumTradeUpRecipeSlots = MaximumTradeUpRecipeSlots;
+        result.TradeUpRecipeSlotUpgradeCostStars = result.TradeUpRecipesUnlocked && result.TradeUpRecipeSlots < MaximumTradeUpRecipeSlots
+            ? TradeUpSlotUpgradeBaseCost + (result.TradeUpRecipeSlots * TradeUpSlotUpgradeIncrement)
+            : 0;
         return result;
     }
 
@@ -573,6 +598,9 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             "inventory-slots-500" => "inventory-slots-250",
             "inventory-slots-1000" => "inventory-slots-500",
             "auto-buy-slots-10" => "auto-buy-slots-5",
+            "trade-up-holding-5" => "trade-up-unlock",
+            "trade-up-holding-10" => "trade-up-holding-5",
+            "trade-up-holding-20" => "trade-up-holding-10",
             _ => null
         };
         if (requiredUpgradeKey is not null && !definitions.Any(item =>
@@ -803,6 +831,22 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             throw new InvalidOperationException("Select exactly 10 eligible skins for a Trade Up Contract.");
         }
 
+        return await ExecuteTradeUpCore(userId, selectedIds, recipe: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Shared by manual Trade Up Contracts and auto trade-up recipes so both run through the exact
+    /// same random collection/item/float roll - an auto-fired contract never gets special odds.
+    /// When <paramref name="recipe"/> is set, the output's match against the recipe's target is
+    /// computed here and persisted atomically with the output row, so a fresh output is held
+    /// immediately and never briefly visible in normal inventory.
+    /// </summary>
+    private async Task<CaseOpeningTradeUpResultObj> ExecuteTradeUpCore(
+        Guid userId,
+        List<Guid> selectedIds,
+        CaseOpeningTradeUpRecipeDbModel? recipe,
+        CancellationToken cancellationToken)
+    {
         List<CaseOpeningHistoryDbModel> inventory = await _data.GetCaseOpeningHistory(userId, cancellationToken);
         List<CaseOpeningHistoryDbModel> inputs = inventory
             .Where(item => selectedIds.Contains(item.OpeningId))
@@ -892,7 +936,14 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             OutputCaseKey = output.CaseKey,
             AverageInputFloat = averageInputFloat
         };
-        await _data.ExecuteCaseOpeningTradeUp(userId, tradeUp, selectedIds, output, cancellationToken);
+        bool? isMatch = null;
+        if (recipe is not null)
+        {
+            bool wearMatches = recipe.TargetWears.Count == 0 || recipe.TargetWears.Contains(output.Wear);
+            isMatch = string.Equals(output.SourceItemId, recipe.TargetSourceItemId, StringComparison.Ordinal) && wearMatches;
+        }
+
+        await _data.ExecuteCaseOpeningTradeUp(userId, tradeUp, selectedIds, output, recipe?.RecipeId, isMatch, cancellationToken);
         await RecordPlayerActivity(userId, skinsObtained: 1, tradeUpsCompleted: 1, cancellationToken: cancellationToken);
         await RecordCollectionMilestones(userId, outputCase, cancellationToken);
         await EvaluateAchievements(userId, cancellationToken);
@@ -913,7 +964,235 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
                     InputCount = group.Count(),
                     Percentage = group.Count() * 10m
                 })
-                .ToList()
+                .ToList(),
+            RecipeId = recipe?.RecipeId,
+            IsMatch = isMatch
+        };
+    }
+
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> GetCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> CreateCaseOpeningTradeUpRecipe(
+        Guid userId,
+        CaseOpeningTradeUpRecipeRequestObj request,
+        CancellationToken cancellationToken = default)
+    {
+        string caseKey = string.IsNullOrWhiteSpace(request.CaseKey)
+            ? throw new InvalidOperationException("Choose a case for this recipe.")
+            : request.CaseKey.Trim();
+        string sourceItemId = string.IsNullOrWhiteSpace(request.SourceItemId)
+            ? throw new InvalidOperationException("Choose a target skin for this recipe.")
+            : request.SourceItemId.Trim();
+
+        List<string> unlockedCaseKeys = await _data.GetCaseOpeningUnlockedCases(userId, cancellationToken);
+        if (!unlockedCaseKeys.Contains(caseKey, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Unlock this case before targeting one of its skins.");
+        }
+
+        CaseOpeningCaseObj caseData = await _referenceData.GetCase(caseKey, cancellationToken);
+        CaseOpeningItemObj? targetItem = caseData.Items.FirstOrDefault(item =>
+            string.Equals(item.SourceItemId, sourceItemId, StringComparison.Ordinal) && !item.IsRareSpecial);
+        if (targetItem is null)
+        {
+            throw new InvalidOperationException("That skin is not available in the selected case.");
+        }
+
+        string? inputRarityKey = TradeUpRarityLadder
+            .FirstOrDefault(pair => string.Equals(pair.Value, targetItem.RarityKey, StringComparison.OrdinalIgnoreCase)).Key;
+        if (inputRarityKey is null)
+        {
+            throw new InvalidOperationException("Only Restricted, Classified or Covert skins have a valid Trade Up input tier.");
+        }
+
+        if (request.StatTrak && !targetItem.SupportsStatTrak)
+        {
+            throw new InvalidOperationException("That skin does not support StatTrak™.");
+        }
+
+        List<string> wears = (request.Wears ?? [])
+            .Where(wear => KnownWears.Contains(wear))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        if (!upgrades.TradeUpRecipesUnlocked)
+        {
+            throw new InvalidOperationException("Unlock Auto trade-up in the Upgrades tab first.");
+        }
+
+        CaseOpeningTradeUpRecipeDbModel recipe = new()
+        {
+            RecipeId = Guid.NewGuid(),
+            TargetCaseKey = caseData.CaseKey,
+            TargetSourceItemId = targetItem.SourceItemId,
+            TargetItemName = targetItem.Name,
+            TargetMarketHashName = targetItem.MarketHashName,
+            TargetImageUrl = targetItem.ImageUrl,
+            TargetRarityKey = targetItem.RarityKey,
+            TargetRarityName = targetItem.RarityName,
+            TargetRarityColor = targetItem.RarityColor,
+            TargetInputRarityKey = inputRarityKey,
+            TargetStatTrak = request.StatTrak,
+            TargetWears = wears
+        };
+
+        await _data.CreateCaseOpeningTradeUpRecipe(userId, recipe, settings.TradeUpRecipeCostStars, upgrades.TradeUpRecipeSlots, cancellationToken);
+        await RecordPlayerActivity(userId, unlocksEarned: 1, cancellationToken: cancellationToken);
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> SetCaseOpeningTradeUpRecipeActive(
+        Guid userId,
+        Guid recipeId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        await _data.SetCaseOpeningTradeUpRecipeActive(userId, recipeId, isActive, upgrades.TradeUpRecipeSlots, cancellationToken);
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> DeleteCaseOpeningTradeUpRecipe(
+        Guid userId,
+        Guid recipeId,
+        CancellationToken cancellationToken = default)
+    {
+        await _data.DeleteCaseOpeningTradeUpRecipe(userId, recipeId, cancellationToken);
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> CollectCaseOpeningTradeUpHolding(
+        Guid userId,
+        Guid holdingId,
+        CancellationToken cancellationToken = default)
+    {
+        await _data.CollectCaseOpeningTradeUpHolding(userId, holdingId, cancellationToken);
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fires at most one contract per active recipe per call, oldest recipe first. Each recipe's
+    /// held-item pool is its own - a recipe already at its own HoldingCapacity is skipped even
+    /// while every other recipe still has room, since the pool is not shared account-wide.
+    /// A recipe with fewer than 10 eligible un-held inputs is silently skipped - it just waits for
+    /// the next poll.
+    /// </summary>
+    public async Task<List<CaseOpeningTradeUpResultObj>> EvaluateCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default)
+    {
+        List<CaseOpeningTradeUpRecipeObj> recipes = (await _data.GetCaseOpeningTradeUpRecipes(userId, cancellationToken))
+            .Where(recipe => recipe.IsActive && recipe.HeldCount < recipe.HoldingCapacity)
+            .OrderBy(recipe => recipe.CreatedUtc)
+            .ToList();
+        if (recipes.Count == 0)
+        {
+            return [];
+        }
+
+        List<CaseOpeningHistoryDbModel> inventory = await _data.GetCaseOpeningHistory(userId, cancellationToken);
+        List<CaseOpeningTradeUpResultObj> fired = [];
+
+        foreach (CaseOpeningTradeUpRecipeObj recipe in recipes)
+        {
+            List<CaseOpeningHistoryDbModel> matchingInputs = inventory
+                .Where(item => string.Equals(item.CaseKey, recipe.TargetCaseKey, StringComparison.OrdinalIgnoreCase)
+                    && item.RarityKey == recipe.TargetInputRarityKey
+                    && !item.IsRareSpecial
+                    && item.IsStatTrak == recipe.TargetStatTrak
+                    && item.FloatValue is not null)
+                .OrderBy(item => item.OpenedUtc)
+                .Take(10)
+                .ToList();
+            if (matchingInputs.Count < 10)
+            {
+                continue;
+            }
+
+            try
+            {
+                CaseOpeningTradeUpResultObj result = await ExecuteTradeUpCore(
+                    userId,
+                    matchingInputs.Select(item => item.OpeningId).ToList(),
+                    recipe,
+                    cancellationToken);
+                fired.Add(result);
+
+                HashSet<Guid> consumedIds = matchingInputs.Select(item => item.OpeningId).ToHashSet();
+                inventory = inventory.Where(item => !consumedIds.Contains(item.OpeningId)).ToList();
+            }
+            catch (InvalidOperationException)
+            {
+                // Inventory changed since the snapshot (another recipe or a manual sale claimed one
+                // of these items first) - skip this recipe, it gets another chance next poll.
+            }
+        }
+
+        return fired;
+    }
+
+    /// <summary>
+    /// Recipe slots are a repeatable +1 purchase, not a discrete-tier upgrade - mirrors the bot
+    /// speed upgrade pattern (UpgradeCaseOpeningBotServer) rather than the auto-buy/inventory-slots
+    /// tiered-definition pattern, so buying "the first upgrade" only ever grants exactly one slot.
+    /// </summary>
+    public async Task<CaseOpeningInventoryUpgradeObj> UpgradeCaseOpeningTradeUpRecipeSlots(Guid userId, CancellationToken cancellationToken = default)
+    {
+        CaseOpeningInventoryUpgradeDbModel upgrades = await _data.GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+        if (!upgrades.TradeUpRecipesUnlocked)
+        {
+            throw new InvalidOperationException("Unlock Auto trade-up in the Upgrades tab first.");
+        }
+        if (upgrades.TradeUpRecipeSlots >= MaximumTradeUpRecipeSlots)
+        {
+            throw new InvalidOperationException("Auto trade-up recipe slots are already at maximum.");
+        }
+
+        int cost = TradeUpSlotUpgradeBaseCost + (upgrades.TradeUpRecipeSlots * TradeUpSlotUpgradeIncrement);
+        await _data.UpgradeCaseOpeningTradeUpRecipeSlots(userId, cost, MaximumTradeUpRecipeSlots, cancellationToken);
+        return await GetCaseOpeningInventoryUpgrades(userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Holding capacity is a repeatable +1 purchase scoped to one recipe - the pool is not shared
+    /// account-wide, so this only ever raises the ceiling for the recipe the player is looking at.
+    /// </summary>
+    public async Task<CaseOpeningTradeUpRecipeSummaryObj> UpgradeCaseOpeningTradeUpRecipeHolding(
+        Guid userId,
+        Guid recipeId,
+        CancellationToken cancellationToken = default)
+    {
+        List<CaseOpeningTradeUpRecipeObj> recipes = await _data.GetCaseOpeningTradeUpRecipes(userId, cancellationToken);
+        CaseOpeningTradeUpRecipeObj? recipe = recipes.FirstOrDefault(item => item.RecipeId == recipeId);
+        if (recipe is null)
+        {
+            throw new InvalidOperationException("That recipe could not be found.");
+        }
+        if (recipe.HoldingCapacity >= MaximumTradeUpRecipeHoldingCapacity)
+        {
+            throw new InvalidOperationException("This recipe's holding capacity is already at maximum.");
+        }
+
+        int cost = TradeUpHoldingUpgradeBaseCost + (recipe.HoldingCapacity * TradeUpHoldingUpgradeIncrement);
+        await _data.UpgradeCaseOpeningTradeUpRecipeHolding(userId, recipeId, cost, MaximumTradeUpRecipeHoldingCapacity, cancellationToken);
+        return await BuildTradeUpRecipeSummary(userId, cancellationToken);
+    }
+
+    private async Task<CaseOpeningTradeUpRecipeSummaryObj> BuildTradeUpRecipeSummary(Guid userId, CancellationToken cancellationToken)
+    {
+        List<CaseOpeningTradeUpRecipeObj> recipes = await _data.GetCaseOpeningTradeUpRecipes(userId, cancellationToken);
+        List<CaseOpeningTradeUpHoldingObj> holdings = await _data.GetCaseOpeningTradeUpHoldings(userId, cancellationToken);
+        CaseOpeningGameSettingsObj settings = await _data.GetGameSettings(cancellationToken);
+        return new CaseOpeningTradeUpRecipeSummaryObj
+        {
+            UsedRecipeSlots = recipes.Count(recipe => recipe.IsActive),
+            UsedHoldingCount = holdings.Count,
+            RecipeCostStars = settings.TradeUpRecipeCostStars,
+            Recipes = recipes,
+            Holdings = holdings
         };
     }
 
@@ -1653,7 +1932,8 @@ public sealed class CaseOpeningFuncs : ICaseOpeningFuncs
             || settings.OpenSpeedUpgradeXpRequirement < 0
             || settings.BotServerBaseCostStars < 0 || settings.BotServerCostIncrementStars < 0
             || settings.BotBaseCostStars < 0 || settings.StorageContainerBaseCostStars < 0
-            || settings.StorageContainerCostIncrementStars < 0 || settings.StorageContainerSlots < 1)
+            || settings.StorageContainerCostIncrementStars < 0 || settings.StorageContainerSlots < 1
+            || settings.TradeUpRecipeCostStars < 0)
         {
             throw new InvalidOperationException("Costs and XP requirements cannot be negative.");
         }

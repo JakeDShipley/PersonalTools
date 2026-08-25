@@ -35,7 +35,17 @@ public interface ICaseOpeningData
         CaseOpeningTradeUpDbModel tradeUp,
         List<Guid> openingIds,
         CaseOpeningHistoryDbModel output,
+        Guid? recipeId,
+        bool? isMatch,
         CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningTradeUpRecipeObj>> GetCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default);
+    Task CreateCaseOpeningTradeUpRecipe(Guid userId, CaseOpeningTradeUpRecipeDbModel recipe, int cost, int recipeSlotCap, CancellationToken cancellationToken = default);
+    Task SetCaseOpeningTradeUpRecipeActive(Guid userId, Guid recipeId, bool isActive, int recipeSlotCap, CancellationToken cancellationToken = default);
+    Task DeleteCaseOpeningTradeUpRecipe(Guid userId, Guid recipeId, CancellationToken cancellationToken = default);
+    Task<List<CaseOpeningTradeUpHoldingObj>> GetCaseOpeningTradeUpHoldings(Guid userId, CancellationToken cancellationToken = default);
+    Task CollectCaseOpeningTradeUpHolding(Guid userId, Guid holdingId, CancellationToken cancellationToken = default);
+    Task UpgradeCaseOpeningTradeUpRecipeSlots(Guid userId, int cost, int maximumSlots, CancellationToken cancellationToken = default);
+    Task UpgradeCaseOpeningTradeUpRecipeHolding(Guid userId, Guid recipeId, int cost, int maximumCapacity, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotServerDbModel>> GetCaseOpeningBotServers(Guid userId, CancellationToken cancellationToken = default);
     Task<List<CaseOpeningBotDbModel>> GetCaseOpeningBots(Guid userId, CancellationToken cancellationToken = default);
     Task PurchaseCaseOpeningBotServer(Guid userId, Guid serverId, int cost, CancellationToken cancellationToken = default);
@@ -292,6 +302,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
         CaseOpeningTradeUpDbModel tradeUp,
         List<Guid> openingIds,
         CaseOpeningHistoryDbModel output,
+        Guid? recipeId,
+        bool? isMatch,
         CancellationToken cancellationToken = default)
     {
         return _database.ExecuteSP(
@@ -324,7 +336,84 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_output_float_value", output.FloatValue ?? (object)DBNull.Value),
                 ("p_output_pattern_seed", output.PatternSeed ?? (object)DBNull.Value),
                 ("p_output_estimated_price", output.EstimatedPrice ?? (object)DBNull.Value),
-                ("p_average_input_float", tradeUp.AverageInputFloat)),
+                ("p_average_input_float", tradeUp.AverageInputFloat),
+                ("p_recipe_id", recipeId.HasValue ? recipeId.Value : (object)DBNull.Value),
+                ("p_is_match", isMatch.HasValue ? isMatch.Value : (object)DBNull.Value)),
+            cancellationToken);
+    }
+
+    public Task<List<CaseOpeningTradeUpRecipeObj>> GetCaseOpeningTradeUpRecipes(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_trade_up_recipes_get", ReadTradeUpRecipe,
+            Parameters(("p_user_id", userId)), cancellationToken);
+    }
+
+    public Task CreateCaseOpeningTradeUpRecipe(Guid userId, CaseOpeningTradeUpRecipeDbModel recipe, int cost, int recipeSlotCap, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_recipe_create",
+            Parameters(
+                ("p_user_id", userId),
+                ("p_recipe_id", recipe.RecipeId),
+                ("p_target_case_key", recipe.TargetCaseKey),
+                ("p_target_source_item_id", recipe.TargetSourceItemId),
+                ("p_target_item_name", recipe.TargetItemName),
+                ("p_target_market_hash_name", recipe.TargetMarketHashName),
+                ("p_target_image_url", recipe.TargetImageUrl),
+                ("p_target_rarity_key", recipe.TargetRarityKey),
+                ("p_target_rarity_name", recipe.TargetRarityName),
+                ("p_target_rarity_color", recipe.TargetRarityColor),
+                ("p_target_input_rarity_key", recipe.TargetInputRarityKey),
+                ("p_target_stat_trak", recipe.TargetStatTrak),
+                ("p_target_wears", JsonSerializer.Serialize(recipe.TargetWears)),
+                ("p_cost", cost),
+                ("p_recipe_slot_cap", recipeSlotCap)),
+            cancellationToken);
+    }
+
+    public Task SetCaseOpeningTradeUpRecipeActive(Guid userId, Guid recipeId, bool isActive, int recipeSlotCap, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_recipe_set_active",
+            Parameters(("p_user_id", userId), ("p_recipe_id", recipeId), ("p_is_active", isActive), ("p_recipe_slot_cap", recipeSlotCap)),
+            cancellationToken);
+    }
+
+    public Task DeleteCaseOpeningTradeUpRecipe(Guid userId, Guid recipeId, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_recipe_delete",
+            Parameters(("p_user_id", userId), ("p_recipe_id", recipeId)),
+            cancellationToken);
+    }
+
+    public Task<List<CaseOpeningTradeUpHoldingObj>> GetCaseOpeningTradeUpHoldings(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return _database.GetBulkDataSP("sp_case_opening_trade_up_holdings_get", ReadTradeUpHolding,
+            Parameters(("p_user_id", userId)), cancellationToken);
+    }
+
+    public Task CollectCaseOpeningTradeUpHolding(Guid userId, Guid holdingId, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_holding_collect",
+            Parameters(("p_user_id", userId), ("p_holding_id", holdingId)),
+            cancellationToken);
+    }
+
+    public Task UpgradeCaseOpeningTradeUpRecipeSlots(Guid userId, int cost, int maximumSlots, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_recipe_slot_upgrade",
+            Parameters(("p_user_id", userId), ("p_cost", cost), ("p_maximum_slots", maximumSlots)),
+            cancellationToken);
+    }
+
+    public Task UpgradeCaseOpeningTradeUpRecipeHolding(Guid userId, Guid recipeId, int cost, int maximumCapacity, CancellationToken cancellationToken = default)
+    {
+        return _database.ExecuteSP(
+            "sp_case_opening_trade_up_recipe_holding_upgrade",
+            Parameters(("p_user_id", userId), ("p_recipe_id", recipeId), ("p_cost", cost), ("p_maximum_capacity", maximumCapacity)),
             cancellationToken);
     }
 
@@ -492,7 +581,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
                 ("p_storage_container_base_cost_stars", settings.StorageContainerBaseCostStars),
                 ("p_storage_container_cost_increment_stars", settings.StorageContainerCostIncrementStars),
                 ("p_storage_container_slots", settings.StorageContainerSlots),
-                ("p_maximum_storage_containers", settings.MaximumStorageContainers)),
+                ("p_maximum_storage_containers", settings.MaximumStorageContainers),
+                ("p_trade_up_recipe_cost_stars", settings.TradeUpRecipeCostStars)),
             cancellationToken);
     }
 
@@ -788,7 +878,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
             StorageContainerBaseCostStars = reader.GetInt32("StorageContainerBaseCostStars"),
             StorageContainerCostIncrementStars = reader.GetInt32("StorageContainerCostIncrementStars"),
             StorageContainerSlots = reader.GetInt32("StorageContainerSlots"),
-            MaximumStorageContainers = reader.GetInt32("MaximumStorageContainers")
+            MaximumStorageContainers = reader.GetInt32("MaximumStorageContainers"),
+            TradeUpRecipeCostStars = reader.GetInt32("TradeUpRecipeCostStars")
         };
     }
 
@@ -857,6 +948,8 @@ public sealed class CaseOpeningData : ICaseOpeningData
             UserId = reader.GetGuid("UserId"), BulkSellLimit = reader.GetInt32("BulkSellLimit"),
             BonusInventorySlots = reader.GetInt32("BonusInventorySlots"),
             AutoBuyUnlocked = reader.GetBoolean("AutoBuyUnlocked"), AutoBuyRuleSlots = reader.GetInt32("AutoBuyRuleSlots"),
+            TradeUpRecipesUnlocked = reader.GetBoolean("TradeUpRecipesUnlocked"),
+            TradeUpRecipeSlots = reader.GetInt32("TradeUpRecipeSlots"),
             AutoSellCovertUnlocked = reader.GetBoolean("AutoSellCovertUnlocked"), AutoSellCovertEnabled = reader.GetBoolean("AutoSellCovertEnabled"),
             AutoSellClassifiedUnlocked = reader.GetBoolean("AutoSellClassifiedUnlocked"), AutoSellClassifiedEnabled = reader.GetBoolean("AutoSellClassifiedEnabled"),
             AutoSellRestrictedUnlocked = reader.GetBoolean("AutoSellRestrictedUnlocked"), AutoSellRestrictedEnabled = reader.GetBoolean("AutoSellRestrictedEnabled"),
@@ -875,6 +968,66 @@ public sealed class CaseOpeningData : ICaseOpeningData
             IsEnabled = reader.GetBoolean("IsEnabled"),
             CreatedUtc = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc),
             UpdatedUtc = DateTime.SpecifyKind(reader.GetDateTime("UpdatedUtc"), DateTimeKind.Utc)
+        };
+    }
+
+    private static CaseOpeningTradeUpRecipeObj ReadTradeUpRecipe(MySqlDataReader reader)
+    {
+        return new CaseOpeningTradeUpRecipeObj
+        {
+            RecipeId = reader.GetGuid("RecipeId"),
+            TargetCaseKey = reader.GetString("TargetCaseKey"),
+            TargetSourceItemId = reader.GetString("TargetSourceItemId"),
+            TargetItemName = reader.GetString("TargetItemName"),
+            TargetMarketHashName = reader.GetString("TargetMarketHashName"),
+            TargetImageUrl = reader.GetString("TargetImageUrl"),
+            TargetRarityKey = reader.GetString("TargetRarityKey"),
+            TargetRarityName = reader.GetString("TargetRarityName"),
+            TargetRarityColor = reader.GetString("TargetRarityColor"),
+            TargetInputRarityKey = reader.GetString("TargetInputRarityKey"),
+            TargetStatTrak = reader.GetBoolean("TargetStatTrak"),
+            TargetWears = JsonSerializer.Deserialize<List<string>>(reader.GetString("TargetWears")) ?? [],
+            IsActive = reader.GetBoolean("IsActive"),
+            HoldingCapacity = reader.GetInt32("HoldingCapacity"),
+            CreatedUtc = DateTime.SpecifyKind(reader.GetDateTime("CreatedUtc"), DateTimeKind.Utc),
+            UpdatedUtc = DateTime.SpecifyKind(reader.GetDateTime("UpdatedUtc"), DateTimeKind.Utc),
+            HeldCount = reader.GetInt32("HeldCount"),
+            EligibleInputCount = reader.GetInt32("EligibleInputCount")
+        };
+    }
+
+    private static CaseOpeningTradeUpHoldingObj ReadTradeUpHolding(MySqlDataReader reader)
+    {
+        return new CaseOpeningTradeUpHoldingObj
+        {
+            HoldingId = reader.GetGuid("HoldingId"),
+            RecipeId = reader.GetGuid("RecipeId"),
+            IsMatch = reader.GetBoolean("IsMatch"),
+            TargetItemName = reader.GetString("TargetItemName"),
+            OpeningId = reader.GetGuid("OpeningId"),
+            CaseKey = reader.GetString("CaseKey"),
+            SourceItemId = reader.GetString("SourceItemId"),
+            Name = reader.GetString("ItemName"),
+            MarketHashName = reader.GetString("MarketHashName"),
+            ImageUrl = reader.GetString("ImageUrl"),
+            Description = reader.GetString("Description"),
+            WeaponName = reader.GetString("WeaponName"),
+            PatternName = reader.GetString("PatternName"),
+            PaintIndex = reader.GetString("PaintIndex"),
+            Phase = reader.GetString("Phase"),
+            RarityKey = reader.GetString("RarityKey"),
+            RarityName = reader.GetString("RarityName"),
+            RarityColor = reader.GetString("RarityColor"),
+            Wear = reader.GetString("Wear"),
+            IsStatTrak = reader.GetBoolean("IsStatTrak"),
+            IsRareSpecial = reader.GetBoolean("IsRareSpecial"),
+            SupportsStatTrak = reader.GetBoolean("SupportsStatTrak"),
+            MinFloat = NullableDecimal(reader, "MinFloat"),
+            MaxFloat = NullableDecimal(reader, "MaxFloat"),
+            FloatValue = NullableDecimal(reader, "FloatValue"),
+            PatternSeed = reader.IsDBNull(reader.GetOrdinal("PatternSeed")) ? null : reader.GetInt32("PatternSeed"),
+            EstimatedPrice = reader.IsDBNull(reader.GetOrdinal("EstimatedPrice")) ? null : reader.GetDecimal("EstimatedPrice"),
+            OpenedUtc = DateTime.SpecifyKind(reader.GetDateTime("OpenedUtc"), DateTimeKind.Utc)
         };
     }
 

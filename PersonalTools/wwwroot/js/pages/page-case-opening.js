@@ -64,6 +64,26 @@
     let autoBuySummary = null;
     let autoBuyRulesLoaded = false;
     let autoBuyPollTimer = null;
+    let tradeUpRecipeSummary = null;
+    let tradeUpRecipesLoaded = false;
+    let tradeUpRecipePollTimer = null;
+    let tradeUpRecipeModalMode = 'create';
+    let tradeUpRecipeModalRecipeId = null;
+    const tradeUpCaseItemsCache = new Map();
+    const tradeUpEligibleRarities = new Set(['restricted', 'classified', 'covert']);
+    const tradeUpWearNames = ['Factory New', 'Minimal Wear', 'Field-Tested', 'Well-Worn', 'Battle-Scarred'];
+    const tradeUpWearAbbreviations = { 'Factory New': 'FN', 'Minimal Wear': 'MW', 'Field-Tested': 'FT', 'Well-Worn': 'WW', 'Battle-Scarred': 'BS' };
+    // Mirrors CaseOpeningFuncs' MaximumTradeUpRecipeHoldingCapacity/TradeUpHoldingUpgradeBaseCost/
+    // TradeUpHoldingUpgradeIncrement - only used to preview the next cost client-side; the server
+    // is always the authority on the actual charge.
+    const tradeUpMaximumHoldingCapacity = 20;
+    const tradeUpHoldingUpgradeBaseCost = 250;
+    const tradeUpHoldingUpgradeIncrement = 50;
+
+    function tradeUpWearSummary(wears) {
+        if (!Array.isArray(wears) || wears.length === 0) return 'Any wear';
+        return wears.map(wear => tradeUpWearAbbreviations[wear] || wear).join(', ');
+    }
     let shopSearch = '';
     let shopTier = '';
     let shopPage = 1;
@@ -1115,6 +1135,7 @@
                         }).first();
                         awardXp([result], $slot.length ? $slot : $('#caseBotFeed'), true);
                         evaluateAutoBuy();
+                        evaluateTradeUpRecipes();
                     })
                     .fail(function (response) {
                         const message = response.responseJSON?.message || '';
@@ -1712,6 +1733,7 @@
                 renderCaseSelector(items);
                 renderShop(items);
                 if (botProgress) renderBotProgress(botProgress);
+                if (tradeUpRecipesLoaded) renderTradeUpRecipesPanel();
             })
             .fail(function (response) {
                 catalogueLoaded = false;
@@ -2314,10 +2336,11 @@
         $('#caseCapacityUpgradeStatus').text(
             `${Number(inventoryUpgrades?.bonusInventorySlots || 0).toLocaleString()} bonus slots unlocked`
         );
+        const consolidatedCategories = new Set(['automation', 'trade-up-unlock', 'trade-up-slots', 'trade-up-holding']);
         availableUpgrades.forEach(function (upgrade) {
-            // Auto-buy tiers get one consolidated card inside the Auto-buy panel instead of a
-            // generic row per tier - see renderAutoBuyPanel().
-            if (String(upgrade.category || '').toLowerCase() === 'automation') return;
+            // Auto-buy and trade-up-recipe tiers each get one consolidated card inside their own
+            // panel instead of a generic row per tier - see renderAutoBuyPanel()/renderTradeUpRecipesPanel().
+            if (consolidatedCategories.has(String(upgrade.category || '').toLowerCase())) return;
             const unlocked = upgrade.isUnlocked === true;
             const prerequisiteKey = {
                 'inventory-slots-500': 'inventory-slots-250',
@@ -2373,6 +2396,8 @@
         $('#casePreserveStatTrakHint').text(autoSellUnlocked ? 'Applies to every enabled rarity' : 'Unlock an auto-sell tier first');
 
         renderAutoBuyPanel();
+        renderTradeUpUpgradePanel();
+        if (tradeUpRecipesLoaded) renderTradeUpRecipesPanel();
     }
 
     function loadAutoBuyRules(options) {
@@ -2387,34 +2412,45 @@
         });
     }
 
-    // Renders both halves of the Auto-buy panel: a single consolidated upgrade button covering
-    // all "automation" tiers (unlock -> more slots -> more slots), and, once at least the first
-    // tier is unlocked, an explicit "add a rule" picker plus one row per configured rule. Rows are
-    // driven entirely by configured rules (not by every unlocked case), so slot count and row
-    // count always agree.
-    function renderAutoBuyPanel() {
+    // Shared by every upgrade progression that gets a single consolidated button instead of one
+    // row per tier (auto-buy, trade-up recipe slots, trade-up holding capacity): shows the next
+    // locked tier's cost/level, or "Maxed out" once every tier in the category is unlocked.
+    // Returns the next locked tier (or null) so callers can key further UI off it.
+    function renderConsolidatedUpgradeTier(category, $button, $description, fallbackDescription, maxedOutText) {
         const stars = Number(inventoryUpgrades?.stars || caseProgress?.stars || 0);
         const level = Number(caseProgress?.level || 0);
-        const autoBuyTiers = (inventoryUpgrades?.availableUpgrades || [])
-            .filter(upgrade => String(upgrade.category || '').toLowerCase() === 'automation')
+        const tiers = (inventoryUpgrades?.availableUpgrades || [])
+            .filter(upgrade => String(upgrade.category || '').toLowerCase() === category)
             .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
-        const nextTier = autoBuyTiers.find(upgrade => upgrade.isUnlocked !== true);
-        const $upgradeButton = $('#caseAutoBuyUpgradeButton');
+        const nextTier = tiers.find(upgrade => upgrade.isUnlocked !== true);
 
-        if (autoBuyTiers.length === 0) {
-            $upgradeButton.addClass('d-none').removeAttr('data-upgrade-key');
+        if (tiers.length === 0) {
+            $button.addClass('d-none').removeAttr('data-upgrade-key');
         } else if (!nextTier) {
-            $upgradeButton.removeClass('d-none').prop('disabled', true).removeAttr('data-upgrade-key').text('Maxed out');
-            $('#caseAutoBuyUpgradeDescription').text('All auto-buy tiers unlocked.');
+            $button.removeClass('d-none').prop('disabled', true).removeAttr('data-upgrade-key').text(maxedOutText || 'Maxed out');
+            $description.text('All tiers unlocked.');
         } else {
             const meetsLevel = level >= Number(nextTier.requiredLevel || 0);
             const canAfford = stars >= Number(nextTier.costStars || 0);
-            $upgradeButton.removeClass('d-none')
+            $button.removeClass('d-none')
                 .attr('data-upgrade-key', nextTier.upgradeKey)
                 .prop('disabled', !meetsLevel || !canAfford)
                 .text(meetsLevel ? `Unlock · ${Number(nextTier.costStars || 0).toLocaleString()} ★` : `Level ${Number(nextTier.requiredLevel || 0)} required`);
-            $('#caseAutoBuyUpgradeDescription').text(nextTier.description || 'Automatically repurchase cases when your owned stock runs low.');
+            $description.text(nextTier.description || fallbackDescription);
         }
+        return nextTier || null;
+    }
+
+    // Renders both halves of the Auto-buy panel: the consolidated "automation" upgrade button
+    // (unlock -> more slots -> more slots), and, once at least the first tier is unlocked, an
+    // explicit "add a rule" picker plus one row per configured rule. Rows are driven entirely by
+    // configured rules (not by every unlocked case), so slot count and row count always agree.
+    function renderAutoBuyPanel() {
+        renderConsolidatedUpgradeTier(
+            'automation',
+            $('#caseAutoBuyUpgradeButton'),
+            $('#caseAutoBuyUpgradeDescription'),
+            'Automatically repurchase cases when your owned stock runs low.');
 
         const unlocked = inventoryUpgrades?.autoBuyUnlocked === true;
         $('#caseAutoBuyRuleEditor').toggleClass('d-none', !unlocked);
@@ -2573,6 +2609,394 @@
                 purchases.forEach(function (purchase) {
                     const caseName = catalogue.find(item => item.caseKey === purchase.caseKey)?.name || purchase.caseKey;
                     window.personalToolsToast?.info(`Auto-bought ${purchase.purchasedQuantity} × ${caseName}.`);
+                });
+            });
+        // A quiet poll failure just tries again next tick - no .fail handler, no error surfaced.
+    }
+
+    function loadTradeUpRecipes(options) {
+        tradeUpRecipesLoaded = true;
+        return request('/api/case-opening/trade-up-recipes', 'GET', options).done(function (result) {
+            tradeUpRecipeSummary = result;
+            renderTradeUpRecipesPanel();
+            manageTradeUpRecipePolling();
+        }).fail(function (response) {
+            tradeUpRecipesLoaded = false;
+            showError(response, 'Auto trade-up recipes could not be loaded.');
+        });
+    }
+
+    // Lives in the Upgrades tab: the one-time unlock, then (once unlocked) the recipe-slots
+    // ladder. Holding capacity is purchased from inside the recipe modal instead, since it's most
+    // relevant right when you're creating or reviewing a recipe.
+    function renderTradeUpUpgradePanel() {
+        renderConsolidatedUpgradeTier(
+            'trade-up-unlock',
+            $('#caseTradeUpUnlockButton'),
+            $('#caseTradeUpUnlockDescription'),
+            'Automatically fire Trade Up Contracts toward a target skin.',
+            'Unlocked');
+
+        const unlocked = inventoryUpgrades?.tradeUpRecipesUnlocked === true;
+        $('#caseTradeUpUpgradeTiers').toggleClass('d-none', !unlocked);
+        if (unlocked) renderTradeUpSlotUpgradeButton();
+    }
+
+    // Recipe slots are a repeatable +1 purchase (like the bot speed upgrade), not a discrete-tier
+    // upgrade, so this reads its cost straight off inventoryUpgrades rather than availableUpgrades.
+    function renderTradeUpSlotUpgradeButton() {
+        const slots = Number(inventoryUpgrades?.tradeUpRecipeSlots || 0);
+        const maximum = Number(inventoryUpgrades?.maximumTradeUpRecipeSlots || 0);
+        const cost = Number(inventoryUpgrades?.tradeUpRecipeSlotUpgradeCostStars || 0);
+        const stars = Number(inventoryUpgrades?.stars || caseProgress?.stars || 0);
+        const $button = $('#caseTradeUpSlotsUpgradeButton');
+
+        $('#caseTradeUpSlotsDescription').text(`${slots} / ${maximum} recipe slots.`);
+        if (slots >= maximum) {
+            $button.prop('disabled', true).text('Maximum reached');
+        } else {
+            $button.prop('disabled', stars < cost).text(`Add slot · ${cost.toLocaleString()} ★`);
+        }
+    }
+
+    // Caps (recipe slots, holding capacity) come straight off inventoryUpgrades so they update the
+    // instant an upgrade is bought - see the "must refresh" lesson from the Auto-buy panel. Used
+    // counts and the actual recipe/holding lists still come from the separately-fetched summary.
+    function renderTradeUpRecipesPanel() {
+        const unlocked = inventoryUpgrades?.tradeUpRecipesUnlocked === true;
+        $('#caseTradeUpLockedNotice').toggleClass('d-none', unlocked);
+        $('#caseTradeUpUnlockedContent').toggleClass('d-none', !unlocked);
+        if (!unlocked) return;
+
+        const summary = tradeUpRecipeSummary;
+        const recipes = summary?.recipes || [];
+        const holdings = summary?.holdings || [];
+        const recipeSlots = Number(inventoryUpgrades?.tradeUpRecipeSlots || 0);
+        const usedRecipeSlots = Number(summary?.usedRecipeSlots || 0);
+        const usedHoldingCount = Number(summary?.usedHoldingCount || 0);
+        const atRecipeCap = usedRecipeSlots >= recipeSlots;
+
+        $('#caseTradeUpRecipeSlotStatus').text(`${usedRecipeSlots} / ${recipeSlots} active recipes`);
+        $('#caseTradeUpHoldingStatus').text(`${usedHoldingCount.toLocaleString()} held`);
+
+        const $recipeGrid = $('#caseTradeUpRecipeGrid').empty();
+        $recipeGrid.append($('<article>', {
+            class: `case-trade-up-recipe-card is-add${atRecipeCap ? ' disabled' : ''}`,
+            id: 'caseTradeUpRecipeAddCard',
+            role: 'button',
+            tabindex: atRecipeCap ? -1 : 0,
+            title: atRecipeCap ? 'You have reached your active recipe limit.' : 'Create a recipe'
+        }).append(
+            $('<i>', { class: 'fa-solid fa-plus', 'aria-hidden': 'true' }),
+            $('<span>', { text: 'Create recipe' })
+        ));
+
+        recipes.forEach(function (recipe) {
+            const eligible = Math.min(10, Number(recipe.eligibleInputCount || 0));
+            const held = Number(recipe.heldCount || 0);
+            const capacity = Number(recipe.holdingCapacity || 0);
+            const $card = $('<article>', {
+                class: `case-trade-up-recipe-card ${rarityClass({ rarityKey: recipe.targetRarityKey })}${recipe.isActive ? '' : ' is-inactive'}`,
+                'data-recipe-id': recipe.recipeId,
+                role: 'button',
+                tabindex: 0
+            }).append(
+                $('<img>', { src: recipe.targetImageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                $('<div>', { class: 'case-trade-up-recipe-card-copy' }).append(
+                    $('<strong>', { text: `${recipe.targetItemName}${recipe.targetStatTrak ? ' (ST)' : ''}` }),
+                    $('<span>', { text: `${recipe.isActive ? `${eligible}/10 ready` : 'Paused'} · ${held}/${capacity} held` }),
+                    $('<span>', { text: tradeUpWearSummary(recipe.targetWears) })
+                )
+            );
+            $recipeGrid.append($card);
+        });
+
+        const $holdingGrid = $('#caseTradeUpHoldingGrid').empty();
+        if (holdings.length === 0) {
+            $holdingGrid.append($('<div>', { class: 'case-trade-up-holding-empty', text: 'Nothing held yet - fired contracts land here until you collect them.' }));
+        } else {
+            holdings.forEach(function (holding) {
+                const isMatch = holding.isMatch === true;
+                $holdingGrid.append($('<article>', {
+                    class: `case-trade-up-holding-row ${rarityClass(holding)}`,
+                    'data-holding-id': holding.holdingId
+                }).append(
+                    $('<img>', { src: holding.imageUrl, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }),
+                    $('<span>', { class: 'case-trade-up-holding-row-name', text: `${holding.name} (${holding.wear})` }),
+                    $('<span>', { class: 'case-trade-up-holding-row-meta', text: `for ${holding.targetItemName}` }),
+                    $('<span>', { class: `case-trade-up-holding-row-badge ${isMatch ? 'is-match' : 'is-unmatched'}`, text: isMatch ? 'Matched' : 'No match' }),
+                    $('<button>', { class: 'btn btn-warning btn-sm js-trade-up-holding-collect', type: 'button', text: 'Collect' })
+                ));
+            });
+        }
+    }
+
+    // Holding capacity is per-recipe, not shared account-wide - the modal always reflects
+    // whichever recipe is currently open for management.
+    function renderTradeUpModalHoldingCapacity(recipe) {
+        const held = Number(recipe.heldCount || 0);
+        const capacity = Number(recipe.holdingCapacity || 0);
+        const stars = Number(caseProgress?.stars || 0);
+        const maximum = tradeUpMaximumHoldingCapacity;
+        const cost = tradeUpHoldingUpgradeBaseCost + (capacity * tradeUpHoldingUpgradeIncrement);
+        const $button = $('#caseTradeUpHoldingUpgradeButton');
+
+        $('#caseTradeUpModalHoldingStatus').text(`${held} / ${capacity} held`);
+        if (capacity >= maximum) {
+            $button.prop('disabled', true).text('Maximum reached');
+        } else {
+            $button.prop('disabled', stars < cost).text(`Add capacity · ${cost.toLocaleString()} ★`);
+        }
+    }
+
+    function openTradeUpCreateModal() {
+        const summary = tradeUpRecipeSummary;
+        const recipeSlots = Number(inventoryUpgrades?.tradeUpRecipeSlots || 0);
+        const usedRecipeSlots = Number(summary?.usedRecipeSlots || 0);
+        if (usedRecipeSlots >= recipeSlots) {
+            window.personalToolsToast?.error('You have reached your active recipe limit.');
+            return;
+        }
+        tradeUpRecipeModalMode = 'create';
+        tradeUpRecipeModalRecipeId = null;
+        $('#caseTradeUpRecipeModalTitle').text('Create a recipe');
+        $('#caseTradeUpRecipeCreateFields').removeClass('d-none');
+        $('#caseTradeUpRecipeManageFields').addClass('d-none');
+        $('#caseTradeUpRecipeModalDelete').addClass('d-none');
+        $('#caseTradeUpRecipeModalSubmit').removeClass('d-none').text('Create recipe');
+        $('#caseTradeUpRecipeModalCost').text(summary ? `Costs ${Number(summary.recipeCostStars || 0).toLocaleString()} ★` : '');
+        $('.js-trade-up-recipe-wear').prop('checked', false);
+        renderTradeUpRecipeCasePicker();
+        renderTradeUpRecipeSubmitButton();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTradeUpRecipeModal')).show();
+    }
+
+    function openTradeUpManageModal(recipeId) {
+        const recipe = (tradeUpRecipeSummary?.recipes || []).find(item => String(item.recipeId) === String(recipeId));
+        if (!recipe) return;
+        tradeUpRecipeModalMode = 'manage';
+        tradeUpRecipeModalRecipeId = recipe.recipeId;
+        const eligible = Math.min(10, Number(recipe.eligibleInputCount || 0));
+        const held = Number(recipe.heldCount || 0);
+
+        $('#caseTradeUpRecipeModalTitle').text('Manage recipe');
+        $('#caseTradeUpRecipeCreateFields').addClass('d-none');
+        $('#caseTradeUpRecipeManageFields').removeClass('d-none');
+        $('#caseTradeUpRecipeManageActive').prop('checked', recipe.isActive === true);
+        $('#caseTradeUpRecipeManageMeta').text(`${eligible}/10 matching inputs ready · Wears: ${tradeUpWearSummary(recipe.targetWears)}`);
+        renderTradeUpModalHoldingCapacity(recipe);
+        $('#caseTradeUpRecipePreview').removeClass('d-none case-rarity-mil-spec case-rarity-restricted case-rarity-classified case-rarity-covert')
+            .addClass(rarityClass({ rarityKey: recipe.targetRarityKey }));
+        $('#caseTradeUpRecipePreviewImage').attr('src', recipe.targetImageUrl);
+        $('#caseTradeUpRecipePreviewName').text(`${recipe.targetItemName}${recipe.targetStatTrak ? ' (StatTrak™)' : ''}`);
+        $('#caseTradeUpRecipePreviewRarity').text(recipe.targetRarityName);
+        $('#caseTradeUpRecipeModalDelete').removeClass('d-none')
+            .prop('disabled', held > 0)
+            .attr('title', held > 0 ? 'Collect held skins before deleting this recipe.' : '');
+        $('#caseTradeUpRecipeModalSubmit').addClass('d-none');
+        $('#caseTradeUpRecipeModalCost').text('');
+        renderTradeUpModalHoldingCapacity();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTradeUpRecipeModal')).show();
+    }
+
+    // The case picker only needs to be rebuilt when the unlocked-case set actually changes -
+    // repopulating it on every render would reset whatever the player was mid-selecting.
+    function renderTradeUpRecipeCasePicker() {
+        const $caseSelect = $('#caseTradeUpRecipeCase');
+        const unlockedCases = catalogue.filter(item => isCaseUnlocked(item));
+        const signature = unlockedCases.map(item => item.caseKey).join('|');
+        if ($caseSelect.data('signature') === signature) {
+            loadTradeUpRecipeCaseItems(String($caseSelect.val() || ''));
+            return;
+        }
+
+        $caseSelect.data('signature', signature).empty();
+        unlockedCases.forEach(item => $caseSelect.append($('<option>', { value: item.caseKey, text: item.name })));
+        if (unlockedCases.length) loadTradeUpRecipeCaseItems(String(unlockedCases[0].caseKey));
+    }
+
+    function loadTradeUpRecipeCaseItems(caseKey) {
+        if (!caseKey) {
+            renderTradeUpRecipeItemPicker([]);
+            return;
+        }
+        if (tradeUpCaseItemsCache.has(caseKey)) {
+            renderTradeUpRecipeItemPicker(tradeUpCaseItemsCache.get(caseKey));
+            return;
+        }
+        request(`/api/case-opening/cases/${encodeURIComponent(caseKey)}`, 'GET', { showLoader: false })
+            .done(function (data) {
+                const items = (data.items || []).filter(item => tradeUpEligibleRarities.has(item.rarityKey) && !item.isRareSpecial);
+                tradeUpCaseItemsCache.set(caseKey, items);
+                if (String($('#caseTradeUpRecipeCase').val() || '') === caseKey) renderTradeUpRecipeItemPicker(items);
+            })
+            .fail(response => showError(response, 'That case could not be loaded.'));
+    }
+
+    function renderTradeUpRecipeItemPicker(items) {
+        const $itemSelect = $('#caseTradeUpRecipeItem').empty();
+        if (items.length === 0) {
+            $itemSelect.append($('<option>', { value: '', text: 'No eligible skins in this case' })).prop('disabled', true);
+        } else {
+            $itemSelect.prop('disabled', false);
+            items.forEach(item => $itemSelect.append($('<option>', { value: item.sourceItemId, text: `${item.name} (${item.rarityName})` })));
+        }
+        renderTradeUpRecipeWearOptions();
+        syncTradeUpRecipeSelection();
+    }
+
+    function renderTradeUpRecipeWearOptions() {
+        const $options = $('#caseTradeUpRecipeWearOptions').empty();
+        tradeUpWearNames.forEach(function (wear, index) {
+            const inputId = `caseTradeUpRecipeWear-${index}`;
+            $options.append($('<label>', { class: 'case-trade-up-recipe-wear-option', for: inputId }).append(
+                $('<input>', { class: 'form-check-input js-trade-up-recipe-wear', type: 'checkbox', id: inputId, value: wear }),
+                $('<span>', { text: wear })
+            ));
+        });
+    }
+
+    // Keeps the StatTrak™ toggle and the live target preview in sync with whatever's currently
+    // selected in the case/item pickers.
+    function syncTradeUpRecipeSelection() {
+        const caseKey = String($('#caseTradeUpRecipeCase').val() || '');
+        const sourceItemId = String($('#caseTradeUpRecipeItem').val() || '');
+        const items = tradeUpCaseItemsCache.get(caseKey) || [];
+        const item = items.find(entry => entry.sourceItemId === sourceItemId);
+
+        const supportsStatTrak = item?.supportsStatTrak === true;
+        $('#caseTradeUpRecipeStatTrak')
+            .prop('disabled', !supportsStatTrak)
+            .prop('checked', supportsStatTrak && $('#caseTradeUpRecipeStatTrak').prop('checked'));
+
+        if (item) {
+            $('#caseTradeUpRecipePreview').removeClass('d-none case-rarity-mil-spec case-rarity-restricted case-rarity-classified case-rarity-covert')
+                .addClass(rarityClass(item));
+            $('#caseTradeUpRecipePreviewImage').attr('src', item.imageUrl);
+            $('#caseTradeUpRecipePreviewName').text(item.name);
+            $('#caseTradeUpRecipePreviewRarity').text(item.rarityName);
+        } else {
+            $('#caseTradeUpRecipePreview').addClass('d-none');
+        }
+
+        renderTradeUpRecipeSubmitButton();
+    }
+
+    function renderTradeUpRecipeSubmitButton() {
+        const summary = tradeUpRecipeSummary;
+        const hasCase = String($('#caseTradeUpRecipeCase').val() || '') !== '';
+        const hasItem = !$('#caseTradeUpRecipeItem').prop('disabled') && String($('#caseTradeUpRecipeItem').val() || '') !== '';
+        const stars = Number(caseProgress?.stars || 0);
+        const cost = Number(summary?.recipeCostStars || 0);
+        const recipeSlots = Number(inventoryUpgrades?.tradeUpRecipeSlots || 0);
+        const usedRecipeSlots = Number(summary?.usedRecipeSlots || 0);
+        const atCap = !summary || usedRecipeSlots >= recipeSlots;
+        $('#caseTradeUpRecipeModalSubmit').prop('disabled', !hasCase || !hasItem || stars < cost || atCap);
+    }
+
+    function createTradeUpRecipe() {
+        const caseKey = String($('#caseTradeUpRecipeCase').val() || '');
+        const sourceItemId = String($('#caseTradeUpRecipeItem').val() || '');
+        if (!caseKey || !sourceItemId) return;
+        const wears = $('.js-trade-up-recipe-wear:checked').map(function () { return String($(this).val()); }).get();
+        const statTrak = $('#caseTradeUpRecipeStatTrak').prop('checked') === true;
+        const $button = $('#caseTradeUpRecipeModalSubmit').prop('disabled', true);
+        request('/api/case-opening/trade-up-recipes', 'POST', {
+            data: JSON.stringify({ caseKey, sourceItemId, wears, statTrak }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                tradeUpRecipeSummary = result;
+                renderTradeUpRecipesPanel();
+                manageTradeUpRecipePolling();
+                loadProgress({ showLoader: false });
+                window.personalToolsToast?.success('Auto trade-up recipe created.');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTradeUpRecipeModal')).hide();
+            })
+            .fail(function (response) {
+                showError(response, 'This recipe could not be created.');
+            })
+            .always(() => $button.prop('disabled', false));
+    }
+
+    function setTradeUpRecipeActive(recipeId, isActive) {
+        return request(`/api/case-opening/trade-up-recipes/${encodeURIComponent(recipeId)}/active`, 'PUT', {
+            data: JSON.stringify({ isActive }),
+            contentType: 'application/json; charset=utf-8',
+            showLoader: false
+        })
+            .done(function (result) {
+                tradeUpRecipeSummary = result;
+                renderTradeUpRecipesPanel();
+                manageTradeUpRecipePolling();
+            })
+            .fail(function (response) {
+                showError(response, 'This recipe could not be updated.');
+            });
+    }
+
+    function deleteTradeUpRecipe(recipeId) {
+        const $button = $('#caseTradeUpRecipeModalDelete').prop('disabled', true);
+        request(`/api/case-opening/trade-up-recipes/${encodeURIComponent(recipeId)}`, 'DELETE', { showLoader: false })
+            .done(function (result) {
+                tradeUpRecipeSummary = result;
+                renderTradeUpRecipesPanel();
+                manageTradeUpRecipePolling();
+                window.personalToolsToast?.success('Recipe deleted.');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('caseTradeUpRecipeModal')).hide();
+            })
+            .fail(function (response) {
+                $button.prop('disabled', false);
+                showError(response, 'This recipe could not be deleted.');
+            });
+    }
+
+    function collectTradeUpHolding($row) {
+        const holdingId = String($row.data('holding-id'));
+        const $button = $row.find('.js-trade-up-holding-collect').prop('disabled', true);
+        request(`/api/case-opening/trade-up-recipes/holdings/${encodeURIComponent(holdingId)}/collect`, 'POST', { showLoader: false })
+            .done(function (result) {
+                tradeUpRecipeSummary = result;
+                renderTradeUpRecipesPanel();
+                manageTradeUpRecipePolling();
+                loadInventoryCapacity({ showLoader: false });
+                if (historyLoaded) loadHistory({ showLoader: false });
+                window.personalToolsToast?.success('Skin collected into your inventory.');
+            })
+            .fail(function (response) {
+                $button.prop('disabled', false);
+                showError(response, 'This skin could not be collected.');
+            });
+    }
+
+    // Same client-driven polling pattern as bots and Auto-buy - only runs once the player actually
+    // has a recipe, and pauses while the tab isn't visible.
+    function manageTradeUpRecipePolling() {
+        const shouldPoll = (tradeUpRecipeSummary?.recipes || []).length > 0 && !document.hidden;
+        if (shouldPoll && !tradeUpRecipePollTimer) {
+            tradeUpRecipePollTimer = window.setInterval(evaluateTradeUpRecipes, 18000);
+        } else if (!shouldPoll && tradeUpRecipePollTimer) {
+            window.clearInterval(tradeUpRecipePollTimer);
+            tradeUpRecipePollTimer = null;
+        }
+    }
+
+    // Also called opportunistically right after any case open (player or bot) - the event that
+    // can bring a recipe's inputs up to ten.
+    function evaluateTradeUpRecipes() {
+        if (!(tradeUpRecipeSummary?.recipes || []).length) return;
+        request('/api/case-opening/trade-up-recipes/evaluate', 'POST', { showLoader: false })
+            .done(function (results) {
+                if (!Array.isArray(results) || results.length === 0) return;
+
+                loadInventoryCapacity({ showLoader: false });
+                if (tradeUpRecipesLoaded) loadTradeUpRecipes({ showLoader: false });
+                if (historyLoaded) loadHistory({ showLoader: false });
+
+                results.forEach(function (result) {
+                    const label = result.isMatch ? 'matched - ready to collect' : 'did not match - waiting to be collected';
+                    window.personalToolsToast?.info(`Auto trade-up fired for ${result.output.name}: ${label}.`);
                 });
             });
         // A quiet poll failure just tries again next tick - no .fail handler, no error surfaced.
@@ -2738,6 +3162,7 @@
         statisticsRequestedAfterOpening = results[0]?.caseKey || caseKey;
         $('#chooseCaseButton, #caseSelectorGrid input').prop('disabled', false);
         evaluateAutoBuy();
+        evaluateTradeUpRecipes();
     }
 
     function renderFinishedOpening(result) {
@@ -3041,6 +3466,8 @@
         if (destination === 'tradeups') {
             if (!historyLoaded) requests.push(loadHistory(quietOptions));
             if (!inventoryCapacityLoaded) requests.push(loadInventoryCapacity(quietOptions));
+            if (!inventoryUpgradesLoaded) requests.push(loadInventoryUpgrades(quietOptions));
+            if (!tradeUpRecipesLoaded) requests.push(loadTradeUpRecipes(quietOptions));
         }
 
         if (requests.length === 0) return $.Deferred().resolve().promise();
@@ -3367,6 +3794,7 @@
             resumeBotsIfDue();
         }
         manageAutoBuyPolling();
+        manageTradeUpRecipePolling();
     });
 
     window.addEventListener('pagehide', () => stopBots(false));
@@ -3557,7 +3985,7 @@
         renderShop(catalogue);
     });
 
-    $('#caseInventoryUpgradeGrid, #caseCapacityUpgradeGrid, #caseAutoBuyPanel').on('click', '.js-unlock-inventory-upgrade', function () {
+    $('#caseInventoryUpgradeGrid, #caseCapacityUpgradeGrid, #caseAutoBuyPanel, #caseTradeUpUpgradePanel').on('click', '.js-unlock-inventory-upgrade', function () {
         const upgradeKey = String($(this).data('upgrade-key') || '');
         const $button = $(this).prop('disabled', true);
         request(`/api/case-opening/inventory/upgrades/${encodeURIComponent(upgradeKey)}/unlock`, 'POST', { showLoader: false })
@@ -3566,6 +3994,7 @@
                 renderInventoryUpgradeStore(); renderInventorySelection(); loadProgress({ showLoader: false });
                 loadInventoryCapacity({ showLoader: false });
                 loadAutoBuyRules({ showLoader: false });
+                if (tradeUpRecipesLoaded) loadTradeUpRecipes({ showLoader: false });
                 window.personalToolsToast?.success('Inventory upgrade unlocked.');
             }).fail(response => showError(response, 'The inventory upgrade could not be unlocked.'))
             .always(() => $button.prop('disabled', false));
@@ -3575,6 +4004,86 @@
 
     $('#caseAutoBuyRules').on('click', '.js-auto-buy-remove', function () {
         removeAutoBuyRule($(this).closest('.case-auto-buy-row'));
+    });
+
+    $('#caseTradeUpLockedLink').on('click', function (event) {
+        event.preventDefault();
+        switchDestination('upgrades');
+    });
+
+    $('#caseTradeUpSlotsUpgradeButton').on('click', function () {
+        const $button = $(this).prop('disabled', true);
+        request('/api/case-opening/trade-up-recipes/slots/upgrade', 'POST', { showLoader: false })
+            .done(function (result) {
+                inventoryUpgrades = result;
+                renderInventoryUpgradeStore(); renderInventorySelection(); loadProgress({ showLoader: false });
+                loadInventoryCapacity({ showLoader: false });
+                if (tradeUpRecipesLoaded) loadTradeUpRecipes({ showLoader: false });
+                window.personalToolsToast?.success('Auto trade-up recipe slot added.');
+            })
+            .fail(response => showError(response, 'This upgrade could not be purchased.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#caseTradeUpHoldingUpgradeButton').on('click', function () {
+        if (!tradeUpRecipeModalRecipeId) return;
+        const recipeId = tradeUpRecipeModalRecipeId;
+        const $button = $(this).prop('disabled', true);
+        request(`/api/case-opening/trade-up-recipes/${encodeURIComponent(recipeId)}/holding/upgrade`, 'POST', { showLoader: false })
+            .done(function (result) {
+                tradeUpRecipeSummary = result;
+                renderTradeUpRecipesPanel();
+                manageTradeUpRecipePolling();
+                loadProgress({ showLoader: false });
+                const recipe = (result.recipes || []).find(item => String(item.recipeId) === String(recipeId));
+                if (recipe) renderTradeUpModalHoldingCapacity(recipe);
+                window.personalToolsToast?.success('Holding capacity added.');
+            })
+            .fail(response => showError(response, 'This upgrade could not be purchased.'))
+            .always(() => $button.prop('disabled', false));
+    });
+
+    $('#caseTradeUpRecipeGrid').on('click', '.case-trade-up-recipe-card', function () {
+        if ($(this).is('.is-add')) {
+            if (!$(this).is('.disabled')) openTradeUpCreateModal();
+            return;
+        }
+        openTradeUpManageModal($(this).data('recipe-id'));
+    }).on('keydown', '.case-trade-up-recipe-card', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        $(this).trigger('click');
+    });
+
+    $('#caseTradeUpRecipeCase').on('change', function () {
+        const caseKey = String($(this).val() || '');
+        $('#caseTradeUpRecipeItem').empty().prop('disabled', true);
+        loadTradeUpRecipeCaseItems(caseKey);
+        renderTradeUpRecipeSubmitButton();
+    });
+
+    $('#caseTradeUpRecipeItem, #caseTradeUpRecipeStatTrak').on('change', function () {
+        if (this.id === 'caseTradeUpRecipeItem') syncTradeUpRecipeSelection();
+        renderTradeUpRecipeSubmitButton();
+    });
+
+    $('#caseTradeUpRecipeModalSubmit').on('click', function () {
+        if (tradeUpRecipeModalMode === 'create') createTradeUpRecipe();
+    });
+
+    $('#caseTradeUpRecipeModalDelete').on('click', function () {
+        if (tradeUpRecipeModalRecipeId) deleteTradeUpRecipe(tradeUpRecipeModalRecipeId);
+    });
+
+    $('#caseTradeUpRecipeManageActive').on('change', function () {
+        const $checkbox = $(this);
+        if (!tradeUpRecipeModalRecipeId) return;
+        const isActive = $checkbox.prop('checked');
+        setTradeUpRecipeActive(tradeUpRecipeModalRecipeId, isActive).fail(() => $checkbox.prop('checked', !isActive));
+    });
+
+    $('#caseTradeUpHoldingGrid').on('click', '.js-trade-up-holding-collect', function () {
+        collectTradeUpHolding($(this).closest('.case-trade-up-holding-row'));
     });
 
     $('#caseAutoSellControls').on('change', '.js-auto-sell-toggle', function () {

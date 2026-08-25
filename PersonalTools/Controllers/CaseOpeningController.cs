@@ -174,6 +174,62 @@ public sealed class CaseOpeningController : ControllerBase
             "selected");
     }
 
+    [HttpGet("trade-up-recipes")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> GetTradeUpRecipes(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.GetCaseOpeningTradeUpRecipes(UserId, cancellationToken), "load auto trade-up recipes", "all");
+    }
+
+    [HttpPost("trade-up-recipes")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> CreateTradeUpRecipe(
+        [FromBody] CaseOpeningTradeUpRecipeRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.CreateCaseOpeningTradeUpRecipe(UserId, request, cancellationToken), "create auto trade-up recipe", "new");
+    }
+
+    [HttpPut("trade-up-recipes/{recipeId:guid}/active")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> SetTradeUpRecipeActive(
+        Guid recipeId,
+        [FromBody] CaseOpeningTradeUpRecipeActiveRequestObj request,
+        CancellationToken cancellationToken)
+    {
+        return Execute(
+            () => _caseOpening.SetCaseOpeningTradeUpRecipeActive(UserId, recipeId, request?.IsActive ?? false, cancellationToken),
+            "update auto trade-up recipe",
+            recipeId.ToString());
+    }
+
+    [HttpDelete("trade-up-recipes/{recipeId:guid}")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> DeleteTradeUpRecipe(Guid recipeId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.DeleteCaseOpeningTradeUpRecipe(UserId, recipeId, cancellationToken), "delete auto trade-up recipe", recipeId.ToString());
+    }
+
+    [HttpPost("trade-up-recipes/holdings/{holdingId:guid}/collect")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> CollectTradeUpHolding(Guid holdingId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.CollectCaseOpeningTradeUpHolding(UserId, holdingId, cancellationToken), "collect held skin", holdingId.ToString());
+    }
+
+    [HttpPost("trade-up-recipes/slots/upgrade")]
+    public Task<ActionResult<CaseOpeningInventoryUpgradeObj>> UpgradeTradeUpRecipeSlots(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UpgradeCaseOpeningTradeUpRecipeSlots(UserId, cancellationToken), "upgrade auto trade-up recipe slots", "all");
+    }
+
+    [HttpPost("trade-up-recipes/{recipeId:guid}/holding/upgrade")]
+    public Task<ActionResult<CaseOpeningTradeUpRecipeSummaryObj>> UpgradeTradeUpRecipeHolding(Guid recipeId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.UpgradeCaseOpeningTradeUpRecipeHolding(UserId, recipeId, cancellationToken), "upgrade recipe holding capacity", recipeId.ToString());
+    }
+
+    [HttpPost("trade-up-recipes/evaluate")]
+    public Task<ActionResult<List<CaseOpeningTradeUpResultObj>>> EvaluateTradeUpRecipes(CancellationToken cancellationToken)
+    {
+        return Execute(() => _caseOpening.EvaluateCaseOpeningTradeUpRecipes(UserId, cancellationToken), "evaluate auto trade-up recipes", "all");
+    }
+
     [HttpGet("bots")]
     public Task<ActionResult<CaseOpeningBotProgressObj>> GetBots(CancellationToken cancellationToken)
     {
